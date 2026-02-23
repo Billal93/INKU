@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>INKU Studio | Pro Ultra Edition</title>
+    <meta name="description"
+        content="INKU Studio Pro Ultra — Application de copyright, capture vidéo et collage d'images pour vos contenus manga/anime.">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="assets/logos.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+
+        :root {
+            --fuchsia: #d91b81;
+            --purple: #82278f;
+            --brand: linear-gradient(135deg, #d91b81 0%, #82278f 100%);
+            --brand-soft: linear-gradient(135deg, rgba(217, 27, 129, 0.08) 0%, rgba(130, 39, 143, 0.08) 100%);
+            --bg: #f4f5f8;
+            --card: #ffffff;
+            --text: #1a1625;
+            --text-muted: #9ca3af;
+            --border: #eef0f4;
+            --radius: 20px;
+            --radius-sm: 12px;
+            --shadow: 0 4px 24px rgba(130, 39, 143, 0.07);
+            --shadow-lg: 0 8px 40px rgba(130, 39, 143, 0.14);
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding-bottom: 40px;
+        }
+
+        /* ── HEADER ── */
+        header {
+            background: white;
+            padding: 12px 20px;
+            box-shadow: 0 1px 0 var(--border), var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-inner {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo-box {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            padding: 2px;
+            background: var(--brand);
+            border-radius: 50%;
+        }
+
+        .logo-box img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            background: white;
+            display: block;
+        }
+
+        .header-title {
+            flex: 1;
+        }
+
+        h1 {
+            font-size: 0.85rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            line-height: 1.1;
+        }
+
+        h1 span {
+            background: var(--brand);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-sub {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        /* ── NAV ── */
+        nav {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding: 10px 20px 0;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        nav::-webkit-scrollbar {
+            display: none;
+        }
+
+        .nav-btn {
+            padding: 8px 16px;
+            border-radius: 100px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.72rem;
+            transition: var(--transition);
+            white-space: nowrap;
+            letter-spacing: 0.3px;
+        }
+
+        .nav-btn:hover {
+            background: var(--brand-soft);
+            color: var(--fuchsia);
+        }
+
+        .nav-btn.active {
+            background: var(--brand);
+            color: white;
+            box-shadow: 0 4px 16px rgba(217, 27, 129, 0.28);
+        }
+
+        /* ── CONTAINER ── */
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
+
+        .panel {
+            display: none;
+            animation: fadeUp 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ── CARD ── */
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .section-title {
+            font-size: 0.68rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .section-title::before {
+            content: '';
+            display: block;
+            width: 3px;
+            height: 12px;
+            background: var(--brand);
+            border-radius: 2px;
+        }
+
+        /* ── DROP ZONE ── */
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 16px;
+            padding: 28px 20px;
+            text-align: center;
+            cursor: pointer;
+            background: #fafbfc;
+            margin-bottom: 15px;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.dragover {
+            border-color: var(--fuchsia);
+            background: rgba(217, 27, 129, 0.03);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(217, 27, 129, 0.1);
+        }
+
+        .drop-zone strong {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .drop-zone small {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            display: block;
+        }
+
+        /* ── SEARCH ── */
+        .search-bar {
+            width: 100%;
+            padding: 13px 16px;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            outline: none;
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            transition: var(--transition);
+            background: #fafbfc;
+            color: var(--text);
+        }
+
+        .search-bar:focus {
+            border-color: var(--fuchsia);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(217, 27, 129, 0.07);
+        }
+
+        .search-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .search-row .search-bar {
+            margin-bottom: 0;
+            flex: 1;
+        }
+
+        /* ── LOGO GRID ── */
+        #logoResults {
+            display: none;
+            /* Masqué par défaut */
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 10px;
+            margin-top: 4px;
+            max-height: 380px;
+            overflow-y: auto;
+            padding: 4px 2px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+
+        .logo-item {
+            background: #fafbfc;
+            border-radius: var(--radius-sm);
+            padding: 10px 8px;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid var(--border);
+            transition: var(--transition);
+            user-select: none;
+        }
+
+        .logo-item:hover {
+            border-color: rgba(217, 27, 129, 0.4);
+            background: rgba(217, 27, 129, 0.03);
+            transform: translateY(-2px);
+        }
+
+        .logo-item.selected {
+            border-color: var(--fuchsia);
+            background: rgba(217, 27, 129, 0.06);
+            box-shadow: 0 4px 16px rgba(217, 27, 129, 0.15);
+        }
+
+        .logo-item img {
+            width: 100%;
+            aspect-ratio: 1/1;
+            object-fit: contain;
+            margin-bottom: 6px;
+            border-radius: 6px;
+        }
+
+        .logo-item span {
+            font-size: 0.58rem;
+            font-weight: 700;
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text);
+        }
+
+        /* Message quand aucun logo affiché */
+        .empty-logo-msg {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 20px;
+            background: #fafbfc;
+            border-radius: var(--radius-sm);
+            border: 1px dashed var(--border);
+        }
+
+        /* Header pour le logo importé */
+        .custom-logo-preview {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: rgba(217, 27, 129, 0.06);
+            border: 1px solid var(--fuchsia);
+            border-radius: var(--radius-sm);
+            margin-top: 10px;
+        }
+
+        .custom-logo-preview img {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+
+        .custom-logo-preview span {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--fuchsia);
+        }
+
+        /* ── BUTTONS ── */
+        .big-btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 14px;
+            border: none;
+            background: var(--brand);
+            color: white;
+            font-weight: 800;
+            font-size: 0.88rem;
+            cursor: pointer;
+            margin-top: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: var(--transition);
+            display: block;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .big-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(217, 27, 129, 0.3);
+            filter: brightness(1.05);
+        }
+
+        .big-btn:active {
+            transform: translateY(0);
+        }
+
+        .big-btn.secondary {
+            background: white;
+            color: var(--fuchsia);
+            border: 2px solid var(--border);
+            box-shadow: none;
+        }
+
+        .big-btn.secondary:hover {
+            border-color: var(--fuchsia);
+            background: rgba(217, 27, 129, 0.04);
+            box-shadow: none;
+        }
+
+        .big-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        /* ── APP PREVIEW ── */
+        .app-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .app-item {
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: #f8f9fa;
+            position: relative;
+        }
+
+        .app-item img {
+            width: 100%;
+            display: block;
+        }
+
+        /* ── TOAST ── */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: #1a1625;
+            color: white;
+            padding: 12px 22px;
+            border-radius: 100px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            z-index: 9999;
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+        }
+
+        .toast.success {
+            background: linear-gradient(135deg, #d91b81, #82278f);
+        }
+
+        .toast.error {
+            background: #e53e3e;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* ── LOADER ── */
+        .loader {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 20px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--fuchsia);
+        }
+
+        .loader.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 22px;
+            height: 22px;
+            border: 3px solid rgba(217, 27, 129, 0.15);
+            border-top-color: var(--fuchsia);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ══════════════════════════════
+           SECTION : VIDÉO (EXTRACTOR)
+        ══════════════════════════════ */
+        .video-preview-wrap {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #000;
+            max-height: 400px;
+            margin-bottom: 14px;
+        }
+
+        #videoPreview {
+            width: 100%;
+            max-height: 400px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .interval-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .interval-btn {
+            padding: 8px 16px;
+            border-radius: 100px;
+            border: 2px solid var(--border);
+            background: white;
+            color: var(--text);
+            font-weight: 700;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .interval-btn.selected {
+            background: var(--brand);
+            border-color: transparent;
+            color: white;
+            box-shadow: 0 4px 12px rgba(217, 27, 129, 0.25);
+        }
+
+        .captures-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+            margin-top: 12px;
+            padding-right: 4px;
+        }
+
+        .capture-thumb {
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: #fff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .capture-thumb img {
+            width: 100%;
+            display: block;
+        }
+
+        .capture-actions {
+            padding: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+        }
+
+        .cap-num {
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: var(--text-muted);
+        }
+
+        .btn-dl-small {
+            background: var(--fuchsia);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .btn-dl-small:hover {
+            filter: brightness(1.1);
+        }
+
+        .pulse {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #e53e3e;
+            margin-right: 6px;
+            animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(0.8);
+                box-shadow: 0 0 0 0 rgba(229, 62, 62, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 6px rgba(229, 62, 62, 0);
+            }
+
+            100% {
+                transform: scale(0.8);
+                box-shadow: 0 0 0 0 rgba(229, 62, 62, 0);
+            }
+        }
+
+        /* ══════════════════════════════
+           SECTION : COLLAGE
+        ══════════════════════════════ */
+        .collage-dropzone {
+            border: 2px dashed var(--border);
+            border-radius: 16px;
+            padding: 32px 20px;
+            text-align: center;
+            cursor: pointer;
+            background: #fafbfc;
+            transition: var(--transition);
+            margin-bottom: 14px;
+        }
+
+        .collage-dropzone:hover,
+        .collage-dropzone.dragover {
+            border-color: var(--fuchsia);
+            background: rgba(217, 27, 129, 0.03);
+        }
+
+        .collage-grid {
+            display: grid;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        /* Grid dynamique selon le nombre d'images */
+        .collage-grid[data-count="1"] {
+            grid-template-columns: 1fr;
+        }
+
+        .collage-grid[data-count="2"] {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .collage-grid[data-count="3"] {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .collage-grid[data-count="4"] {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .collage-grid[data-count="5"] {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .collage-grid[data-count="6"] {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .collage-grid[data-count="7"] {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .collage-grid[data-count="8"] {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .collage-grid[data-count="9"] {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .collage-grid[data-count="10"] {
+            grid-template-columns: repeat(5, 1fr);
+        }
+
+        .collage-grid {
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        }
+
+        .collage-item {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid var(--border);
+            cursor: grab;
+            background: #f0f0f0;
+            aspect-ratio: 1/1;
+            transition: var(--transition);
+        }
+
+        .collage-item:hover {
+            border-color: var(--fuchsia);
+        }
+
+        .collage-item.sortable-ghost {
+            opacity: 0.4;
+        }
+
+        .collage-item.sortable-chosen {
+            transform: scale(1.03);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .collage-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            pointer-events: none;
+        }
+
+        .collage-remove {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(0, 0, 0, 0.55);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .collage-item:hover .collage-remove {
+            opacity: 1;
+        }
+
+        /* ══════════════════════════════
+           SECTION : GÉNÉRATEUR
+        ══════════════════════════════ */
+        #genOutput {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        #canvasGenPreview {
+            width: 100%;
+            border-radius: 10px;
+            background: #000;
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 540px) {
+            .header-inner {
+                gap: 10px;
+            }
+
+            h1 {
+                font-size: 0.78rem;
+            }
+
+            .logo-box {
+                width: 36px;
+                height: 36px;
+            }
+
+            #logoResults {
+                grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+                max-height: 300px;
+            }
+
+            .app-grid {
+                grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            }
+
+            .btn-row {
+                grid-template-columns: 1fr;
+            }
+
+            .captures-grid {
+                grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            }
+        }
+
+        @media (min-width: 700px) {
+            #logoResults {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="header-inner">
+            <div class="logo-box">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSb7q9nFw5FkSNLYQNNWYARWgF9q_xsHnKYkQ&s"
+                    alt="INKU Studio Logo">
+            </div>
+            <div class="header-title">
+                <h1>INKU STUDIO | PRO <span>ULTRA</span></h1>
+                <div class="header-sub">Copyright · Vidéo · Collage · 4K</div>
+            </div>
+        </div>
+        <nav>
+            <button onclick="tab('applier')" class="nav-btn active" id="btn-applier">Appliquer</button>
+            <button onclick="tab('extractor')" class="nav-btn" id="btn-extractor">Vidéo</button>
+            <button onclick="tab('collage')" class="nav-btn" id="btn-collage">Collage</button>
+            <button onclick="tab('generator')" class="nav-btn" id="btn-generator">Créateur 4K</button>
+        </nav>
+    </header>
+
+    <div class="container">
+
+        <!-- ══ APPLIER ══ -->
+        <section id="applier" class="panel active">
+            <div class="card">
+                <span class="section-title">1. Images Sources</span>
+                <div class="drop-zone" id="dropZoneApplier" onclick="document.getElementById('inImgs').click()">
+                    <strong id="animeCount">Sélectionner ou déposer les images</strong>
+                    <small>JPEG, PNG, WEBP · Multiple</small>
+                    <input type="file" id="inImgs" multiple accept="image/*" hidden>
+                </div>
+
+                <span class="section-title">2. Choisir le Copyright</span>
+                <div class="search-row">
+                    <input type="text" id="logoSearch" class="search-bar"
+                        placeholder="Rechercher... (ex: scarlet, oshi, naruto)">
+                    <button class="big-btn secondary"
+                        style="width:auto; margin:0; padding:13px 16px; border-radius:12px; font-size:0.75rem;"
+                        onclick="document.getElementById('customLogoInput').click()">Importer</button>
+                    <input type="file" id="customLogoInput" accept="image/png, image/webp" hidden
+                        onchange="handleCustomLogo()">
+                </div>
+
+                <div id="emptyLogoMsg" class="empty-logo-msg">Tapez un nom pour rechercher un copyright existant.</div>
+                <div id="customLogoPreview" class="custom-logo-preview">
+                    <img id="customLogoImg" src="">
+                    <span>Copyright personnalisé importé</span>
+                </div>
+                <div id="logoResults"></div>
+            </div>
+
+            <div class="card">
+                <span class="section-title">3. Appliquer</span>
+                <button class="big-btn" onclick="fastProcess()">Appliquer les Copyrights</button>
+                <div class="loader" id="applierLoader">
+                    <div class="spinner"></div>
+                    <span id="applierLoaderText">Traitement en cours...</span>
+                </div>
+                <div id="bulkActions" style="display:none; margin-top:14px;">
+                    <button class="big-btn" onclick="downloadZip()">Télécharger le ZIP</button>
+                </div>
+                <div id="appPreview" class="app-grid"></div>
+            </div>
+        </section>
+
+        <!-- ══ VIDÉO EXTRACTOR ══ -->
+        <section id="extractor" class="panel">
+            <div class="card">
+                <span class="section-title">Source vidéo (Épisode Anime)</span>
+
+                <div class="drop-zone" id="videoDropZone" onclick="document.getElementById('videoFile').click()">
+                    <strong id="videoFileName">Sélectionner un fichier vidéo</strong>
+                    <small>MP4, WEBM, MOV</small>
+                    <input type="file" id="videoFile" accept="video/*" hidden onchange="loadLocalVideo(this)">
+                </div>
+
+                <div class="video-preview-wrap" id="videoWrap" style="display:none;">
+                    <video id="videoPreview" controls playsinline></video>
+                </div>
+            </div>
+
+            <div class="card" id="videoControls" style="display:none;">
+                <span class="section-title">Intervalle de capture automatique</span>
+                <div class="interval-grid" id="intervalGrid">
+                    <button class="interval-btn" data-val="1">1 s</button>
+                    <button class="interval-btn selected" data-val="2">2 s</button>
+                    <button class="interval-btn" data-val="5">5 s</button>
+                    <button class="interval-btn" data-val="10">10 s</button>
+                    <button class="interval-btn" data-val="30">30 s</button>
+                    <button class="interval-btn" data-val="60">60 s</button>
+                </div>
+
+                <div class="btn-row">
+                    <button class="big-btn" id="btnStartRealtime" onclick="startFastCapture()"
+                        style="margin-top:0;">Démarrer l'extraction ultra-rapide</button>
+                    <button class="big-btn secondary" id="btnStopRealtime" onclick="stopFastCapture()"
+                        style="margin-top:0;" disabled>Arrêter</button>
+                </div>
+                <div id="realtimeStatus"
+                    style="display:none; text-align:center; font-size:0.8rem; font-weight:700; color:var(--text); margin-top:12px;">
+                    <span class="pulse"></span> Extraction ultra-rapide en cours...
+                </div>
+
+                <div id="capturesSection"
+                    style="display:none; margin-top:20px; border-top: 1px solid var(--border); padding-top: 16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="section-title" style="margin:0;">Captures (<span id="capTotal">0</span>)</span>
+                        <div>
+                            <button class="big-btn secondary" onclick="clearCaptures()"
+                                style="width:auto; padding:8px 14px; margin:0; display:inline-block; font-size:0.75rem;">Effacer</button>
+                            <button class="big-btn" id="btnDlCaptures" onclick="downloadCaptures()"
+                                style="width:auto; padding:8px 14px; margin:0; display:inline-flex; font-size:0.75rem;">ZIP
+                                Complet</button>
+                        </div>
+                    </div>
+                    <div class="captures-grid" id="capturesGrid"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ COLLAGE ══ -->
+        <section id="collage" class="panel">
+            <div class="card">
+                <span class="section-title">Images du collage</span>
+                <div class="collage-dropzone" id="collageDropzone"
+                    onclick="document.getElementById('collageInput').click()">
+                    <strong>Déposer ou sélectionner des images</strong>
+                    <small>La grille s'adapte automatiquement au nombre d'images · Réordonnez par
+                        glisser-déposer</small>
+                    <input type="file" id="collageInput" multiple accept="image/*" hidden>
+                </div>
+
+                <div id="collageGrid" class="collage-grid" style="display:none;"></div>
+
+                <div id="collageActions" style="display:none; margin-top:14px;">
+                    <div class="btn-row">
+                        <button class="big-btn" onclick="downloadCollageZip()" style="margin-top:0;">Télécharger
+                            ZIP</button>
+                        <button class="big-btn secondary" onclick="clearCollage()" style="margin-top:0;">Tout
+                            effacer</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ GÉNÉRATEUR 4K ══ -->
+        <section id="generator" class="panel">
+            <div class="card">
+                <span class="section-title">Générateur de PNG 4K</span>
+                <input type="text" id="wmText" class="search-bar"
+                    placeholder="Texte du copyright... (ex: © INKU Studio)" style="margin-bottom:10px;">
+                <button class="big-btn" onclick="generatePNG()">Générer PNG Ultra HD</button>
+                <div id="genOutput">
+                    <canvas id="canvasGenPreview"></canvas>
+                    <a id="genDl" class="big-btn"
+                        style="display:block; text-decoration:none; background: var(--purple); margin-top:14px;">Télécharger
+                        l'image 4K</a>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ═══════════════════════════════════════════
+        //  UTILS
+        // ═══════════════════════════════════════════
+        function showToast(msg, type = 'success') {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast ' + type;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        function loadImg(url) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = url;
+            });
+        }
+
+        // ═══════════════════════════════════════════
+        //  NAV
+        // ═══════════════════════════════════════════
+        function tab(id) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.getElementById('btn-' + id).classList.add('active');
+        }
+
+        // ═══════════════════════════════════════════
+        //  LOGOS — Section Applier
+        // ═══════════════════════════════════════════
+        let logosData = [];
+        let SELECTED_WM_URL = null;
+        let debounceTimer;
+
+        async function initLogos() {
+            if (typeof window.LOGO_DB !== 'undefined') {
+                logosData = window.LOGO_DB;
+                console.log('Logos chargés depuis logos.js :', logosData.length);
+            } else {
+                try {
+                    const res = await fetch('assets/logos.json');
+                    if (!res.ok) throw new Error("CORS ou Introuvable");
+                    logosData = await res.json();
+                    console.log('Logos chargés depuis logos.json :', logosData.length);
+                } catch (e) {
+                    console.warn("Base de logos introuvable.");
+                }
+            }
+        }
+
+        function displayLogos(list) {
+            const grid = document.getElementById('logoResults');
+            const emptyMsg = document.getElementById('emptyLogoMsg');
+
+            grid.innerHTML = '';
+
+            // On n'affiche la grille que si la recherche n'est pas vide (et on trouve des résultats)
+            const q = document.getElementById('logoSearch').value.toLowerCase().trim();
+
+            if (!q) {
+                grid.style.display = 'none';
+                emptyMsg.style.display = 'block';
+                return;
+            }
+
+            if (list.length === 0) {
+                grid.style.display = 'none';
+                emptyMsg.style.display = 'block';
+                emptyMsg.textContent = "Aucun copyright trouvé pour cette recherche.";
+                return;
+            }
+
+            emptyMsg.style.display = 'none';
+            grid.style.display = 'grid';
+
+            list.forEach(name => {
+                const div = document.createElement('div');
+                div.className = 'logo-item';
+                div.dataset.name = name;
+
+                const img = document.createElement('img');
+                img.src = `assets/copyrights/${name}.png`;
+                img.loading = 'lazy';
+                img.alt = name.replace(/_/g, ' ');
+                img.onerror = () => { div.style.display = 'none'; };
+
+                const span = document.createElement('span');
+                span.textContent = name.replace(/_/g, ' ');
+
+                div.appendChild(img);
+                div.appendChild(span);
+
+                // Si c'est celui qui est sélectionné (pour l'import ou précédent choix)
+                if (`assets/copyrights/${name}.png` === SELECTED_WM_URL) {
+                    div.classList.add('selected');
+                }
+
+                div.addEventListener('click', () => selectCloudLogo(name, div));
+                grid.appendChild(div);
+            });
+        }
+
+        function filterLogos() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                const q = document.getElementById('logoSearch').value.toLowerCase().trim();
+                const filtered = q ? logosData.filter(n => n.toLowerCase().replace(/_/g, ' ').includes(q)) : [];
+                displayLogos(filtered);
+            }, 200);
+        }
+
+        function selectCloudLogo(name, el) {
+            SELECTED_WM_URL = `assets/copyrights/${name}.png`;
+            document.querySelectorAll('.logo-item').forEach(i => i.classList.remove('selected'));
+            el.classList.add('selected');
+            // On enlève le custom logo vu qu'on a pris un du cloud
+            document.getElementById('customLogoPreview').style.display = 'none';
+            document.getElementById('customLogoInput').value = '';
+        }
+
+        function handleCustomLogo() {
+            const input = document.getElementById('customLogoInput');
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                const url = URL.createObjectURL(file);
+                SELECTED_WM_URL = url;
+
+                document.querySelectorAll('.logo-item').forEach(i => i.classList.remove('selected'));
+                document.getElementById('logoSearch').value = '';
+                document.getElementById('logoResults').style.display = 'none';
+                document.getElementById('emptyLogoMsg').style.display = 'none';
+
+                const preview = document.getElementById('customLogoPreview');
+                preview.style.display = 'flex';
+                document.getElementById('customLogoImg').src = url;
+
+                showToast('Copyright personnalisé prêt !');
+            }
+        }
+
+        // Drop zone applier
+        const dropZoneApplier = document.getElementById('dropZoneApplier');
+        const inImgs = document.getElementById('inImgs');
+
+        dropZoneApplier.addEventListener('dragover', e => { e.preventDefault(); dropZoneApplier.classList.add('dragover'); });
+        dropZoneApplier.addEventListener('dragleave', () => dropZoneApplier.classList.remove('dragover'));
+        dropZoneApplier.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZoneApplier.classList.remove('dragover');
+            const dt = new DataTransfer();
+            [...e.dataTransfer.files].filter(f => f.type.startsWith('image/')).forEach(f => dt.items.add(f));
+            inImgs.files = dt.files;
+            updateAnimeCount();
+        });
+
+        inImgs.addEventListener('change', updateAnimeCount);
+
+        function updateAnimeCount() {
+            const count = inImgs.files.length;
+            document.getElementById('animeCount').textContent = count ? `${count} image(s) sélectionnée(s)` : 'Sélectionner ou déposer les images';
+        }
+
+        document.getElementById('logoSearch').addEventListener('input', filterLogos);
+
+        async function fastProcess() {
+            if (!SELECTED_WM_URL) return showToast('Sélectionne un copyright d\'abord', 'error');
+            const files = inImgs.files;
+            if (!files.length) return showToast('Ajoute des images', 'error');
+
+            const loader = document.getElementById('applierLoader');
+            const loaderText = document.getElementById('applierLoaderText');
+            loader.classList.add('active');
+            const preview = document.getElementById('appPreview');
+            preview.innerHTML = '';
+
+            let zip = new JSZip();
+
+            try {
+                const wmImg = await loadImg(SELECTED_WM_URL);
+
+                for (let i = 0; i < files.length; i++) {
+                    loaderText.textContent = `Traitement ${i + 1} / ${files.length}...`;
+                    const f = files[i];
+                    const img = await loadImg(URL.createObjectURL(f));
+                    const cv = document.createElement('canvas');
+                    cv.width = img.width;
+                    cv.height = img.height;
+                    const ctx = cv.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+
+                    // Calculer la taille du copyright (prend 100% de la largeur)
+                    ctx.drawImage(wmImg, 0, 0, cv.width, cv.height);
+
+                    const dataUrl = cv.toDataURL('image/jpeg', 0.92);
+                    const blob = await (await fetch(dataUrl)).blob();
+                    zip.file('INKU_' + f.name.replace(/\.[^.]+$/, '') + '.jpg', blob);
+
+                    const div = document.createElement('div');
+                    div.className = 'app-item';
+                    const imgEl = document.createElement('img');
+                    imgEl.src = dataUrl;
+                    imgEl.alt = f.name;
+                    div.appendChild(imgEl);
+                    preview.appendChild(div);
+                }
+
+                window.currentZip = zip;
+                document.getElementById('bulkActions').style.display = 'block';
+                showToast(`${files.length} image(s) traitée(s)`);
+            } catch (e) {
+                showToast('Erreur pendant le traitement', 'error');
+            } finally {
+                loader.classList.remove('active');
+            }
+        }
+
+        async function downloadZip() {
+            const content = await window.currentZip.generateAsync({ type: 'blob' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = 'INKU_STUDIO_PACK.zip';
+            link.click();
+        }
+
+        // ═══════════════════════════════════════════
+        //  VIDÉO EXTRACTOR (EXTRACTION RAPIDE OFF-SCREEN)
+        // ═══════════════════════════════════════════
+        let videoFileUrl = null;
+        let selectedInterval = 2; // secondes
+        let liveCapturesList = [];
+        let isExtracting = false;
+        let extractVideoElem = null;
+
+        // Sélection intervalle
+        document.querySelectorAll('.interval-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.interval-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selectedInterval = parseInt(btn.dataset.val);
+            });
+        });
+
+        const videoDropZone = document.getElementById('videoDropZone');
+
+        videoDropZone.addEventListener('dragover', e => { e.preventDefault(); videoDropZone.classList.add('dragover'); });
+        videoDropZone.addEventListener('dragleave', () => videoDropZone.classList.remove('dragover'));
+        videoDropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            videoDropZone.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                const input = document.getElementById('videoFile');
+                input.files = e.dataTransfer.files;
+                loadLocalVideo(input);
+            }
+        });
+
+        function loadLocalVideo(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                document.getElementById('videoFileName').textContent = file.name;
+
+                if (videoFileUrl) URL.revokeObjectURL(videoFileUrl);
+                videoFileUrl = URL.createObjectURL(file);
+
+                const vid = document.getElementById('videoPreview');
+                vid.src = videoFileUrl;
+
+                document.getElementById('videoWrap').style.display = 'block';
+                document.getElementById('videoControls').style.display = 'block';
+
+                // Si on change de vidéo on arrête la capture auto s'il y en avait une
+                stopFastCapture();
+                clearCaptures();
+            }
+        }
+
+        function startFastCapture() {
+            if (!videoFileUrl) return showToast('Sélectionnez d\'abord une vidéo', 'error');
+            if (isExtracting) return;
+
+            // Préparation UI
+            isExtracting = true;
+            document.getElementById('btnStartRealtime').disabled = true;
+            document.getElementById('btnStopRealtime').disabled = false;
+
+            const statusEl = document.getElementById('realtimeStatus');
+            statusEl.style.display = 'block';
+            statusEl.innerHTML = '<span class="pulse"></span> Extraction ultra-rapide en cours... (0%)';
+
+            document.getElementById('capturesSection').style.display = 'block';
+
+            // Element vidéo caché pour chercher sans affecter le lecteur principal
+            extractVideoElem = document.createElement('video');
+            extractVideoElem.src = videoFileUrl;
+            extractVideoElem.muted = true;
+            extractVideoElem.playsInline = true;
+
+            // On attend que les métadonnées (durée, taille) soient chargées
+            extractVideoElem.addEventListener('loadeddata', () => {
+                extractNextFrame(0);
+            });
+
+            // C'est l'événement déclenché quand on a fini de se déplacer à un instant T
+            extractVideoElem.addEventListener('seeked', () => {
+                if (!isExtracting) return;
+
+                // Dessiner sur le canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = extractVideoElem.videoWidth || 1280;
+                canvas.height = extractVideoElem.videoHeight || 720;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(extractVideoElem, 0, 0, canvas.width, canvas.height);
+
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.90);
+                liveCapturesList.push(dataUrl);
+                addCaptureToGrid(dataUrl, liveCapturesList.length);
+
+                // Mettre à jour le pourcentage
+                const percent = Math.min(100, Math.floor((extractVideoElem.currentTime / extractVideoElem.duration) * 100));
+                document.getElementById('realtimeStatus').innerHTML = `<span class="pulse"></span> Extraction ultra-rapide en cours... (${percent}%)`;
+
+                // Lancer la frame suivante
+                const nextTime = extractVideoElem.currentTime + selectedInterval;
+                extractNextFrame(nextTime);
+            });
+        }
+
+        function extractNextFrame(time) {
+            if (!isExtracting || !extractVideoElem) return;
+
+            if (time > extractVideoElem.duration) {
+                finishFastCapture();
+                return;
+            }
+
+            // Déplace le curseur vidéo. Ça déclenchera l'événement 'seeked' quand fini
+            extractVideoElem.currentTime = time;
+        }
+
+        function stopFastCapture() {
+            if (!isExtracting) return;
+            isExtracting = false;
+
+            document.getElementById('btnStartRealtime').disabled = false;
+            document.getElementById('btnStopRealtime').disabled = true;
+            document.getElementById('realtimeStatus').style.display = 'none';
+
+            if (extractVideoElem) {
+                extractVideoElem.removeAttribute('src');
+                extractVideoElem.load();
+                extractVideoElem = null;
+            }
+        }
+
+        function finishFastCapture() {
+            stopFastCapture();
+            document.getElementById('realtimeStatus').style.display = 'block';
+            document.getElementById('realtimeStatus').innerHTML = `✅ Extraction terminée ! (${liveCapturesList.length} images)`;
+            showToast('Extraction terminée !');
+        }
+
+        function addCaptureToGrid(dataUrl, index) {
+            const grid = document.getElementById('capturesGrid');
+            document.getElementById('capTotal').textContent = index;
+
+            const div = document.createElement('div');
+            div.className = 'capture-thumb';
+
+            const img = document.createElement('img');
+            img.src = dataUrl;
+
+            const actions = document.createElement('div');
+            actions.className = 'capture-actions';
+
+            const num = document.createElement('span');
+            num.className = 'cap-num';
+            num.textContent = '#' + index;
+
+            const dlBtn = document.createElement('a');
+            dlBtn.className = 'btn-dl-small';
+            dlBtn.textContent = 'Télécharger';
+            dlBtn.href = dataUrl;
+            dlBtn.download = `inku_capture_${String(index).padStart(3, '0')}.jpg`;
+
+            actions.appendChild(num);
+            actions.appendChild(dlBtn);
+
+            div.appendChild(img);
+            div.appendChild(actions);
+
+            grid.prepend(div); // Ajoute en haut de la liste pour voir les derniers arriver
+        }
+
+        async function downloadCaptures() {
+            if (liveCapturesList.length === 0) return showToast('Aucune capture disponible', 'error');
+            showToast('Préparation du ZIP complet...');
+
+            const zip = new JSZip();
+            liveCapturesList.forEach((url, i) => {
+                const b64 = url.split(',')[1];
+                zip.file(`inku_capture_${String(i + 1).padStart(3, '0')}.jpg`, b64, { base64: true });
+            });
+
+            const blob = await zip.generateAsync({ type: 'blob' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'INKU_STUDIO_CAPTURES.zip';
+            a.click();
+        }
+
+        function clearCaptures() {
+            liveCapturesList = [];
+            document.getElementById('capturesGrid').innerHTML = '';
+            document.getElementById('capTotal').textContent = '0';
+            document.getElementById('capturesSection').style.display = 'none';
+
+            // S'assure que si c'était en cours on l'arrête
+            stopFastCapture();
+            showToast('Captures effacées');
+        }
+
+        // ═══════════════════════════════════════════
+        //  COLLAGE — Section Collage
+        // ═══════════════════════════════════════════
+        const collageDropzone = document.getElementById('collageDropzone');
+        const collageInput = document.getElementById('collageInput');
+        let collageFiles = [];
+        let sortableCollage = null;
+
+        collageDropzone.addEventListener('dragover', e => { e.preventDefault(); collageDropzone.classList.add('dragover'); });
+        collageDropzone.addEventListener('dragleave', () => collageDropzone.classList.remove('dragover'));
+        collageDropzone.addEventListener('drop', e => {
+            e.preventDefault();
+            collageDropzone.classList.remove('dragover');
+            handleCollageFiles([...e.dataTransfer.files]);
+        });
+
+        collageInput.addEventListener('change', () => handleCollageFiles([...collageInput.files]));
+
+        async function handleCollageFiles(files) {
+            const imageFiles = files.filter(f => f.type.startsWith('image/'));
+            for (const f of imageFiles) {
+                const dataUrl = await fileToDataUrl(f);
+                collageFiles.push({ name: f.name, dataUrl });
+            }
+            renderCollageGrid();
+        }
+
+        function fileToDataUrl(file) {
+            return new Promise(resolve => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function renderCollageGrid() {
+            const grid = document.getElementById('collageGrid');
+            const actions = document.getElementById('collageActions');
+            const count = collageFiles.length;
+
+            if (!count) {
+                grid.style.display = 'none';
+                actions.style.display = 'none';
+                return;
+            }
+
+            grid.style.display = 'grid';
+            actions.style.display = 'block';
+            grid.dataset.count = count;
+            grid.innerHTML = '';
+
+            collageFiles.forEach((item, idx) => {
+                const div = document.createElement('div');
+                div.className = 'collage-item';
+                div.dataset.index = idx;
+
+                const img = document.createElement('img');
+                img.src = item.dataUrl;
+                img.alt = item.name;
+
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'collage-remove';
+                removeBtn.innerHTML = 'X';
+                removeBtn.title = 'Supprimer';
+                removeBtn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    collageFiles.splice(idx, 1);
+                    renderCollageGrid();
+                });
+
+                div.appendChild(img);
+                div.appendChild(removeBtn);
+                grid.appendChild(div);
+            });
+
+            if (sortableCollage) sortableCollage.destroy();
+            sortableCollage = new Sortable(grid, {
+                animation: 200,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                onEnd: () => {
+                    const newOrder = [];
+                    grid.querySelectorAll('.collage-item').forEach(el => {
+                        newOrder.push(collageFiles[parseInt(el.dataset.index)]);
+                    });
+                    collageFiles = newOrder;
+                    renderCollageGrid();
+                }
+            });
+        }
+
+        async function downloadCollageZip() {
+            if (!collageFiles.length) return showToast('Aucune image', 'error');
+            const zip = new JSZip();
+
+            const orderedFiles = [];
+            document.querySelectorAll('#collageGrid .collage-item').forEach(el => {
+                orderedFiles.push(collageFiles[parseInt(el.dataset.index)]);
+            });
+
+            orderedFiles.forEach((item, i) => {
+                const b64 = item.dataUrl.split(',')[1];
+                const ext = item.dataUrl.substring(item.dataUrl.indexOf('/') + 1, item.dataUrl.indexOf(';'));
+                zip.file(`collage_${String(i + 1).padStart(2, '0')}.${ext}`, b64, { base64: true });
+            });
+
+            const blob = await zip.generateAsync({ type: 'blob' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'INKU_STUDIO_COLLAGE.zip';
+            a.click();
+            showToast(`${orderedFiles.length} images téléchargées`);
+        }
+
+        function clearCollage() {
+            collageFiles = [];
+            renderCollageGrid();
+            if (sortableCollage) { sortableCollage.destroy(); sortableCollage = null; }
+            showToast('Collage effacé');
+        }
+
+        // ═══════════════════════════════════════════
+        //  GÉNÉRATEUR PNG 4K
+        // ═══════════════════════════════════════════
+        function generatePNG() {
+            const text = document.getElementById('wmText').value.trim() || '© INKU Studio';
+            const canvas = document.getElementById('canvasGenPreview');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 3840;
+            canvas.height = 2160;
+            ctx.clearRect(0, 0, 3840, 2160);
+
+            const grad = ctx.createLinearGradient(0, 1700, 0, 2160);
+            grad.addColorStop(0, 'rgba(0,0,0,0)');
+            grad.addColorStop(1, 'rgba(0,0,0,0.7)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 1700, 3840, 460);
+
+            ctx.font = 'bold 64px Arial';
+            ctx.fillStyle = 'white';
+            ctx.shadowColor = 'rgba(0,0,0,0.6)';
+            ctx.shadowBlur = 10;
+            ctx.fillText('© ' + text, 80, 2100);
+
+            const u = canvas.toDataURL('image/png');
+            const dlLink = document.getElementById('genDl');
+            dlLink.href = u;
+            dlLink.download = (text || 'copyright') + '.png';
+            document.getElementById('genOutput').style.display = 'block';
+            showToast('PNG 4K généré');
+        }
+
+        // ═══════════════════════════════════════════
+        //  INIT
+        // ═══════════════════════════════════════════
+        initLogos();
+    </script>
+
+</body>
+
+</html>
