@@ -425,7 +425,7 @@
         .app-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 10px;
+            gap: 12px;
             margin-top: 16px;
         }
 
@@ -433,13 +433,32 @@
             border-radius: var(--radius-sm);
             overflow: hidden;
             border: 1px solid var(--border);
-            background: #f8f9fa;
+            background: #fff;
             position: relative;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         }
 
         .app-item img {
             width: 100%;
             display: block;
+        }
+
+        .app-item-actions {
+            padding: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+        }
+
+        .app-item-name {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 60px;
         }
 
         /* ── TOAST ── */
@@ -874,7 +893,10 @@
                     <span id="applierLoaderText">Traitement en cours...</span>
                 </div>
                 <div id="bulkActions" style="display:none; margin-top:14px;">
-                    <button class="big-btn" onclick="downloadZip()">Télécharger le ZIP</button>
+                    <button class="big-btn" onclick="downloadAllProcessed()">Tout Télécharger</button>
+                    <small
+                        style="display:block; text-align:center; margin-top:6px; font-size:0.7rem; color:var(--text-muted);">Les
+                        images seront enregistrées une par une dans votre dossier de téléchargement.</small>
                 </div>
                 <div id="appPreview" class="app-grid"></div>
             </div>
@@ -1150,6 +1172,8 @@
 
         document.getElementById('logoSearch').addEventListener('input', filterLogos);
 
+        let processedImagesList = []; // Pour stocker les images prêtes à télécharger
+
         async function fastProcess() {
             if (!SELECTED_WM_URL) return showToast('Sélectionne un copyright d\'abord', 'error');
             const files = inImgs.files;
@@ -1161,7 +1185,7 @@
             const preview = document.getElementById('appPreview');
             preview.innerHTML = '';
 
-            let zip = new JSZip();
+            processedImagesList = []; // Reset liste
 
             try {
                 const wmImg = await loadImg(SELECTED_WM_URL);
@@ -1180,19 +1204,39 @@
                     ctx.drawImage(wmImg, 0, 0, cv.width, cv.height);
 
                     const dataUrl = cv.toDataURL('image/jpeg', 0.92);
-                    const blob = await (await fetch(dataUrl)).blob();
-                    zip.file('INKU_' + f.name.replace(/\.[^.]+$/, '') + '.jpg', blob);
+                    const finalName = 'INKU_' + f.name.replace(/\.[^.]+$/, '') + '.jpg';
+
+                    processedImagesList.push({ url: dataUrl, name: finalName });
 
                     const div = document.createElement('div');
                     div.className = 'app-item';
+
                     const imgEl = document.createElement('img');
                     imgEl.src = dataUrl;
                     imgEl.alt = f.name;
+
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.className = 'app-item-actions';
+
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'app-item-name';
+                    nameSpan.textContent = finalName;
+                    nameSpan.title = finalName; // tooltip complet sur hover
+
+                    const dlBtn = document.createElement('a');
+                    dlBtn.className = 'btn-dl-small';
+                    dlBtn.textContent = 'D/L';
+                    dlBtn.href = dataUrl;
+                    dlBtn.download = finalName;
+
+                    actionsDiv.appendChild(nameSpan);
+                    actionsDiv.appendChild(dlBtn);
+
                     div.appendChild(imgEl);
+                    div.appendChild(actionsDiv);
                     preview.appendChild(div);
                 }
 
-                window.currentZip = zip;
                 document.getElementById('bulkActions').style.display = 'block';
                 showToast(`${files.length} image(s) traitée(s)`);
             } catch (e) {
@@ -1202,12 +1246,22 @@
             }
         }
 
-        async function downloadZip() {
-            const content = await window.currentZip.generateAsync({ type: 'blob' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(content);
-            link.download = 'INKU_STUDIO_PACK.zip';
-            link.click();
+        function downloadAllProcessed() {
+            if (processedImagesList.length === 0) return showToast('Aucune image à télécharger', 'error');
+
+            showToast(`Téléchargement de ${processedImagesList.length} images...`);
+
+            // Créer un délai entre chaque téléchargement pour éviter que le navigateur ne bloque les requêtes multiples
+            processedImagesList.forEach((img, index) => {
+                setTimeout(() => {
+                    const a = document.createElement('a');
+                    a.href = img.url;
+                    a.download = img.name;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }, index * 200); // 200ms entre chaque téléchargement
+            });
         }
 
         // ═══════════════════════════════════════════
@@ -1532,24 +1586,31 @@
         //  GÉNÉRATEUR PNG 4K
         // ═══════════════════════════════════════════
         function generatePNG() {
-            const text = document.getElementById('wmText').value.trim() || '© INKU Studio';
+            let text = document.getElementById('wmText').value.trim();
+            if (!text) text = 'INKU Studio';
+
             const canvas = document.getElementById('canvasGenPreview');
             const ctx = canvas.getContext('2d');
-            canvas.width = 3840;
-            canvas.height = 2160;
-            ctx.clearRect(0, 0, 3840, 2160);
 
-            const grad = ctx.createLinearGradient(0, 1700, 0, 2160);
-            grad.addColorStop(0, 'rgba(0,0,0,0)');
-            grad.addColorStop(1, 'rgba(0,0,0,0.7)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 1700, 3840, 460);
+            // Définition de la résolution 4K
+            const width = 3840;
+            const height = 2160;
+            canvas.width = width;
+            canvas.height = height;
 
-            ctx.font = 'bold 64px Arial';
-            ctx.fillStyle = 'white';
-            ctx.shadowColor = 'rgba(0,0,0,0.6)';
-            ctx.shadowBlur = 10;
-            ctx.fillText('© ' + text, 80, 2100);
+            // Effacer le canvas
+            ctx.clearRect(0, 0, width, height);
+
+            // Paramètres du texte
+            ctx.font = "45px Arial";
+            ctx.fillStyle = "white";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "bottom";
+
+            const leftMargin = 100;  // Marge à gauche
+            const bottomMargin = 67;  // Marge en bas
+
+            ctx.fillText(`© ${text}`, leftMargin, height - bottomMargin);
 
             const u = canvas.toDataURL('image/png');
             const dlLink = document.getElementById('genDl');
