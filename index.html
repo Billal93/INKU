@@ -678,48 +678,8 @@
         }
 
         /* Grid dynamique selon le nombre d'images */
-        .collage-grid[data-count="1"] {
-            grid-template-columns: 1fr;
-        }
-
-        .collage-grid[data-count="2"] {
-            grid-template-columns: 1fr 1fr;
-        }
-
-        .collage-grid[data-count="3"] {
-            grid-template-columns: 1fr 1fr 1fr;
-        }
-
-        .collage-grid[data-count="4"] {
-            grid-template-columns: 1fr 1fr;
-        }
-
-        .collage-grid[data-count="5"] {
-            grid-template-columns: 1fr 1fr 1fr;
-        }
-
-        .collage-grid[data-count="6"] {
-            grid-template-columns: 1fr 1fr 1fr;
-        }
-
-        .collage-grid[data-count="7"] {
-            grid-template-columns: repeat(4, 1fr);
-        }
-
-        .collage-grid[data-count="8"] {
-            grid-template-columns: repeat(4, 1fr);
-        }
-
-        .collage-grid[data-count="9"] {
-            grid-template-columns: repeat(3, 1fr);
-        }
-
-        .collage-grid[data-count="10"] {
-            grid-template-columns: repeat(5, 1fr);
-        }
-
         .collage-grid {
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            grid-template-columns: 1fr 1fr;
         }
 
         .collage-item {
@@ -921,6 +881,7 @@
             <div class="card" id="videoControls" style="display:none;">
                 <span class="section-title">Intervalle de capture automatique</span>
                 <div class="interval-grid" id="intervalGrid">
+                    <button class="interval-btn" data-val="0.5">0.5 s</button>
                     <button class="interval-btn" data-val="1">1 s</button>
                     <button class="interval-btn selected" data-val="2">2 s</button>
                     <button class="interval-btn" data-val="5">5 s</button>
@@ -973,11 +934,13 @@
 
                 <div id="collageActions" style="display:none; margin-top:14px;">
                     <div class="btn-row">
-                        <button class="big-btn" onclick="downloadCollageZip()" style="margin-top:0;">Télécharger
-                            ZIP</button>
-                        <button class="big-btn secondary" onclick="clearCollage()" style="margin-top:0;">Tout
-                            effacer</button>
+                        <button class="big-btn" onclick="generateClassicCollage()" style="margin-top:0;">Collage
+                            Classique</button>
+                        <button class="big-btn" onclick="generateInstaCollage()" style="margin-top:0;">Collage
+                            Insta</button>
                     </div>
+                    <button class="big-btn secondary" onclick="clearCollage()" style="margin-top:10px;">Tout
+                        effacer</button>
                 </div>
             </div>
         </section>
@@ -1278,7 +1241,7 @@
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.interval-btn').forEach(b => b.classList.remove('selected'));
                 btn.classList.add('selected');
-                selectedInterval = parseInt(btn.dataset.val);
+                selectedInterval = parseFloat(btn.dataset.val);
             });
         });
 
@@ -1552,27 +1515,95 @@
             });
         }
 
-        async function downloadCollageZip() {
-            if (!collageFiles.length) return showToast('Aucune image', 'error');
-            const zip = new JSZip();
-
+        function getOrderedCollageFiles() {
             const orderedFiles = [];
             document.querySelectorAll('#collageGrid .collage-item').forEach(el => {
                 orderedFiles.push(collageFiles[parseInt(el.dataset.index)]);
             });
+            return orderedFiles;
+        }
 
-            orderedFiles.forEach((item, i) => {
-                const b64 = item.dataUrl.split(',')[1];
-                const ext = item.dataUrl.substring(item.dataUrl.indexOf('/') + 1, item.dataUrl.indexOf(';'));
-                zip.file(`collage_${String(i + 1).padStart(2, '0')}.${ext}`, b64, { base64: true });
+        async function createMergedCanvas(files, cols) {
+            const loadedImgs = await Promise.all(files.map(item => loadImg(item.dataUrl)));
+            if (!loadedImgs.length) return null;
+
+            // Utilisation max qualité: largeur et hauteur max parmi toutes les images
+            const cellWidth = Math.max(...loadedImgs.map(img => img.width));
+            const cellHeight = Math.max(...loadedImgs.map(img => img.height));
+
+            const rows = Math.ceil(loadedImgs.length / cols);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = cellWidth * cols;
+            canvas.height = cellHeight * rows;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            loadedImgs.forEach((img, index) => {
+                const col = index % cols;
+                const row = Math.floor(index / cols);
+                const x = col * cellWidth;
+                const y = row * cellHeight;
+
+                const ratio = Math.max(cellWidth / img.width, cellHeight / img.height);
+                const drawWidth = img.width * ratio;
+                const drawHeight = img.height * ratio;
+                const drawX = x + (cellWidth - drawWidth) / 2;
+                const drawY = y + (cellHeight - drawHeight) / 2;
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(x, y, cellWidth, cellHeight);
+                ctx.clip();
+                ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+                ctx.restore();
             });
 
-            const blob = await zip.generateAsync({ type: 'blob' });
+            return canvas;
+        }
+
+        async function generateClassicCollage() {
+            const orderedFiles = getOrderedCollageFiles();
+            if (!orderedFiles.length) return showToast('Aucune image', 'error');
+            showToast('Génération Collage 2 Colonnes...');
+
+            const canvas = await createMergedCanvas(orderedFiles, 2);
+            if (!canvas) return;
+
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = 'INKU_STUDIO_COLLAGE.zip';
+            a.href = canvas.toDataURL('image/jpeg', 1.0); // Qualité maximum basique
+            a.download = 'INKU_COLLAGE_2_COLONNES.jpg';
+            document.body.appendChild(a);
             a.click();
-            showToast(`${orderedFiles.length} images téléchargées`);
+            document.body.removeChild(a);
+            showToast('Collage téléchargé !');
+        }
+
+        async function generateInstaCollage() {
+            const orderedFiles = getOrderedCollageFiles();
+            if (!orderedFiles.length) return showToast('Aucune image', 'error');
+            showToast('Génération Collages Insta...', 'success');
+
+            for (let i = 0; i < orderedFiles.length; i += 2) {
+                const pair = orderedFiles.slice(i, i + 2);
+                const canvas = await createMergedCanvas(pair, 1);
+                if (!canvas) continue;
+
+                const url = canvas.toDataURL('image/jpeg', 1.0); // Qualité maximum basique
+                setTimeout(() => {
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `INKU_COLLAGE_INSTA_${Math.floor(i / 2) + 1}.jpg`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }, (i / 2) * 500); // 500ms d'attente pour que le navigateur ne bloque pas
+            }
+
+            const total = Math.ceil(orderedFiles.length / 2);
+            setTimeout(() => showToast(`${total} Collages Insta téléchargés !`), total * 500 + 100);
         }
 
         function clearCollage() {
