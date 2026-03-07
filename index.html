@@ -942,6 +942,18 @@
                     <button class="big-btn secondary" onclick="clearCollage()" style="margin-top:10px;">Tout
                         effacer</button>
                 </div>
+
+                <div id="instaPreviewContainer"
+                    style="display:none; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="section-title" style="margin:0;">Aperçu des paires Insta</span>
+                        <button class="big-btn secondary" onclick="downloadAllInsta()"
+                            style="width:auto; padding:8px 14px; margin:0; display:inline-block; font-size:0.75rem;">Tout
+                            Télécharger</button>
+                    </div>
+                    <div class="captures-grid" id="instaPreview"
+                        style="margin-top:12px; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));"></div>
+                </div>
             </div>
         </section>
 
@@ -1586,30 +1598,82 @@
             if (!orderedFiles.length) return showToast('Aucune image', 'error');
             showToast('Génération Collages Insta...', 'success');
 
+            const previewContainer = document.getElementById('instaPreviewContainer');
+            const previewWrap = document.getElementById('instaPreview');
+            previewWrap.innerHTML = '';
+
             for (let i = 0; i < orderedFiles.length; i += 2) {
                 const pair = orderedFiles.slice(i, i + 2);
                 const canvas = await createMergedCanvas(pair, 1);
                 if (!canvas) continue;
 
                 const url = canvas.toDataURL('image/jpeg', 1.0); // Qualité maximum basique
+                const name = `INKU_COLLAGE_INSTA_${Math.floor(i / 2) + 1}.jpg`;
+
+                const div = document.createElement('div');
+                div.className = 'capture-thumb';
+                div.style.cursor = 'grab';
+
+                const imgEl = document.createElement('img');
+                imgEl.src = url;
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'capture-actions';
+                actionsDiv.style.justifyContent = 'center';
+
+                const dlBtn = document.createElement('a');
+                dlBtn.className = 'btn-dl-small';
+                dlBtn.textContent = 'Télécharger';
+                dlBtn.href = url;
+                dlBtn.download = name;
+                dlBtn.style.width = '100%';
+                dlBtn.style.textAlign = 'center';
+
+                actionsDiv.appendChild(dlBtn);
+                div.appendChild(imgEl);
+                div.appendChild(actionsDiv);
+
+                previewWrap.appendChild(div);
+            }
+
+            previewContainer.style.display = 'block';
+
+            if (window.instaSortable) window.instaSortable.destroy();
+            window.instaSortable = new Sortable(previewWrap, {
+                animation: 200,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen'
+            });
+
+            showToast('Paires Insta générées !', 'success');
+        }
+
+        function downloadAllInsta() {
+            const links = document.querySelectorAll('#instaPreview .btn-dl-small');
+            if (!links.length) return;
+            showToast(`Téléchargement de ${links.length} paires...`);
+            links.forEach((link, index) => {
                 setTimeout(() => {
                     const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `INKU_COLLAGE_INSTA_${Math.floor(i / 2) + 1}.jpg`;
+                    a.href = link.href;
+                    a.download = link.download;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
-                }, (i / 2) * 500); // 500ms d'attente pour que le navigateur ne bloque pas
-            }
-
-            const total = Math.ceil(orderedFiles.length / 2);
-            setTimeout(() => showToast(`${total} Collages Insta téléchargés !`), total * 500 + 100);
+                }, index * 500);
+            });
         }
 
         function clearCollage() {
             collageFiles = [];
             renderCollageGrid();
             if (sortableCollage) { sortableCollage.destroy(); sortableCollage = null; }
+
+            const pv = document.getElementById('instaPreviewContainer');
+            if (pv) pv.style.display = 'none';
+            const wrap = document.getElementById('instaPreview');
+            if (wrap) wrap.innerHTML = '';
+
             showToast('Collage effacé');
         }
 
