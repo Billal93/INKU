@@ -812,6 +812,7 @@
             <button onclick="tab('extractor')" class="nav-btn" id="btn-extractor">Vidéo</button>
             <button onclick="tab('collage')" class="nav-btn" id="btn-collage">Collage</button>
             <button onclick="tab('generator')" class="nav-btn" id="btn-generator">Créateur 4K</button>
+            <button onclick="tab('redaction')" class="nav-btn" id="btn-redaction">✍️ Tweets</button>
         </nav>
     </header>
 
@@ -972,6 +973,58 @@
                         l'image 4K</a>
                 </div>
             </div>
+        </section>
+
+
+        <!-- ══ RÉDACTION TWEETS ══ -->
+        <section id="redaction" class="panel">
+
+            <!-- Tweet Libre -->
+            <div class="card">
+                <span class="section-title">✏️ Tweet Libre</span>
+                <div style="position:relative;">
+                    <textarea id="tweetLibreInput" placeholder="Rédige ton tweet ici..." oninput="updateLibreCount()" onfocus="this.style.borderColor='var(--fuchsia)'" onblur="this.style.borderColor='var(--border)'" style="width:100%;min-height:140px;padding:14px;padding-bottom:32px;border-radius:12px;border:2px solid var(--border);font-size:0.92rem;font-weight:600;line-height:1.55;resize:vertical;outline:none;font-family:inherit;color:var(--text);background:#fafbfc;transition:var(--transition);"></textarea>
+                    <span id="libreCount" style="position:absolute;bottom:10px;right:12px;font-size:0.68rem;font-weight:800;color:var(--text-muted);pointer-events:none;">0 / 280</span>
+                </div>
+                <div class="btn-row" style="margin-top:10px;">
+                    <button class="big-btn" style="margin:0;" onclick="copyLibre()">📋 Copier</button>
+                    <button class="big-btn secondary" style="margin:0;" onclick="clearLibre()">🗑 Effacer</button>
+                </div>
+            </div>
+
+            <!-- Tweet Officiel -->
+            <div class="card">
+                <span class="section-title">🔖 Tweet avec 「OFFICIEL」</span>
+                <div style="background:rgba(217,27,129,0.06);border:1px solid rgba(217,27,129,0.2);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:0.75rem;font-weight:700;color:var(--fuchsia);">
+                    La balise <strong>「OFFICIEL」</strong> est ajoutée automatiquement au début.
+                </div>
+                <textarea id="tweetOfficielInput" placeholder="NOUVELLE ILLUSTRATION DE NARUTO PAR MASASHI KISHIMOTO !
+
+À L'OCCASION DE L'OUVERTURE DE LA ZONE NARUTO AU PARC SPIROU EN FRANCE, DANS 2 JOURS !" oninput="buildOfficiel()" onfocus="this.style.borderColor='var(--fuchsia)'" onblur="this.style.borderColor='var(--border)'" style="width:100%;min-height:120px;padding:14px;border-radius:12px;border:2px solid var(--border);font-size:0.92rem;font-weight:600;line-height:1.55;resize:vertical;outline:none;font-family:inherit;color:var(--text);background:#fafbfc;transition:var(--transition);margin-bottom:12px;"></textarea>
+                <div style="margin-bottom:12px;">
+                    <div style="font-size:0.68rem;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+                        <span>Aperçu</span>
+                        <span id="officielCount" style="color:var(--fuchsia);">0 / 280</span>
+                    </div>
+                    <div id="officielPreview" style="background:#f8f9fa;border:2px solid var(--border);border-radius:12px;padding:14px;font-size:0.9rem;font-weight:700;line-height:1.6;min-height:60px;white-space:pre-wrap;word-break:break-word;color:var(--text);"></div>
+                </div>
+                <div class="btn-row">
+                    <button class="big-btn" style="margin:0;" onclick="copyOfficiel()">📋 Copier le tweet</button>
+                    <button class="big-btn secondary" style="margin:0;" onclick="clearOfficiel()">🗑 Effacer</button>
+                </div>
+            </div>
+
+            <!-- Bloc-notes -->
+            <div class="card">
+                <span class="section-title">📝 Bloc-notes</span>
+                <small style="display:block;margin-bottom:10px;color:var(--text-muted);font-size:0.72rem;font-weight:600;">Sauvegardé automatiquement dans le navigateur</small>
+                <textarea id="blocNotesInput" placeholder="Phrases récurrentes, brouillons, notes..." oninput="saveBlocNotes()" onfocus="this.style.borderColor='var(--fuchsia)'" onblur="this.style.borderColor='var(--border)'" style="width:100%;min-height:180px;padding:14px;border-radius:12px;border:2px solid var(--border);font-size:0.88rem;font-weight:600;line-height:1.55;resize:vertical;outline:none;font-family:inherit;color:var(--text);background:#fafbfc;transition:var(--transition);"></textarea>
+                <div class="btn-row" style="margin-top:10px;">
+                    <button class="big-btn secondary" style="margin:0;" onclick="copyBlocNotes()">📋 Tout copier</button>
+                    <button class="big-btn secondary" style="margin:0;color:#e53e3e;border-color:#fcc;" onclick="clearBlocNotes()">🗑 Effacer</button>
+                </div>
+            </div>
+
         </section>
 
     </div>
@@ -1855,6 +1908,101 @@
             document.getElementById('genOutput').style.display = 'block';
             showToast('PNG 4K généré');
         }
+
+
+        // ═══════════════════════════════════════════
+        //  RÉDACTION TWEETS
+        // ═══════════════════════════════════════════
+
+        // Compte caractères tweet libre
+        function updateLibreCount() {
+            const txt = document.getElementById('tweetLibreInput').value;
+            const el = document.getElementById('libreCount');
+            const len = [...txt].length; // gère les emojis correctement
+            el.textContent = len + ' / 280';
+            el.style.color = len > 280 ? '#e53e3e' : len > 240 ? '#f59e0b' : 'var(--text-muted)';
+        }
+
+        function copyLibre() {
+            const txt = document.getElementById('tweetLibreInput').value;
+            if (!txt.trim()) return showToast('Rien à copier', 'error');
+            navigator.clipboard.writeText(txt).then(() => showToast('Tweet copié !')).catch(() => {
+                // Fallback pour iOS qui bloque clipboard API sans interaction directe
+                const ta = document.getElementById('tweetLibreInput');
+                ta.select(); ta.setSelectionRange(0, 99999);
+                document.execCommand('copy');
+                showToast('Tweet copié !');
+            });
+        }
+
+        function clearLibre() {
+            document.getElementById('tweetLibreInput').value = '';
+            updateLibreCount();
+        }
+
+        // Tweet Officiel
+        function buildOfficiel() {
+            const input = document.getElementById('tweetOfficielInput').value;
+            const full = input.trim() ? '「OFFICIEL」' + input : '';
+            const preview = document.getElementById('officielPreview');
+            const countEl = document.getElementById('officielCount');
+            preview.textContent = full || '';
+            const len = [...full].length;
+            countEl.textContent = len + ' / 280';
+            countEl.style.color = len > 280 ? '#e53e3e' : len > 240 ? '#f59e0b' : 'var(--fuchsia)';
+        }
+
+        function copyOfficiel() {
+            const input = document.getElementById('tweetOfficielInput').value;
+            if (!input.trim()) return showToast('Rien à copier', 'error');
+            const full = '「OFFICIEL」' + input;
+            navigator.clipboard.writeText(full).then(() => showToast('Tweet Officiel copié !')).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = full; ta.style.position = 'fixed'; ta.style.opacity = '0';
+                document.body.appendChild(ta); ta.focus(); ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast('Tweet Officiel copié !');
+            });
+        }
+
+        function clearOfficiel() {
+            document.getElementById('tweetOfficielInput').value = '';
+            document.getElementById('officielPreview').textContent = '';
+            document.getElementById('officielCount').textContent = '0 / 280';
+        }
+
+        // Bloc-notes avec sauvegarde localStorage
+        function saveBlocNotes() {
+            try { localStorage.setItem('inku_blocnotes', document.getElementById('blocNotesInput').value); } catch(e) {}
+        }
+
+        function loadBlocNotes() {
+            try {
+                const saved = localStorage.getItem('inku_blocnotes');
+                if (saved) document.getElementById('blocNotesInput').value = saved;
+            } catch(e) {}
+        }
+
+        function copyBlocNotes() {
+            const txt = document.getElementById('blocNotesInput').value;
+            if (!txt.trim()) return showToast('Rien à copier', 'error');
+            navigator.clipboard.writeText(txt).then(() => showToast('Notes copiées !')).catch(() => {
+                const ta = document.getElementById('blocNotesInput');
+                ta.select(); ta.setSelectionRange(0, 99999);
+                document.execCommand('copy');
+                showToast('Notes copiées !');
+            });
+        }
+
+        function clearBlocNotes() {
+            if (!confirm('Effacer le bloc-notes ?')) return;
+            document.getElementById('blocNotesInput').value = '';
+            try { localStorage.removeItem('inku_blocnotes'); } catch(e) {}
+            showToast('Bloc-notes effacé');
+        }
+
+        loadBlocNotes();
 
         // ═══════════════════════════════════════════
         //  INIT
