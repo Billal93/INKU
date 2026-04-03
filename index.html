@@ -1137,9 +1137,9 @@
             // Mettre à jour le sous-titre du modal selon navigateur
             const modalSub = document.getElementById('iosModalSub');
             if (isChromeiOS) {
-                modalSub.innerHTML = '⚠️ Chrome iOS : appui long sur l'image → <strong>"Enregistrer l'image"</strong>';
+                modalSub.innerHTML = '⚠️ Chrome iOS : appui long sur l\'image → <strong>"Enregistrer l\'image"</strong>';
             } else {
-                modalSub.innerHTML = '👆 Safari : appui long sur l'image → <strong>"Enregistrer dans Photos"</strong>';
+                modalSub.innerHTML = '👆 Safari : appui long sur l\'image → <strong>"Enregistrer dans Photos"</strong>';
             }
 
             items.forEach(item => {
@@ -1156,7 +1156,7 @@
 
                 const label = document.createElement('div');
                 label.textContent = isChromeiOS
-                    ? '👆 Appui long → "Enregistrer l'image"'
+                    ? '👆 Appui long → "Enregistrer l\'image"'
                     : '👆 Appui long → "Enregistrer dans Photos"';
                 label.style.cssText = 'font-size:0.7rem; font-weight:800; color:#d91b81; padding:9px 12px; background:#fff; text-align:center;';
 
