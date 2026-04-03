@@ -995,21 +995,15 @@
             <!-- Tweet Officiel -->
             <div class="card">
                 <span class="section-title">🔖 Tweet avec 「OFFICIEL」</span>
-                <div style="background:rgba(217,27,129,0.06);border:1px solid rgba(217,27,129,0.2);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:0.75rem;font-weight:700;color:var(--fuchsia);">
-                    La balise <strong>「OFFICIEL」</strong> est ajoutée automatiquement au début.
+                <div style="background:rgba(217,27,129,0.06);border:1px solid rgba(217,27,129,0.2);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:0.8rem;font-weight:700;color:var(--fuchsia);">
+                    La balise <strong>「OFFICIEL」</strong> sera ajoutée automatiquement au début lors de la copie.
                 </div>
-                <textarea id="tweetOfficielInput" placeholder="NOUVELLE ILLUSTRATION DE NARUTO PAR MASASHI KISHIMOTO !
-
-À L'OCCASION DE L'OUVERTURE DE LA ZONE NARUTO AU PARC SPIROU EN FRANCE, DANS 2 JOURS !" oninput="buildOfficiel()" onfocus="this.style.borderColor='var(--fuchsia)'" onblur="this.style.borderColor='var(--border)'" style="width:100%;min-height:120px;padding:14px;border-radius:12px;border:2px solid var(--border);font-size:0.92rem;font-weight:600;line-height:1.55;resize:vertical;outline:none;font-family:inherit;color:var(--text);background:#fafbfc;transition:var(--transition);margin-bottom:12px;"></textarea>
-                <div style="margin-bottom:12px;">
-                    <div style="font-size:0.68rem;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
-                        <span>Aperçu</span>
-                        <span id="officielCount" style="color:var(--fuchsia);">0 / 280</span>
-                    </div>
-                    <div id="officielPreview" style="background:#f8f9fa;border:2px solid var(--border);border-radius:12px;padding:14px;font-size:0.9rem;font-weight:700;line-height:1.6;min-height:60px;white-space:pre-wrap;word-break:break-word;color:var(--text);"></div>
+                <div style="position:relative;">
+                    <textarea id="tweetOfficielInput" placeholder="Écris ton contenu ici..." oninput="buildOfficiel()" onfocus="this.style.borderColor='var(--fuchsia)'" onblur="this.style.borderColor='var(--border)'" style="width:100%;min-height:130px;padding:14px;padding-bottom:32px;border-radius:12px;border:2px solid var(--border);font-size:0.92rem;font-weight:600;line-height:1.55;resize:vertical;outline:none;font-family:inherit;color:var(--text);background:#fafbfc;transition:var(--transition);"></textarea>
+                    <span id="officielCount" style="position:absolute;bottom:10px;right:12px;font-size:0.68rem;font-weight:800;color:var(--fuchsia);pointer-events:none;">0 / 280</span>
                 </div>
-                <div class="btn-row">
-                    <button class="big-btn" style="margin:0;" onclick="copyOfficiel()">📋 Copier le tweet</button>
+                <div class="btn-row" style="margin-top:10px;">
+                    <button class="big-btn" style="margin:0;" onclick="copyOfficiel()">📋 Copier avec 「OFFICIEL」</button>
                     <button class="big-btn secondary" style="margin:0;" onclick="clearOfficiel()">🗑 Effacer</button>
                 </div>
             </div>
@@ -1052,10 +1046,8 @@
 
     <script>
         // ═══════════════════════════════════════════
-        //  iOS COMPAT — détection + download
+        //  iOS COMPAT — détection (pas de DOM ici)
         // ═══════════════════════════════════════════
-
-        // Détection device complète
         const UA = navigator.userAgent;
         const isIOS = /iPad|iPhone|iPod/.test(UA) && !window.MSStream;
         const isChromeiOS = isIOS && /CriOS/.test(UA);
@@ -1064,7 +1056,7 @@
             if (/iPhone/.test(UA)) return 'iPhone';
             if (/iPad/.test(UA)) return 'iPad';
             if (/iPod/.test(UA)) return 'iPod';
-            return null;
+            return 'Desktop';
         })();
         const browserName = (() => {
             if (/CriOS/.test(UA)) return 'Chrome iOS';
@@ -1076,26 +1068,30 @@
             if (/Firefox/.test(UA)) return 'Firefox';
             return 'Autre';
         })();
-        const screenInfo = `${screen.width}×${screen.height} (ratio ${window.devicePixelRatio || 1}x)`;
+        const screenInfo = screen.width + '×' + screen.height + ' (' + (window.devicePixelRatio || 1) + 'x)';
 
-        // Affichage banner header
-        window.addEventListener('DOMContentLoaded', () => {
-            const banner = document.getElementById('deviceBanner');
+        // ═══════════════════════════════════════════
+        //  TOUT LE RESTE dans DOMContentLoaded
+        // ═══════════════════════════════════════════
+        document.addEventListener('DOMContentLoaded', function() {
+
+        // ── Bannière device ──
+        const banner = document.getElementById('deviceBanner');
+        if (banner) {
+            banner.style.display = 'block';
             if (isIOS) {
-                banner.style.display = 'block';
-                banner.style.background = 'linear-gradient(135deg, rgba(217,27,129,0.1), rgba(130,39,143,0.1))';
+                banner.style.background = 'linear-gradient(135deg,rgba(217,27,129,0.1),rgba(130,39,143,0.1))';
                 banner.style.border = '1px solid rgba(217,27,129,0.25)';
                 banner.style.color = '#82278f';
-                banner.innerHTML = `📱 <strong>${deviceModel} détecté</strong> · ${browserName} · ${screenInfo} · <span style="color:#d91b81">Mode iOS actif</span> — Les images s'ouvrent en galerie (appui long pour sauvegarder)`;
+                banner.innerHTML = '📱 <strong>' + deviceModel + ' détecté</strong> · ' + browserName + ' · ' + screenInfo + ' · <span style="color:#d91b81">Mode iOS actif</span>';
             } else {
-                banner.style.display = 'block';
                 banner.style.background = 'rgba(0,0,0,0.04)';
                 banner.style.color = '#9ca3af';
-                banner.innerHTML = `💻 <strong>${browserName}</strong> · ${screenInfo} · Mode standard actif`;
+                banner.innerHTML = '💻 <strong>' + browserName + '</strong> · ' + screenInfo + ' · Mode standard';
             }
-        });
+        }
 
-        // Convertit dataURL → Blob URL pour meilleure compatibilité Chrome iOS
+        // ── Utilitaires ──
         function dataUrlToBlobUrl(dataUrl) {
             const arr = dataUrl.split(',');
             const mime = arr[0].match(/:(.*?);/)[1];
@@ -1107,69 +1103,38 @@
         }
 
         function smartDownload(url, filename) {
-            if (isIOS) {
-                showIOSModal([{ url, name: filename }]);
-            } else {
-                const a = document.createElement('a');
-                a.href = url; a.download = filename;
-                document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            }
+            if (isIOS) { showIOSModal([{ url, name: filename }]); }
+            else { const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
         }
 
         function smartDownloadAll(items) {
-            if (isIOS) {
-                showIOSModal(items);
-            } else {
-                items.forEach((item, i) => {
-                    setTimeout(() => {
-                        const a = document.createElement('a');
-                        a.href = item.url; a.download = item.name;
-                        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                    }, i * 220);
-                });
-            }
+            if (isIOS) { showIOSModal(items); }
+            else { items.forEach((item, i) => { setTimeout(() => { const a = document.createElement('a'); a.href = item.url; a.download = item.name; document.body.appendChild(a); a.click(); document.body.removeChild(a); }, i * 220); }); }
         }
 
         function showIOSModal(items) {
             const grid = document.getElementById('iosModalGrid');
-            grid.innerHTML = '';
-
-            // Mettre à jour le sous-titre du modal selon navigateur
             const modalSub = document.getElementById('iosModalSub');
-            if (isChromeiOS) {
-                modalSub.innerHTML = '⚠️ Chrome iOS : appui long sur l\'image → <strong>"Enregistrer l\'image"</strong>';
-            } else {
-                modalSub.innerHTML = '👆 Safari : appui long sur l\'image → <strong>"Enregistrer dans Photos"</strong>';
-            }
-
+            grid.innerHTML = '';
+            if (modalSub) modalSub.innerHTML = isChromeiOS
+                ? '⚠️ Chrome iOS : appui long → <strong>"Enregistrer l\'image"</strong>'
+                : '👆 Safari : appui long → <strong>"Enregistrer dans Photos"</strong>';
             items.forEach(item => {
                 const wrap = document.createElement('div');
-                wrap.style.cssText = 'border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,0.12); background:#111;';
-
-                // Convertir en blob URL pour meilleure compat Chrome iOS
+                wrap.style.cssText = 'border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.12);background:#111;';
                 const blobUrl = item.url.startsWith('blob:') ? item.url : dataUrlToBlobUrl(item.url);
-
                 const img = document.createElement('img');
                 img.src = blobUrl;
-                img.style.cssText = 'width:100%; display:block; -webkit-touch-callout:default;';
-                // -webkit-touch-callout:default permet le menu contextuel sur appui long
-
+                img.style.cssText = 'width:100%;display:block;-webkit-touch-callout:default;';
                 const label = document.createElement('div');
-                label.textContent = isChromeiOS
-                    ? '👆 Appui long → "Enregistrer l\'image"'
-                    : '👆 Appui long → "Enregistrer dans Photos"';
-                label.style.cssText = 'font-size:0.7rem; font-weight:800; color:#d91b81; padding:9px 12px; background:#fff; text-align:center;';
-
-                wrap.appendChild(img);
-                wrap.appendChild(label);
+                label.textContent = isChromeiOS ? '👆 Appui long → "Enregistrer l\'image"' : '👆 Appui long → "Enregistrer dans Photos"';
+                label.style.cssText = 'font-size:0.7rem;font-weight:800;color:#d91b81;padding:9px 12px;background:#fff;text-align:center;';
+                wrap.appendChild(img); wrap.appendChild(label);
                 grid.appendChild(wrap);
             });
             document.getElementById('iosModal').style.display = 'flex';
         }
 
-        // ═══════════════════════════════════════════
-        //  UTILS
-        // ═══════════════════════════════════════════
         function showToast(msg, type = 'success') {
             const t = document.getElementById('toast');
             t.textContent = msg;
@@ -1197,9 +1162,11 @@
             document.getElementById(id).classList.add('active');
             document.getElementById('btn-' + id).classList.add('active');
         }
+        // Expose tab globally so onclick= attributes work
+        window.tab = tab;
 
         // ═══════════════════════════════════════════
-        //  LOGOS — Section Applier
+        //  LOGOS
         // ═══════════════════════════════════════════
         let logosData = [];
         let SELECTED_WM_URL = null;
@@ -1208,66 +1175,37 @@
         async function initLogos() {
             if (typeof window.LOGO_DB !== 'undefined') {
                 logosData = window.LOGO_DB;
-                console.log('Logos chargés depuis logos.js :', logosData.length);
             } else {
                 try {
                     const res = await fetch('assets/logos.json');
-                    if (!res.ok) throw new Error("CORS ou Introuvable");
+                    if (!res.ok) throw new Error('Introuvable');
                     logosData = await res.json();
-                    console.log('Logos chargés depuis logos.json :', logosData.length);
-                } catch (e) {
-                    console.warn("Base de logos introuvable.");
-                }
+                } catch (e) { console.warn('Base de logos introuvable.'); }
             }
         }
 
         function displayLogos(list) {
             const grid = document.getElementById('logoResults');
             const emptyMsg = document.getElementById('emptyLogoMsg');
-
             grid.innerHTML = '';
-
-            // On n'affiche la grille que si la recherche n'est pas vide (et on trouve des résultats)
             const q = document.getElementById('logoSearch').value.toLowerCase().trim();
-
-            if (!q) {
-                grid.style.display = 'none';
-                emptyMsg.style.display = 'block';
-                return;
-            }
-
+            if (!q) { grid.style.display = 'none'; emptyMsg.style.display = 'block'; return; }
             if (list.length === 0) {
-                grid.style.display = 'none';
-                emptyMsg.style.display = 'block';
-                emptyMsg.textContent = "Aucun copyright trouvé pour cette recherche.";
-                return;
+                grid.style.display = 'none'; emptyMsg.style.display = 'block';
+                emptyMsg.textContent = 'Aucun copyright trouvé.'; return;
             }
-
-            emptyMsg.style.display = 'none';
-            grid.style.display = 'grid';
-
+            emptyMsg.style.display = 'none'; grid.style.display = 'grid';
             list.forEach(name => {
                 const div = document.createElement('div');
-                div.className = 'logo-item';
-                div.dataset.name = name;
-
+                div.className = 'logo-item'; div.dataset.name = name;
                 const img = document.createElement('img');
-                img.src = `assets/copyrights/${name}.png`;
-                img.loading = 'lazy';
-                img.alt = name.replace(/_/g, ' ');
+                img.src = 'assets/copyrights/' + name + '.png';
+                img.loading = 'lazy'; img.alt = name.replace(/_/g, ' ');
                 img.onerror = () => { div.style.display = 'none'; };
-
                 const span = document.createElement('span');
                 span.textContent = name.replace(/_/g, ' ');
-
-                div.appendChild(img);
-                div.appendChild(span);
-
-                // Si c'est celui qui est sélectionné (pour l'import ou précédent choix)
-                if (`assets/copyrights/${name}.png` === SELECTED_WM_URL) {
-                    div.classList.add('selected');
-                }
-
+                if ('assets/copyrights/' + name + '.png' === SELECTED_WM_URL) div.classList.add('selected');
+                div.appendChild(img); div.appendChild(span);
                 div.addEventListener('click', () => selectCloudLogo(name, div));
                 grid.appendChild(div);
             });
@@ -1283,10 +1221,9 @@
         }
 
         function selectCloudLogo(name, el) {
-            SELECTED_WM_URL = `assets/copyrights/${name}.png`;
+            SELECTED_WM_URL = 'assets/copyrights/' + name + '.png';
             document.querySelectorAll('.logo-item').forEach(i => i.classList.remove('selected'));
             el.classList.add('selected');
-            // On enlève le custom logo vu qu'on a pris un du cloud
             document.getElementById('customLogoPreview').style.display = 'none';
             document.getElementById('customLogoInput').value = '';
         }
@@ -1294,141 +1231,104 @@
         function handleCustomLogo() {
             const input = document.getElementById('customLogoInput');
             if (input.files && input.files[0]) {
-                const file = input.files[0];
-                const url = URL.createObjectURL(file);
+                const url = URL.createObjectURL(input.files[0]);
                 SELECTED_WM_URL = url;
-
                 document.querySelectorAll('.logo-item').forEach(i => i.classList.remove('selected'));
                 document.getElementById('logoSearch').value = '';
                 document.getElementById('logoResults').style.display = 'none';
                 document.getElementById('emptyLogoMsg').style.display = 'none';
-
                 const preview = document.getElementById('customLogoPreview');
                 preview.style.display = 'flex';
                 document.getElementById('customLogoImg').src = url;
-
                 showToast('Copyright personnalisé prêt !');
             }
         }
+        window.handleCustomLogo = handleCustomLogo;
 
-        // Drop zone applier
+        // ── Drop zone applier ──
         const dropZoneApplier = document.getElementById('dropZoneApplier');
         const inImgs = document.getElementById('inImgs');
-
         dropZoneApplier.addEventListener('dragover', e => { e.preventDefault(); dropZoneApplier.classList.add('dragover'); });
         dropZoneApplier.addEventListener('dragleave', () => dropZoneApplier.classList.remove('dragover'));
         dropZoneApplier.addEventListener('drop', e => {
-            e.preventDefault();
-            dropZoneApplier.classList.remove('dragover');
+            e.preventDefault(); dropZoneApplier.classList.remove('dragover');
             const dt = new DataTransfer();
             [...e.dataTransfer.files].filter(f => f.type.startsWith('image/')).forEach(f => dt.items.add(f));
-            inImgs.files = dt.files;
-            updateAnimeCount();
+            inImgs.files = dt.files; updateAnimeCount();
         });
-
         inImgs.addEventListener('change', updateAnimeCount);
+        document.getElementById('logoSearch').addEventListener('input', filterLogos);
 
         function updateAnimeCount() {
             const count = inImgs.files.length;
-            document.getElementById('animeCount').textContent = count ? `${count} image(s) sélectionnée(s)` : 'Sélectionner ou déposer les images';
+            document.getElementById('animeCount').textContent = count ? count + ' image(s) sélectionnée(s)' : 'Sélectionner ou déposer les images';
         }
 
-        document.getElementById('logoSearch').addEventListener('input', filterLogos);
-
-        let processedImagesList = []; // Pour stocker les images prêtes à télécharger
+        let processedImagesList = [];
 
         async function fastProcess() {
             if (!SELECTED_WM_URL) return showToast('Sélectionne un copyright d\'abord', 'error');
             const files = inImgs.files;
             if (!files.length) return showToast('Ajoute des images', 'error');
-
             const loader = document.getElementById('applierLoader');
             const loaderText = document.getElementById('applierLoaderText');
             loader.classList.add('active');
             const preview = document.getElementById('appPreview');
             preview.innerHTML = '';
-
-            processedImagesList = []; // Reset liste
-
+            processedImagesList = [];
             try {
                 const wmImg = await loadImg(SELECTED_WM_URL);
-
                 for (let i = 0; i < files.length; i++) {
-                    loaderText.textContent = `Traitement ${i + 1} / ${files.length}...`;
+                    loaderText.textContent = 'Traitement ' + (i + 1) + ' / ' + files.length + '...';
                     const f = files[i];
                     const img = await loadImg(URL.createObjectURL(f));
                     const cv = document.createElement('canvas');
-                    cv.width = img.width;
-                    cv.height = img.height;
+                    cv.width = img.width; cv.height = img.height;
                     const ctx = cv.getContext('2d');
                     ctx.drawImage(img, 0, 0);
-
-                    // Calculer la taille du copyright (prend 100% de la largeur)
                     ctx.drawImage(wmImg, 0, 0, cv.width, cv.height);
-
                     const dataUrl = cv.toDataURL('image/jpeg', 0.92);
                     const finalName = 'INKU_' + f.name.replace(/\.[^.]+$/, '') + '.jpg';
-
                     processedImagesList.push({ url: dataUrl, name: finalName });
-
-                    const div = document.createElement('div');
-                    div.className = 'app-item';
-
-                    const imgEl = document.createElement('img');
-                    imgEl.src = dataUrl;
-                    imgEl.alt = f.name;
-
-                    const actionsDiv = document.createElement('div');
-                    actionsDiv.className = 'app-item-actions';
-
-                    const nameSpan = document.createElement('span');
-                    nameSpan.className = 'app-item-name';
-                    nameSpan.textContent = finalName;
-                    nameSpan.title = finalName; // tooltip complet sur hover
-
+                    const div = document.createElement('div'); div.className = 'app-item';
+                    const imgEl = document.createElement('img'); imgEl.src = dataUrl; imgEl.alt = f.name;
+                    const actionsDiv = document.createElement('div'); actionsDiv.className = 'app-item-actions';
+                    const nameSpan = document.createElement('span'); nameSpan.className = 'app-item-name';
+                    nameSpan.textContent = finalName; nameSpan.title = finalName;
                     const dlBtn = document.createElement(isIOS ? 'button' : 'a');
-                    dlBtn.className = 'btn-dl-small';
-                    dlBtn.textContent = 'D/L';
-                    if (isIOS) {
-                        dlBtn.addEventListener('click', () => smartDownload(dataUrl, finalName));
-                    } else {
-                        dlBtn.href = dataUrl;
-                        dlBtn.download = finalName;
-                    }
-
-                    actionsDiv.appendChild(nameSpan);
-                    actionsDiv.appendChild(dlBtn);
-
-                    div.appendChild(imgEl);
-                    div.appendChild(actionsDiv);
+                    dlBtn.className = 'btn-dl-small'; dlBtn.textContent = 'D/L';
+                    if (isIOS) { dlBtn.addEventListener('click', () => smartDownload(dataUrl, finalName)); }
+                    else { dlBtn.href = dataUrl; dlBtn.download = finalName; }
+                    actionsDiv.appendChild(nameSpan); actionsDiv.appendChild(dlBtn);
+                    div.appendChild(imgEl); div.appendChild(actionsDiv);
                     preview.appendChild(div);
                 }
-
                 document.getElementById('bulkActions').style.display = 'block';
-                showToast(`${files.length} image(s) traitée(s)`);
+                showToast(files.length + ' image(s) traitée(s)');
             } catch (e) {
                 showToast('Erreur pendant le traitement', 'error');
             } finally {
                 loader.classList.remove('active');
             }
         }
+        window.fastProcess = fastProcess;
 
         function downloadAllProcessed() {
-            if (processedImagesList.length === 0) return showToast('Aucune image à télécharger', 'error');
-            showToast(`${isIOS ? 'Ouverture galerie' : 'Téléchargement de ' + processedImagesList.length + ' images'}...`);
+            if (!processedImagesList.length) return showToast('Aucune image à télécharger', 'error');
+            showToast((isIOS ? 'Ouverture galerie...' : 'Téléchargement de ' + processedImagesList.length + ' images...'));
             smartDownloadAll(processedImagesList.map(img => ({ url: img.url, name: img.name })));
         }
+        window.downloadAllProcessed = downloadAllProcessed;
 
         // ═══════════════════════════════════════════
-        //  VIDÉO EXTRACTOR (EXTRACTION RAPIDE OFF-SCREEN)
+        //  VIDÉO EXTRACTOR
         // ═══════════════════════════════════════════
         let videoFileUrl = null;
-        let selectedInterval = 2; // secondes
+        let selectedInterval = 2;
         let liveCapturesList = [];
         let isExtracting = false;
         let extractVideoElem = null;
 
-        // Sélection intervalle
         document.querySelectorAll('.interval-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.interval-btn').forEach(b => b.classList.remove('selected'));
@@ -1438,16 +1338,13 @@
         });
 
         const videoDropZone = document.getElementById('videoDropZone');
-
         videoDropZone.addEventListener('dragover', e => { e.preventDefault(); videoDropZone.classList.add('dragover'); });
         videoDropZone.addEventListener('dragleave', () => videoDropZone.classList.remove('dragover'));
         videoDropZone.addEventListener('drop', e => {
-            e.preventDefault();
-            videoDropZone.classList.remove('dragover');
+            e.preventDefault(); videoDropZone.classList.remove('dragover');
             if (e.dataTransfer.files && e.dataTransfer.files[0]) {
                 const input = document.getElementById('videoFile');
-                input.files = e.dataTransfer.files;
-                loadLocalVideo(input);
+                input.files = e.dataTransfer.files; loadLocalVideo(input);
             }
         });
 
@@ -1455,194 +1352,127 @@
             if (input.files && input.files[0]) {
                 const file = input.files[0];
                 document.getElementById('videoFileName').textContent = file.name;
-
                 if (videoFileUrl) URL.revokeObjectURL(videoFileUrl);
                 videoFileUrl = URL.createObjectURL(file);
-
                 const vid = document.getElementById('videoPreview');
                 vid.src = videoFileUrl;
-
                 document.getElementById('videoWrap').style.display = 'block';
                 document.getElementById('videoControls').style.display = 'block';
-
-                // Si on change de vidéo on arrête la capture auto s'il y en avait une
-                stopFastCapture();
-                clearCaptures();
+                stopFastCapture(); clearCaptures();
             }
         }
+        window.loadLocalVideo = loadLocalVideo;
 
         function startFastCapture() {
             if (!videoFileUrl) return showToast('Sélectionnez d\'abord une vidéo', 'error');
             if (isExtracting) return;
-
-            // Préparation UI
             isExtracting = true;
             document.getElementById('btnStartRealtime').disabled = true;
             document.getElementById('btnStopRealtime').disabled = false;
-
             const statusEl = document.getElementById('realtimeStatus');
             statusEl.style.display = 'block';
             statusEl.innerHTML = '<span class="pulse"></span> Extraction ultra-rapide en cours... (0%)';
-
             document.getElementById('capturesSection').style.display = 'block';
-
-            // Element vidéo caché pour chercher sans affecter le lecteur principal
             extractVideoElem = document.createElement('video');
             extractVideoElem.src = videoFileUrl;
             extractVideoElem.muted = true;
             extractVideoElem.playsInline = true;
-
-            // On attend que les métadonnées (durée, taille) soient chargées
-            extractVideoElem.addEventListener('loadeddata', () => {
-                extractNextFrame(0);
-            });
-
-            // C'est l'événement déclenché quand on a fini de se déplacer à un instant T
+            extractVideoElem.addEventListener('loadeddata', () => { extractNextFrame(0); });
             extractVideoElem.addEventListener('seeked', () => {
                 if (!isExtracting) return;
-
-                // Dessiner sur le canvas
                 const canvas = document.createElement('canvas');
                 canvas.width = extractVideoElem.videoWidth || 1280;
                 canvas.height = extractVideoElem.videoHeight || 720;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(extractVideoElem, 0, 0, canvas.width, canvas.height);
-
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.90);
                 liveCapturesList.push(dataUrl);
                 addCaptureToGrid(dataUrl, liveCapturesList.length);
-
-                // Mettre à jour le pourcentage
                 const percent = Math.min(100, Math.floor((extractVideoElem.currentTime / extractVideoElem.duration) * 100));
-                document.getElementById('realtimeStatus').innerHTML = `<span class="pulse"></span> Extraction ultra-rapide en cours... (${percent}%)`;
-
-                // Lancer la frame suivante
-                const nextTime = extractVideoElem.currentTime + selectedInterval;
-                extractNextFrame(nextTime);
+                document.getElementById('realtimeStatus').innerHTML = '<span class="pulse"></span> Extraction ultra-rapide en cours... (' + percent + '%)';
+                extractNextFrame(extractVideoElem.currentTime + selectedInterval);
             });
         }
+        window.startFastCapture = startFastCapture;
 
         function extractNextFrame(time) {
             if (!isExtracting || !extractVideoElem) return;
-
-            if (time > extractVideoElem.duration) {
-                finishFastCapture();
-                return;
-            }
-
-            // Déplace le curseur vidéo. Ça déclenchera l'événement 'seeked' quand fini
+            if (time > extractVideoElem.duration) { finishFastCapture(); return; }
             extractVideoElem.currentTime = time;
         }
 
         function stopFastCapture() {
             if (!isExtracting) return;
             isExtracting = false;
-
             document.getElementById('btnStartRealtime').disabled = false;
             document.getElementById('btnStopRealtime').disabled = true;
             document.getElementById('realtimeStatus').style.display = 'none';
-
-            if (extractVideoElem) {
-                extractVideoElem.removeAttribute('src');
-                extractVideoElem.load();
-                extractVideoElem = null;
-            }
+            if (extractVideoElem) { extractVideoElem.removeAttribute('src'); extractVideoElem.load(); extractVideoElem = null; }
         }
+        window.stopFastCapture = stopFastCapture;
 
         function finishFastCapture() {
             stopFastCapture();
             document.getElementById('realtimeStatus').style.display = 'block';
-            document.getElementById('realtimeStatus').innerHTML = `✅ Extraction terminée ! (${liveCapturesList.length} images)`;
+            document.getElementById('realtimeStatus').innerHTML = '✅ Extraction terminée ! (' + liveCapturesList.length + ' images)';
             showToast('Extraction terminée !');
         }
 
         function addCaptureToGrid(dataUrl, index) {
             const grid = document.getElementById('capturesGrid');
             document.getElementById('capTotal').textContent = index;
-
-            const div = document.createElement('div');
-            div.className = 'capture-thumb';
-
-            const img = document.createElement('img');
-            img.src = dataUrl;
-
-            const actions = document.createElement('div');
-            actions.className = 'capture-actions';
-
-            const num = document.createElement('span');
-            num.className = 'cap-num';
-            num.textContent = '#' + index;
-
+            const div = document.createElement('div'); div.className = 'capture-thumb';
+            const img = document.createElement('img'); img.src = dataUrl;
+            const actions = document.createElement('div'); actions.className = 'capture-actions';
+            const num = document.createElement('span'); num.className = 'cap-num'; num.textContent = '#' + index;
+            const capName = 'inku_capture_' + String(index).padStart(3, '0') + '.jpg';
             const dlBtn = document.createElement(isIOS ? 'button' : 'a');
-            dlBtn.className = 'btn-dl-small';
-            dlBtn.textContent = 'Télécharger';
-            const capName = `inku_capture_${String(index).padStart(3, '0')}.jpg`;
-            if (isIOS) {
-                dlBtn.addEventListener('click', () => smartDownload(dataUrl, capName));
-            } else {
-                dlBtn.href = dataUrl;
-                dlBtn.download = capName;
-                dlBtn.dataset.name = capName;
-            }
-
-            actions.appendChild(num);
-            actions.appendChild(dlBtn);
-
-            div.appendChild(img);
-            div.appendChild(actions);
-
-            grid.prepend(div); // Ajoute en haut de la liste pour voir les derniers arriver
+            dlBtn.className = 'btn-dl-small'; dlBtn.textContent = 'Télécharger';
+            if (isIOS) { dlBtn.addEventListener('click', () => smartDownload(dataUrl, capName)); }
+            else { dlBtn.href = dataUrl; dlBtn.download = capName; dlBtn.dataset.name = capName; }
+            actions.appendChild(num); actions.appendChild(dlBtn);
+            div.appendChild(img); div.appendChild(actions);
+            grid.prepend(div);
         }
 
         async function downloadCaptures() {
-            if (liveCapturesList.length === 0) return showToast('Aucune capture disponible', 'error');
+            if (!liveCapturesList.length) return showToast('Aucune capture disponible', 'error');
             showToast('Préparation du ZIP complet...');
-
             const zip = new JSZip();
             liveCapturesList.forEach((url, i) => {
-                const b64 = url.split(',')[1];
-                zip.file(`inku_capture_${String(i + 1).padStart(3, '0')}.jpg`, b64, { base64: true });
+                zip.file('inku_capture_' + String(i + 1).padStart(3, '0') + '.jpg', url.split(',')[1], { base64: true });
             });
-
             const blob = await zip.generateAsync({ type: 'blob' });
             const blobUrl = URL.createObjectURL(blob);
-            if (isIOS) {
-                window.open(blobUrl, '_blank');
-                showToast('ZIP ouvert — enregistre depuis Fichiers');
-            } else {
-                const a = document.createElement('a');
-                a.href = blobUrl; a.download = 'INKU_STUDIO_CAPTURES.zip';
-                document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            }
+            if (isIOS) { window.open(blobUrl, '_blank'); showToast('ZIP ouvert — enregistre depuis Fichiers'); }
+            else { const a = document.createElement('a'); a.href = blobUrl; a.download = 'INKU_STUDIO_CAPTURES.zip'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
         }
+        window.downloadCaptures = downloadCaptures;
 
         function clearCaptures() {
             liveCapturesList = [];
             document.getElementById('capturesGrid').innerHTML = '';
             document.getElementById('capTotal').textContent = '0';
             document.getElementById('capturesSection').style.display = 'none';
-
-            // S'assure que si c'était en cours on l'arrête
             stopFastCapture();
             showToast('Captures effacées');
         }
+        window.clearCaptures = clearCaptures;
 
         // ═══════════════════════════════════════════
-        //  COLLAGE — Section Collage
+        //  COLLAGE
         // ═══════════════════════════════════════════
-        const collageDropzone = document.getElementById('collageDropzone');
-        const collageInput = document.getElementById('collageInput');
         let collageFiles = [];
         let sortableCollage = null;
 
+        const collageDropzone = document.getElementById('collageDropzone');
+        const collageInput = document.getElementById('collageInput');
         collageDropzone.addEventListener('dragover', e => { e.preventDefault(); collageDropzone.classList.add('dragover'); });
         collageDropzone.addEventListener('dragleave', () => collageDropzone.classList.remove('dragover'));
         collageDropzone.addEventListener('drop', e => {
-            e.preventDefault();
-            collageDropzone.classList.remove('dragover');
+            e.preventDefault(); collageDropzone.classList.remove('dragover');
             handleCollageFiles([...e.dataTransfer.files]);
         });
-
         collageInput.addEventListener('change', () => handleCollageFiles([...collageInput.files]));
 
         async function handleCollageFiles(files) {
@@ -1666,104 +1496,53 @@
             const grid = document.getElementById('collageGrid');
             const actions = document.getElementById('collageActions');
             const count = collageFiles.length;
-
-            if (!count) {
-                grid.style.display = 'none';
-                actions.style.display = 'none';
-                return;
-            }
-
-            grid.style.display = 'grid';
-            actions.style.display = 'block';
-            grid.dataset.count = count;
-            grid.innerHTML = '';
-
+            if (!count) { grid.style.display = 'none'; actions.style.display = 'none'; return; }
+            grid.style.display = 'grid'; actions.style.display = 'block';
+            grid.dataset.count = count; grid.innerHTML = '';
             collageFiles.forEach((item, idx) => {
-                const div = document.createElement('div');
-                div.className = 'collage-item';
-                div.dataset.index = idx;
-
-                const img = document.createElement('img');
-                img.src = item.dataUrl;
-                img.alt = item.name;
-
+                const div = document.createElement('div'); div.className = 'collage-item'; div.dataset.index = idx;
+                const img = document.createElement('img'); img.src = item.dataUrl; img.alt = item.name;
                 const removeBtn = document.createElement('button');
-                removeBtn.className = 'collage-remove';
-                removeBtn.innerHTML = 'X';
-                removeBtn.title = 'Supprimer';
-                removeBtn.addEventListener('click', e => {
-                    e.stopPropagation();
-                    collageFiles.splice(idx, 1);
-                    renderCollageGrid();
-                });
-
-                div.appendChild(img);
-                div.appendChild(removeBtn);
-                grid.appendChild(div);
+                removeBtn.className = 'collage-remove'; removeBtn.innerHTML = 'X'; removeBtn.title = 'Supprimer';
+                removeBtn.addEventListener('click', e => { e.stopPropagation(); collageFiles.splice(idx, 1); renderCollageGrid(); });
+                div.appendChild(img); div.appendChild(removeBtn); grid.appendChild(div);
             });
-
             if (sortableCollage) sortableCollage.destroy();
             sortableCollage = new Sortable(grid, {
-                animation: 200,
-                ghostClass: 'sortable-ghost',
-                chosenClass: 'sortable-chosen',
+                animation: 200, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen',
                 onEnd: () => {
                     const newOrder = [];
-                    grid.querySelectorAll('.collage-item').forEach(el => {
-                        newOrder.push(collageFiles[parseInt(el.dataset.index)]);
-                    });
-                    collageFiles = newOrder;
-                    renderCollageGrid();
+                    grid.querySelectorAll('.collage-item').forEach(el => { newOrder.push(collageFiles[parseInt(el.dataset.index)]); });
+                    collageFiles = newOrder; renderCollageGrid();
                 }
             });
         }
 
         function getOrderedCollageFiles() {
             const orderedFiles = [];
-            document.querySelectorAll('#collageGrid .collage-item').forEach(el => {
-                orderedFiles.push(collageFiles[parseInt(el.dataset.index)]);
-            });
+            document.querySelectorAll('#collageGrid .collage-item').forEach(el => { orderedFiles.push(collageFiles[parseInt(el.dataset.index)]); });
             return orderedFiles;
         }
 
         async function createMergedCanvas(files, cols) {
             const loadedImgs = await Promise.all(files.map(item => loadImg(item.dataUrl)));
             if (!loadedImgs.length) return null;
-
-            // Utilisation max qualité: largeur et hauteur max parmi toutes les images
             const cellWidth = Math.max(...loadedImgs.map(img => img.width));
             const cellHeight = Math.max(...loadedImgs.map(img => img.height));
-
             const rows = Math.ceil(loadedImgs.length / cols);
-
             const canvas = document.createElement('canvas');
-            canvas.width = cellWidth * cols;
-            canvas.height = cellHeight * rows;
+            canvas.width = cellWidth * cols; canvas.height = cellHeight * rows;
             const ctx = canvas.getContext('2d');
-
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
             loadedImgs.forEach((img, index) => {
-                const col = index % cols;
-                const row = Math.floor(index / cols);
-                const x = col * cellWidth;
-                const y = row * cellHeight;
-
+                const col = index % cols; const row = Math.floor(index / cols);
+                const x = col * cellWidth; const y = row * cellHeight;
                 const ratio = Math.max(cellWidth / img.width, cellHeight / img.height);
-                const drawWidth = img.width * ratio;
-                const drawHeight = img.height * ratio;
-                const drawX = x + (cellWidth - drawWidth) / 2;
-                const drawY = y + (cellHeight - drawHeight) / 2;
-
-                ctx.save();
-                ctx.beginPath();
-                ctx.rect(x, y, cellWidth, cellHeight);
-                ctx.clip();
-                ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
-                ctx.restore();
+                const drawWidth = img.width * ratio; const drawHeight = img.height * ratio;
+                const drawX = x + (cellWidth - drawWidth) / 2; const drawY = y + (cellHeight - drawHeight) / 2;
+                ctx.save(); ctx.beginPath(); ctx.rect(x, y, cellWidth, cellHeight); ctx.clip();
+                ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight); ctx.restore();
             });
-
             return canvas;
         }
 
@@ -1771,104 +1550,67 @@
             const orderedFiles = getOrderedCollageFiles();
             if (!orderedFiles.length) return showToast('Aucune image', 'error');
             showToast('Génération Collage 2 Colonnes...');
-
             const canvas = await createMergedCanvas(orderedFiles, 2);
             if (!canvas) return;
-
             const url = canvas.toDataURL('image/jpeg', 1.0);
             smartDownload(url, 'INKU_COLLAGE_2_COLONNES.jpg');
             showToast(isIOS ? 'Appuie long pour sauvegarder !' : 'Collage téléchargé !');
         }
+        window.generateClassicCollage = generateClassicCollage;
 
         async function generateInstaCollage() {
             const orderedFiles = getOrderedCollageFiles();
             if (!orderedFiles.length) return showToast('Aucune image', 'error');
-            showToast('Génération Collages Insta...', 'success');
-
+            showToast('Génération Collages Insta...');
             const previewContainer = document.getElementById('instaPreviewContainer');
             const previewWrap = document.getElementById('instaPreview');
             previewWrap.innerHTML = '';
-
             for (let i = 0; i < orderedFiles.length; i += 2) {
                 const pair = orderedFiles.slice(i, i + 2);
                 const canvas = await createMergedCanvas(pair, 1);
                 if (!canvas) continue;
-
-                const url = canvas.toDataURL('image/jpeg', 1.0); // Qualité maximum basique
-                const name = `INKU_COLLAGE_INSTA_${Math.floor(i / 2) + 1}.jpg`;
-
-                const div = document.createElement('div');
-                div.className = 'capture-thumb';
-                div.style.cursor = 'grab';
-
-                const imgEl = document.createElement('img');
-                imgEl.src = url;
-
-                const actionsDiv = document.createElement('div');
-                actionsDiv.className = 'capture-actions';
-                actionsDiv.style.justifyContent = 'center';
-
+                const url = canvas.toDataURL('image/jpeg', 1.0);
+                const name = 'INKU_COLLAGE_INSTA_' + (Math.floor(i / 2) + 1) + '.jpg';
+                const div = document.createElement('div'); div.className = 'capture-thumb'; div.style.cursor = 'grab';
+                const imgEl = document.createElement('img'); imgEl.src = url;
+                const actionsDiv = document.createElement('div'); actionsDiv.className = 'capture-actions'; actionsDiv.style.justifyContent = 'center';
                 const dlBtn = document.createElement(isIOS ? 'button' : 'a');
-                dlBtn.className = 'btn-dl-small';
-                dlBtn.textContent = 'Télécharger';
-                if (isIOS) {
-                    dlBtn.style.width = '100%';
-                    dlBtn.style.textAlign = 'center';
-                    dlBtn.addEventListener('click', () => smartDownload(url, name));
-                } else {
-                    dlBtn.href = url;
-                    dlBtn.download = name;
-                    dlBtn.style.width = '100%';
-                    dlBtn.style.textAlign = 'center';
-                }
-
-                actionsDiv.appendChild(dlBtn);
-                div.appendChild(imgEl);
-                div.appendChild(actionsDiv);
-
+                dlBtn.className = 'btn-dl-small'; dlBtn.textContent = 'Télécharger'; dlBtn.style.width = '100%'; dlBtn.style.textAlign = 'center';
+                if (isIOS) { dlBtn.addEventListener('click', () => smartDownload(url, name)); }
+                else { dlBtn.href = url; dlBtn.download = name; }
+                actionsDiv.appendChild(dlBtn); div.appendChild(imgEl); div.appendChild(actionsDiv);
                 previewWrap.appendChild(div);
             }
-
             previewContainer.style.display = 'block';
-
             if (window.instaSortable) window.instaSortable.destroy();
-            window.instaSortable = new Sortable(previewWrap, {
-                animation: 200,
-                ghostClass: 'sortable-ghost',
-                chosenClass: 'sortable-chosen'
-            });
-
-            showToast('Paires Insta générées !', 'success');
+            window.instaSortable = new Sortable(previewWrap, { animation: 200, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen' });
+            showToast('Paires Insta générées !');
         }
+        window.generateInstaCollage = generateInstaCollage;
 
         function downloadAllInsta() {
             const thumbs = document.querySelectorAll('#instaPreview .capture-thumb');
             if (!thumbs.length) return;
-            showToast(`${isIOS ? 'Ouverture galerie' : 'Téléchargement de ' + thumbs.length + ' paires'}...`);
             const items = [];
-            thumbs.forEach(thumb => {
+            thumbs.forEach((thumb, i) => {
                 const img = thumb.querySelector('img');
-                const btn = thumb.querySelector('.btn-dl-small');
-                if (img && btn) {
-                    const name = btn.download || btn.dataset?.name || 'INKU_INSTA.jpg';
-                    items.push({ url: img.src, name });
-                }
+                if (img) items.push({ url: img.src, name: 'INKU_COLLAGE_INSTA_' + (i + 1) + '.jpg' });
             });
             smartDownloadAll(items);
         }
+        window.downloadAllInsta = downloadAllInsta;
 
         function clearCollage() {
             collageFiles = [];
             renderCollageGrid();
             if (sortableCollage) { sortableCollage.destroy(); sortableCollage = null; }
-
             const pv = document.getElementById('instaPreviewContainer');
             if (pv) pv.style.display = 'none';
             const wrap = document.getElementById('instaPreview');
             if (wrap) wrap.innerHTML = '';
-
             showToast('Collage effacé');
         }
+        window.clearCollage = clearCollage;
 
         // ═══════════════════════════════════════════
         //  GÉNÉRATEUR PNG 4K
@@ -1876,124 +1618,99 @@
         function generatePNG() {
             let text = document.getElementById('wmText').value.trim();
             if (!text) text = 'INKU Studio';
-
             const canvas = document.getElementById('canvasGenPreview');
             const ctx = canvas.getContext('2d');
-
-            // Définition de la résolution 4K
-            const width = 3840;
-            const height = 2160;
-            canvas.width = width;
-            canvas.height = height;
-
-            // Effacer le canvas
-            ctx.clearRect(0, 0, width, height);
-
-            // Paramètres du texte
-            ctx.font = "45px Arial";
-            ctx.fillStyle = "white";
-            ctx.textAlign = "left";
-            ctx.textBaseline = "bottom";
-
-            const leftMargin = 100;  // Marge à gauche
-            const bottomMargin = 67;  // Marge en bas
-
-            ctx.fillText(`© ${text}`, leftMargin, height - bottomMargin);
-
+            canvas.width = 3840; canvas.height = 2160;
+            ctx.clearRect(0, 0, 3840, 2160);
+            ctx.font = '45px Arial'; ctx.fillStyle = 'white';
+            ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+            ctx.fillText('© ' + text, 100, 2160 - 67);
             const u = canvas.toDataURL('image/png');
-            const filename = (text || 'copyright') + '.png';
             const dlLink = document.getElementById('genDl');
-            dlLink.onclick = (e) => { e.preventDefault(); smartDownload(u, filename); };
+            dlLink.onclick = (e) => { e.preventDefault(); smartDownload(u, (text || 'copyright') + '.png'); };
             dlLink.href = '#';
             document.getElementById('genOutput').style.display = 'block';
             showToast('PNG 4K généré');
         }
-
+        window.generatePNG = generatePNG;
 
         // ═══════════════════════════════════════════
         //  RÉDACTION TWEETS
         // ═══════════════════════════════════════════
-
-        // Compte caractères tweet libre
         function updateLibreCount() {
             const txt = document.getElementById('tweetLibreInput').value;
             const el = document.getElementById('libreCount');
-            const len = [...txt].length; // gère les emojis correctement
+            const len = [...txt].length;
             el.textContent = len + ' / 280';
             el.style.color = len > 280 ? '#e53e3e' : len > 240 ? '#f59e0b' : 'var(--text-muted)';
+        }
+        window.updateLibreCount = updateLibreCount;
+
+        function copyClipboard(text, successMsg) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => showToast(successMsg)).catch(() => fallbackCopy(text, successMsg));
+            } else { fallbackCopy(text, successMsg); }
+        }
+
+        function fallbackCopy(text, successMsg) {
+            const ta = document.createElement('textarea');
+            ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+            document.body.appendChild(ta); ta.focus(); ta.select();
+            try { document.execCommand('copy'); showToast(successMsg); } catch(e) { showToast('Erreur copie', 'error'); }
+            document.body.removeChild(ta);
         }
 
         function copyLibre() {
             const txt = document.getElementById('tweetLibreInput').value;
             if (!txt.trim()) return showToast('Rien à copier', 'error');
-            navigator.clipboard.writeText(txt).then(() => showToast('Tweet copié !')).catch(() => {
-                // Fallback pour iOS qui bloque clipboard API sans interaction directe
-                const ta = document.getElementById('tweetLibreInput');
-                ta.select(); ta.setSelectionRange(0, 99999);
-                document.execCommand('copy');
-                showToast('Tweet copié !');
-            });
+            copyClipboard(txt, 'Tweet copié !');
         }
+        window.copyLibre = copyLibre;
 
         function clearLibre() {
             document.getElementById('tweetLibreInput').value = '';
             updateLibreCount();
         }
+        window.clearLibre = clearLibre;
 
-        // Tweet Officiel
         function buildOfficiel() {
             const input = document.getElementById('tweetOfficielInput').value;
-            const full = input.trim() ? '「OFFICIEL」' + input : '';
-            const preview = document.getElementById('officielPreview');
             const countEl = document.getElementById('officielCount');
-            preview.textContent = full || '';
+            const full = input.trim() ? '「OFFICIEL」' + input : '';
             const len = [...full].length;
             countEl.textContent = len + ' / 280';
             countEl.style.color = len > 280 ? '#e53e3e' : len > 240 ? '#f59e0b' : 'var(--fuchsia)';
         }
+        window.buildOfficiel = buildOfficiel;
 
         function copyOfficiel() {
             const input = document.getElementById('tweetOfficielInput').value;
             if (!input.trim()) return showToast('Rien à copier', 'error');
-            const full = '「OFFICIEL」' + input;
-            navigator.clipboard.writeText(full).then(() => showToast('Tweet Officiel copié !')).catch(() => {
-                const ta = document.createElement('textarea');
-                ta.value = full; ta.style.position = 'fixed'; ta.style.opacity = '0';
-                document.body.appendChild(ta); ta.focus(); ta.select();
-                document.execCommand('copy');
-                document.body.removeChild(ta);
-                showToast('Tweet Officiel copié !');
-            });
+            copyClipboard('「OFFICIEL」' + input, 'Tweet Officiel copié !');
         }
+        window.copyOfficiel = copyOfficiel;
 
         function clearOfficiel() {
             document.getElementById('tweetOfficielInput').value = '';
-            document.getElementById('officielPreview').textContent = '';
             document.getElementById('officielCount').textContent = '0 / 280';
         }
+        window.clearOfficiel = clearOfficiel;
 
-        // Bloc-notes avec sauvegarde localStorage
         function saveBlocNotes() {
             try { localStorage.setItem('inku_blocnotes', document.getElementById('blocNotesInput').value); } catch(e) {}
         }
+        window.saveBlocNotes = saveBlocNotes;
 
         function loadBlocNotes() {
-            try {
-                const saved = localStorage.getItem('inku_blocnotes');
-                if (saved) document.getElementById('blocNotesInput').value = saved;
-            } catch(e) {}
+            try { const s = localStorage.getItem('inku_blocnotes'); if (s) document.getElementById('blocNotesInput').value = s; } catch(e) {}
         }
 
         function copyBlocNotes() {
             const txt = document.getElementById('blocNotesInput').value;
             if (!txt.trim()) return showToast('Rien à copier', 'error');
-            navigator.clipboard.writeText(txt).then(() => showToast('Notes copiées !')).catch(() => {
-                const ta = document.getElementById('blocNotesInput');
-                ta.select(); ta.setSelectionRange(0, 99999);
-                document.execCommand('copy');
-                showToast('Notes copiées !');
-            });
+            copyClipboard(txt, 'Notes copiées !');
         }
+        window.copyBlocNotes = copyBlocNotes;
 
         function clearBlocNotes() {
             if (!confirm('Effacer le bloc-notes ?')) return;
@@ -2001,14 +1718,16 @@
             try { localStorage.removeItem('inku_blocnotes'); } catch(e) {}
             showToast('Bloc-notes effacé');
         }
-
-        loadBlocNotes();
+        window.clearBlocNotes = clearBlocNotes;
 
         // ═══════════════════════════════════════════
         //  INIT
         // ═══════════════════════════════════════════
         initLogos();
-    </script>
+        loadBlocNotes();
+
+        }); // END DOMContentLoaded
+</script>
 
 </body>
 
