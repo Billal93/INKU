@@ -806,6 +806,7 @@
                 <div class="header-sub">Copyright · Vidéo · Collage · 4K</div>
             </div>
         </div>
+        <div id="deviceBanner" style="display:none; max-width:900px; margin:8px auto 0; padding:7px 14px; border-radius:10px; font-size:0.62rem; font-weight:700; letter-spacing:0.3px; line-height:1.7;"></div>
         <nav>
             <button onclick="tab('applier')" class="nav-btn active" id="btn-applier">Appliquer</button>
             <button onclick="tab('extractor')" class="nav-btn" id="btn-extractor">Vidéo</button>
@@ -988,8 +989,8 @@
                 </div>
                 <button onclick="document.getElementById('iosModal').style.display='none'" style="background:rgba(255,255,255,0.15); border:none; border-radius:50%; width:34px; height:34px; color:white; font-weight:800; cursor:pointer; font-size:1.1rem; flex-shrink:0;">✕</button>
             </div>
-            <div style="background:rgba(217,27,129,0.18); border:1px solid rgba(217,27,129,0.4); border-radius:12px; padding:11px 14px; margin-bottom:16px; font-size:0.72rem; font-weight:700; color:#f9a8d4; text-align:center;">
-                Sur iPhone, Safari bloque les téléchargements automatiques.<br>Appui long → "Enregistrer dans Photos" pour chaque image.
+            <div id="iosModalSub" style="background:rgba(217,27,129,0.18); border:1px solid rgba(217,27,129,0.4); border-radius:12px; padding:11px 14px; margin-bottom:16px; font-size:0.72rem; font-weight:700; color:#f9a8d4; text-align:center;">
+                Appui long → "Enregistrer dans Photos" pour chaque image.
             </div>
             <div id="iosModalGrid" style="display:flex; flex-direction:column; gap:14px;"></div>
             <button onclick="document.getElementById('iosModal').style.display='none'" style="width:100%; margin-top:20px; padding:16px; border-radius:14px; border:none; background:linear-gradient(135deg,#d91b81,#82278f); color:white; font-weight:800; font-size:0.88rem; cursor:pointer; text-transform:uppercase; letter-spacing:0.5px;">Fermer</button>
@@ -998,9 +999,59 @@
 
     <script>
         // ═══════════════════════════════════════════
-        //  iOS COMPAT
+        //  iOS COMPAT — détection + download
         // ═══════════════════════════════════════════
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+        // Détection device complète
+        const UA = navigator.userAgent;
+        const isIOS = /iPad|iPhone|iPod/.test(UA) && !window.MSStream;
+        const isChromeiOS = isIOS && /CriOS/.test(UA);
+        const isSafariIOS = isIOS && /Safari/.test(UA) && !/CriOS|FxiOS|OPiOS/.test(UA);
+        const deviceModel = (() => {
+            if (/iPhone/.test(UA)) return 'iPhone';
+            if (/iPad/.test(UA)) return 'iPad';
+            if (/iPod/.test(UA)) return 'iPod';
+            return null;
+        })();
+        const browserName = (() => {
+            if (/CriOS/.test(UA)) return 'Chrome iOS';
+            if (/FxiOS/.test(UA)) return 'Firefox iOS';
+            if (/OPiOS/.test(UA)) return 'Opera iOS';
+            if (/EdgiOS/.test(UA)) return 'Edge iOS';
+            if (isIOS) return 'Safari iOS';
+            if (/Chrome/.test(UA)) return 'Chrome';
+            if (/Firefox/.test(UA)) return 'Firefox';
+            return 'Autre';
+        })();
+        const screenInfo = `${screen.width}×${screen.height} (ratio ${window.devicePixelRatio || 1}x)`;
+
+        // Affichage banner header
+        window.addEventListener('DOMContentLoaded', () => {
+            const banner = document.getElementById('deviceBanner');
+            if (isIOS) {
+                banner.style.display = 'block';
+                banner.style.background = 'linear-gradient(135deg, rgba(217,27,129,0.1), rgba(130,39,143,0.1))';
+                banner.style.border = '1px solid rgba(217,27,129,0.25)';
+                banner.style.color = '#82278f';
+                banner.innerHTML = `📱 <strong>${deviceModel} détecté</strong> · ${browserName} · ${screenInfo} · <span style="color:#d91b81">Mode iOS actif</span> — Les images s'ouvrent en galerie (appui long pour sauvegarder)`;
+            } else {
+                banner.style.display = 'block';
+                banner.style.background = 'rgba(0,0,0,0.04)';
+                banner.style.color = '#9ca3af';
+                banner.innerHTML = `💻 <strong>${browserName}</strong> · ${screenInfo} · Mode standard actif`;
+            }
+        });
+
+        // Convertit dataURL → Blob URL pour meilleure compatibilité Chrome iOS
+        function dataUrlToBlobUrl(dataUrl) {
+            const arr = dataUrl.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) u8arr[n] = bstr.charCodeAt(n);
+            return URL.createObjectURL(new Blob([u8arr], { type: mime }));
+        }
 
         function smartDownload(url, filename) {
             if (isIOS) {
@@ -1029,15 +1080,33 @@
         function showIOSModal(items) {
             const grid = document.getElementById('iosModalGrid');
             grid.innerHTML = '';
+
+            // Mettre à jour le sous-titre du modal selon navigateur
+            const modalSub = document.getElementById('iosModalSub');
+            if (isChromeiOS) {
+                modalSub.innerHTML = '⚠️ Chrome iOS : appui long sur l'image → <strong>"Enregistrer l'image"</strong>';
+            } else {
+                modalSub.innerHTML = '👆 Safari : appui long sur l'image → <strong>"Enregistrer dans Photos"</strong>';
+            }
+
             items.forEach(item => {
                 const wrap = document.createElement('div');
-                wrap.style.cssText = 'position:relative; border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,0.1);';
+                wrap.style.cssText = 'border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,0.12); background:#111;';
+
+                // Convertir en blob URL pour meilleure compat Chrome iOS
+                const blobUrl = item.url.startsWith('blob:') ? item.url : dataUrlToBlobUrl(item.url);
+
                 const img = document.createElement('img');
-                img.src = item.url;
-                img.style.cssText = 'width:100%; display:block;';
+                img.src = blobUrl;
+                img.style.cssText = 'width:100%; display:block; -webkit-touch-callout:default;';
+                // -webkit-touch-callout:default permet le menu contextuel sur appui long
+
                 const label = document.createElement('div');
-                label.textContent = '👆 Appui long → "Enregistrer dans Photos"';
-                label.style.cssText = 'font-size:0.68rem; font-weight:800; color:#d91b81; padding:8px 10px; background:#fff; text-align:center;';
+                label.textContent = isChromeiOS
+                    ? '👆 Appui long → "Enregistrer l'image"'
+                    : '👆 Appui long → "Enregistrer dans Photos"';
+                label.style.cssText = 'font-size:0.7rem; font-weight:800; color:#d91b81; padding:9px 12px; background:#fff; text-align:center;';
+
                 wrap.appendChild(img);
                 wrap.appendChild(label);
                 grid.appendChild(wrap);
