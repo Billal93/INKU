@@ -978,7 +978,73 @@
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
+    <!-- ══ MODAL iOS ══ -->
+    <div id="iosModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:99999; flex-direction:column; align-items:center; overflow-y:auto; padding:20px; -webkit-overflow-scrolling:touch;">
+        <div style="width:100%; max-width:640px; padding-bottom:30px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                <div>
+                    <div style="color:white; font-weight:800; font-size:0.95rem;">📱 Sauvegarde iPhone</div>
+                    <div style="color:rgba(255,255,255,0.55); font-size:0.68rem; margin-top:2px;">Appui long sur chaque image → "Enregistrer dans Photos"</div>
+                </div>
+                <button onclick="document.getElementById('iosModal').style.display='none'" style="background:rgba(255,255,255,0.15); border:none; border-radius:50%; width:34px; height:34px; color:white; font-weight:800; cursor:pointer; font-size:1.1rem; flex-shrink:0;">✕</button>
+            </div>
+            <div style="background:rgba(217,27,129,0.18); border:1px solid rgba(217,27,129,0.4); border-radius:12px; padding:11px 14px; margin-bottom:16px; font-size:0.72rem; font-weight:700; color:#f9a8d4; text-align:center;">
+                Sur iPhone, Safari bloque les téléchargements automatiques.<br>Appui long → "Enregistrer dans Photos" pour chaque image.
+            </div>
+            <div id="iosModalGrid" style="display:flex; flex-direction:column; gap:14px;"></div>
+            <button onclick="document.getElementById('iosModal').style.display='none'" style="width:100%; margin-top:20px; padding:16px; border-radius:14px; border:none; background:linear-gradient(135deg,#d91b81,#82278f); color:white; font-weight:800; font-size:0.88rem; cursor:pointer; text-transform:uppercase; letter-spacing:0.5px;">Fermer</button>
+        </div>
+    </div>
+
     <script>
+        // ═══════════════════════════════════════════
+        //  iOS COMPAT
+        // ═══════════════════════════════════════════
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+        function smartDownload(url, filename) {
+            if (isIOS) {
+                showIOSModal([{ url, name: filename }]);
+            } else {
+                const a = document.createElement('a');
+                a.href = url; a.download = filename;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            }
+        }
+
+        function smartDownloadAll(items) {
+            if (isIOS) {
+                showIOSModal(items);
+            } else {
+                items.forEach((item, i) => {
+                    setTimeout(() => {
+                        const a = document.createElement('a');
+                        a.href = item.url; a.download = item.name;
+                        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                    }, i * 220);
+                });
+            }
+        }
+
+        function showIOSModal(items) {
+            const grid = document.getElementById('iosModalGrid');
+            grid.innerHTML = '';
+            items.forEach(item => {
+                const wrap = document.createElement('div');
+                wrap.style.cssText = 'position:relative; border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,0.1);';
+                const img = document.createElement('img');
+                img.src = item.url;
+                img.style.cssText = 'width:100%; display:block;';
+                const label = document.createElement('div');
+                label.textContent = '👆 Appui long → "Enregistrer dans Photos"';
+                label.style.cssText = 'font-size:0.68rem; font-weight:800; color:#d91b81; padding:8px 10px; background:#fff; text-align:center;';
+                wrap.appendChild(img);
+                wrap.appendChild(label);
+                grid.appendChild(wrap);
+            });
+            document.getElementById('iosModal').style.display = 'flex';
+        }
+
         // ═══════════════════════════════════════════
         //  UTILS
         // ═══════════════════════════════════════════
@@ -1198,11 +1264,15 @@
                     nameSpan.textContent = finalName;
                     nameSpan.title = finalName; // tooltip complet sur hover
 
-                    const dlBtn = document.createElement('a');
+                    const dlBtn = document.createElement(isIOS ? 'button' : 'a');
                     dlBtn.className = 'btn-dl-small';
                     dlBtn.textContent = 'D/L';
-                    dlBtn.href = dataUrl;
-                    dlBtn.download = finalName;
+                    if (isIOS) {
+                        dlBtn.addEventListener('click', () => smartDownload(dataUrl, finalName));
+                    } else {
+                        dlBtn.href = dataUrl;
+                        dlBtn.download = finalName;
+                    }
 
                     actionsDiv.appendChild(nameSpan);
                     actionsDiv.appendChild(dlBtn);
@@ -1223,20 +1293,8 @@
 
         function downloadAllProcessed() {
             if (processedImagesList.length === 0) return showToast('Aucune image à télécharger', 'error');
-
-            showToast(`Téléchargement de ${processedImagesList.length} images...`);
-
-            // Créer un délai entre chaque téléchargement pour éviter que le navigateur ne bloque les requêtes multiples
-            processedImagesList.forEach((img, index) => {
-                setTimeout(() => {
-                    const a = document.createElement('a');
-                    a.href = img.url;
-                    a.download = img.name;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                }, index * 200); // 200ms entre chaque téléchargement
-            });
+            showToast(`${isIOS ? 'Ouverture galerie' : 'Téléchargement de ' + processedImagesList.length + ' images'}...`);
+            smartDownloadAll(processedImagesList.map(img => ({ url: img.url, name: img.name })));
         }
 
         // ═══════════════════════════════════════════
@@ -1393,11 +1451,17 @@
             num.className = 'cap-num';
             num.textContent = '#' + index;
 
-            const dlBtn = document.createElement('a');
+            const dlBtn = document.createElement(isIOS ? 'button' : 'a');
             dlBtn.className = 'btn-dl-small';
             dlBtn.textContent = 'Télécharger';
-            dlBtn.href = dataUrl;
-            dlBtn.download = `inku_capture_${String(index).padStart(3, '0')}.jpg`;
+            const capName = `inku_capture_${String(index).padStart(3, '0')}.jpg`;
+            if (isIOS) {
+                dlBtn.addEventListener('click', () => smartDownload(dataUrl, capName));
+            } else {
+                dlBtn.href = dataUrl;
+                dlBtn.download = capName;
+                dlBtn.dataset.name = capName;
+            }
 
             actions.appendChild(num);
             actions.appendChild(dlBtn);
@@ -1419,10 +1483,15 @@
             });
 
             const blob = await zip.generateAsync({ type: 'blob' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = 'INKU_STUDIO_CAPTURES.zip';
-            a.click();
+            const blobUrl = URL.createObjectURL(blob);
+            if (isIOS) {
+                window.open(blobUrl, '_blank');
+                showToast('ZIP ouvert — enregistre depuis Fichiers');
+            } else {
+                const a = document.createElement('a');
+                a.href = blobUrl; a.download = 'INKU_STUDIO_CAPTURES.zip';
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            }
         }
 
         function clearCaptures() {
@@ -1584,13 +1653,9 @@
             const canvas = await createMergedCanvas(orderedFiles, 2);
             if (!canvas) return;
 
-            const a = document.createElement('a');
-            a.href = canvas.toDataURL('image/jpeg', 1.0); // Qualité maximum basique
-            a.download = 'INKU_COLLAGE_2_COLONNES.jpg';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            showToast('Collage téléchargé !');
+            const url = canvas.toDataURL('image/jpeg', 1.0);
+            smartDownload(url, 'INKU_COLLAGE_2_COLONNES.jpg');
+            showToast(isIOS ? 'Appuie long pour sauvegarder !' : 'Collage téléchargé !');
         }
 
         async function generateInstaCollage() {
@@ -1621,13 +1686,19 @@
                 actionsDiv.className = 'capture-actions';
                 actionsDiv.style.justifyContent = 'center';
 
-                const dlBtn = document.createElement('a');
+                const dlBtn = document.createElement(isIOS ? 'button' : 'a');
                 dlBtn.className = 'btn-dl-small';
                 dlBtn.textContent = 'Télécharger';
-                dlBtn.href = url;
-                dlBtn.download = name;
-                dlBtn.style.width = '100%';
-                dlBtn.style.textAlign = 'center';
+                if (isIOS) {
+                    dlBtn.style.width = '100%';
+                    dlBtn.style.textAlign = 'center';
+                    dlBtn.addEventListener('click', () => smartDownload(url, name));
+                } else {
+                    dlBtn.href = url;
+                    dlBtn.download = name;
+                    dlBtn.style.width = '100%';
+                    dlBtn.style.textAlign = 'center';
+                }
 
                 actionsDiv.appendChild(dlBtn);
                 div.appendChild(imgEl);
@@ -1649,19 +1720,19 @@
         }
 
         function downloadAllInsta() {
-            const links = document.querySelectorAll('#instaPreview .btn-dl-small');
-            if (!links.length) return;
-            showToast(`Téléchargement de ${links.length} paires...`);
-            links.forEach((link, index) => {
-                setTimeout(() => {
-                    const a = document.createElement('a');
-                    a.href = link.href;
-                    a.download = link.download;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                }, index * 500);
+            const thumbs = document.querySelectorAll('#instaPreview .capture-thumb');
+            if (!thumbs.length) return;
+            showToast(`${isIOS ? 'Ouverture galerie' : 'Téléchargement de ' + thumbs.length + ' paires'}...`);
+            const items = [];
+            thumbs.forEach(thumb => {
+                const img = thumb.querySelector('img');
+                const btn = thumb.querySelector('.btn-dl-small');
+                if (img && btn) {
+                    const name = btn.download || btn.dataset?.name || 'INKU_INSTA.jpg';
+                    items.push({ url: img.src, name });
+                }
             });
+            smartDownloadAll(items);
         }
 
         function clearCollage() {
@@ -1708,9 +1779,10 @@
             ctx.fillText(`© ${text}`, leftMargin, height - bottomMargin);
 
             const u = canvas.toDataURL('image/png');
+            const filename = (text || 'copyright') + '.png';
             const dlLink = document.getElementById('genDl');
-            dlLink.href = u;
-            dlLink.download = (text || 'copyright') + '.png';
+            dlLink.onclick = (e) => { e.preventDefault(); smartDownload(u, filename); };
+            dlLink.href = '#';
             document.getElementById('genOutput').style.display = 'block';
             showToast('PNG 4K généré');
         }
