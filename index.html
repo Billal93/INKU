@@ -752,6 +752,19 @@
             background: #000;
         }
 
+        /* ── iOS MODAL : les images DOIVENT avoir touch-callout actif pour "Enregistrer dans Photos" ── */
+        #iosModalGrid img {
+            -webkit-touch-callout: default !important;
+            user-select: none;
+            -webkit-user-select: none;
+            display: block;
+            width: 100%;
+        }
+        /* Le * global ne doit pas écraser touch-callout sur ces images */
+        #iosModal * {
+            -webkit-touch-callout: inherit;
+        }
+
         /* ── RESPONSIVE ── */
         @media (max-width: 540px) {
             .header-inner {
@@ -1122,9 +1135,11 @@
             items.forEach(item => {
                 const wrap = document.createElement('div');
                 wrap.style.cssText = 'border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.12);background:#111;';
-                const blobUrl = item.url.startsWith('blob:') ? item.url : dataUrlToBlobUrl(item.url);
                 const img = document.createElement('img');
-                img.src = blobUrl;
+                // CRITIQUE : on met TOUJOURS la dataURL directement dans src.
+                // Un blob: URL affiche "pas de connexion" quand Safari essaie de l'enregistrer dans Photos.
+                // La dataURL est auto-contenue et fonctionne toujours.
+                img.src = item.dataUrl || item.url;
                 img.style.cssText = 'width:100%;display:block;-webkit-touch-callout:default;';
                 const label = document.createElement('div');
                 label.textContent = isChromeiOS ? '👆 Appui long → "Enregistrer l\'image"' : '👆 Appui long → "Enregistrer dans Photos"';
@@ -1146,11 +1161,20 @@
         function loadImg(url) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
-                img.crossOrigin = 'anonymous';
+                // crossOrigin uniquement pour les URLs distantes (pas dataURL ni blob: local)
+                if (url && !url.startsWith('data:') && !url.startsWith('blob:')) {
+                    img.crossOrigin = 'anonymous';
+                }
                 img.onload = () => resolve(img);
                 img.onerror = reject;
                 img.src = url;
             });
+        }
+
+        // Toujours retourner une dataURL — c'est le seul format que Safari iOS
+        // accepte pour "Enregistrer dans Photos" via appui long sur <img>
+        function canvasToDataUrl(canvas, quality) {
+            return canvas.toDataURL('image/jpeg', quality || 0.92);
         }
 
         // ═══════════════════════════════════════════
@@ -1281,15 +1305,19 @@
                 for (let i = 0; i < files.length; i++) {
                     loaderText.textContent = 'Traitement ' + (i + 1) + ' / ' + files.length + '...';
                     const f = files[i];
-                    const img = await loadImg(URL.createObjectURL(f));
+                    const srcBlobUrl = URL.createObjectURL(f);
+                    const img = await loadImg(srcBlobUrl);
+                    URL.revokeObjectURL(srcBlobUrl);
                     const cv = document.createElement('canvas');
                     cv.width = img.width; cv.height = img.height;
                     const ctx = cv.getContext('2d');
                     ctx.drawImage(img, 0, 0);
                     ctx.drawImage(wmImg, 0, 0, cv.width, cv.height);
-                    const dataUrl = cv.toDataURL('image/jpeg', 0.92);
+                    // dataUrl = auto-contenu, fonctionne pour la modal iOS "Enregistrer dans Photos"
+                    const dataUrl = canvasToDataUrl(cv, 0.92);
                     const finalName = 'INKU_' + f.name.replace(/\.[^.]+$/, '') + '.jpg';
-                    processedImagesList.push({ url: dataUrl, name: finalName });
+                    // { url, dataUrl, name } — url et dataUrl sont identiques ici mais on nomme clairement
+                    processedImagesList.push({ url: dataUrl, dataUrl: dataUrl, name: finalName });
                     const div = document.createElement('div'); div.className = 'app-item';
                     const imgEl = document.createElement('img'); imgEl.src = dataUrl; imgEl.alt = f.name;
                     const actionsDiv = document.createElement('div'); actionsDiv.className = 'app-item-actions';
@@ -1297,7 +1325,7 @@
                     nameSpan.textContent = finalName; nameSpan.title = finalName;
                     const dlBtn = document.createElement(isIOS ? 'button' : 'a');
                     dlBtn.className = 'btn-dl-small'; dlBtn.textContent = 'D/L';
-                    if (isIOS) { dlBtn.addEventListener('click', () => smartDownload(dataUrl, finalName)); }
+                    if (isIOS) { dlBtn.addEventListener('click', () => showIOSModal([{ dataUrl, name: finalName }])); }
                     else { dlBtn.href = dataUrl; dlBtn.download = finalName; }
                     actionsDiv.appendChild(nameSpan); actionsDiv.appendChild(dlBtn);
                     div.appendChild(imgEl); div.appendChild(actionsDiv);
@@ -1306,6 +1334,7 @@
                 document.getElementById('bulkActions').style.display = 'block';
                 showToast(files.length + ' image(s) traitée(s)');
             } catch (e) {
+                console.error(e);
                 showToast('Erreur pendant le traitement', 'error');
             } finally {
                 loader.classList.remove('active');
@@ -1315,8 +1344,9 @@
 
         function downloadAllProcessed() {
             if (!processedImagesList.length) return showToast('Aucune image à télécharger', 'error');
-            showToast((isIOS ? 'Ouverture galerie...' : 'Téléchargement de ' + processedImagesList.length + ' images...'));
-            smartDownloadAll(processedImagesList.map(img => ({ url: img.url, name: img.name })));
+            showToast(isIOS ? 'Ouverture galerie...' : 'Téléchargement de ' + processedImagesList.length + ' images...');
+            // On passe dataUrl pour que showIOSModal l'utilise directement
+            smartDownloadAll(processedImagesList.map(img => ({ url: img.url, dataUrl: img.dataUrl, name: img.name })));
         }
         window.downloadAllProcessed = downloadAllProcessed;
 
@@ -1385,9 +1415,12 @@
                 canvas.height = extractVideoElem.videoHeight || 720;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(extractVideoElem, 0, 0, canvas.width, canvas.height);
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.90);
-                liveCapturesList.push(dataUrl);
-                addCaptureToGrid(dataUrl, liveCapturesList.length);
+                // On garde toujours en dataUrl — c'est la seule chose que Safari iOS
+                // accepte pour "Enregistrer dans Photos" via appui long
+                const dataUrl = canvasToDataUrl(canvas, 0.90);
+                const capName = 'inku_capture_' + String(liveCapturesList.length + 1).padStart(3, '0') + '.jpg';
+                liveCapturesList.push({ dataUrl, name: capName });
+                addCaptureToGrid(dataUrl, liveCapturesList.length, capName);
                 const percent = Math.min(100, Math.floor((extractVideoElem.currentTime / extractVideoElem.duration) * 100));
                 document.getElementById('realtimeStatus').innerHTML = '<span class="pulse"></span> Extraction ultra-rapide en cours... (' + percent + '%)';
                 extractNextFrame(extractVideoElem.currentTime + selectedInterval);
@@ -1418,17 +1451,17 @@
             showToast('Extraction terminée !');
         }
 
-        function addCaptureToGrid(dataUrl, index) {
+        function addCaptureToGrid(dataUrl, index, capName) {
             const grid = document.getElementById('capturesGrid');
             document.getElementById('capTotal').textContent = index;
             const div = document.createElement('div'); div.className = 'capture-thumb';
             const img = document.createElement('img'); img.src = dataUrl;
             const actions = document.createElement('div'); actions.className = 'capture-actions';
             const num = document.createElement('span'); num.className = 'cap-num'; num.textContent = '#' + index;
-            const capName = 'inku_capture_' + String(index).padStart(3, '0') + '.jpg';
             const dlBtn = document.createElement(isIOS ? 'button' : 'a');
             dlBtn.className = 'btn-dl-small'; dlBtn.textContent = 'Télécharger';
-            if (isIOS) { dlBtn.addEventListener('click', () => smartDownload(dataUrl, capName)); }
+            // iOS : passer dataUrl à showIOSModal (pas blob) pour que "Enregistrer dans Photos" marche
+            if (isIOS) { dlBtn.addEventListener('click', () => showIOSModal([{ dataUrl, name: capName }])); }
             else { dlBtn.href = dataUrl; dlBtn.download = capName; dlBtn.dataset.name = capName; }
             actions.appendChild(num); actions.appendChild(dlBtn);
             div.appendChild(img); div.appendChild(actions);
@@ -1439,8 +1472,10 @@
             if (!liveCapturesList.length) return showToast('Aucune capture disponible', 'error');
             showToast('Préparation du ZIP complet...');
             const zip = new JSZip();
-            liveCapturesList.forEach((url, i) => {
-                zip.file('inku_capture_' + String(i + 1).padStart(3, '0') + '.jpg', url.split(',')[1], { base64: true });
+            liveCapturesList.forEach((item, i) => {
+                const fname = item.name || ('inku_capture_' + String(i + 1).padStart(3, '0') + '.jpg');
+                // item.dataUrl est toujours une dataURL base64
+                zip.file(fname, item.dataUrl.split(',')[1], { base64: true });
             });
             const blob = await zip.generateAsync({ type: 'blob' });
             const blobUrl = URL.createObjectURL(blob);
@@ -1550,11 +1585,19 @@
             const orderedFiles = getOrderedCollageFiles();
             if (!orderedFiles.length) return showToast('Aucune image', 'error');
             showToast('Génération Collage 2 Colonnes...');
-            const canvas = await createMergedCanvas(orderedFiles, 2);
-            if (!canvas) return;
-            const url = canvas.toDataURL('image/jpeg', 1.0);
-            smartDownload(url, 'INKU_COLLAGE_2_COLONNES.jpg');
-            showToast(isIOS ? 'Appuie long pour sauvegarder !' : 'Collage téléchargé !');
+            try {
+                const canvas = await createMergedCanvas(orderedFiles, 2);
+                if (!canvas) return;
+                const dataUrl = canvasToDataUrl(canvas, 1.0);
+                const name = 'INKU_COLLAGE_2_COLONNES.jpg';
+                if (isIOS) {
+                    showIOSModal([{ dataUrl, name }]);
+                } else {
+                    const a = document.createElement('a'); a.href = dataUrl; a.download = name;
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                    showToast('Collage téléchargé !');
+                }
+            } catch(e) { console.error(e); showToast('Erreur collage', 'error'); }
         }
         window.generateClassicCollage = generateClassicCollage;
 
@@ -1565,26 +1608,29 @@
             const previewContainer = document.getElementById('instaPreviewContainer');
             const previewWrap = document.getElementById('instaPreview');
             previewWrap.innerHTML = '';
-            for (let i = 0; i < orderedFiles.length; i += 2) {
-                const pair = orderedFiles.slice(i, i + 2);
-                const canvas = await createMergedCanvas(pair, 1);
-                if (!canvas) continue;
-                const url = canvas.toDataURL('image/jpeg', 1.0);
-                const name = 'INKU_COLLAGE_INSTA_' + (Math.floor(i / 2) + 1) + '.jpg';
-                const div = document.createElement('div'); div.className = 'capture-thumb'; div.style.cursor = 'grab';
-                const imgEl = document.createElement('img'); imgEl.src = url;
-                const actionsDiv = document.createElement('div'); actionsDiv.className = 'capture-actions'; actionsDiv.style.justifyContent = 'center';
-                const dlBtn = document.createElement(isIOS ? 'button' : 'a');
-                dlBtn.className = 'btn-dl-small'; dlBtn.textContent = 'Télécharger'; dlBtn.style.width = '100%'; dlBtn.style.textAlign = 'center';
-                if (isIOS) { dlBtn.addEventListener('click', () => smartDownload(url, name)); }
-                else { dlBtn.href = url; dlBtn.download = name; }
-                actionsDiv.appendChild(dlBtn); div.appendChild(imgEl); div.appendChild(actionsDiv);
-                previewWrap.appendChild(div);
-            }
-            previewContainer.style.display = 'block';
-            if (window.instaSortable) window.instaSortable.destroy();
-            window.instaSortable = new Sortable(previewWrap, { animation: 200, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen' });
-            showToast('Paires Insta générées !');
+            try {
+                for (let i = 0; i < orderedFiles.length; i += 2) {
+                    const pair = orderedFiles.slice(i, i + 2);
+                    const canvas = await createMergedCanvas(pair, 1);
+                    if (!canvas) continue;
+                    const dataUrl = canvasToDataUrl(canvas, 1.0);
+                    const name = 'INKU_COLLAGE_INSTA_' + (Math.floor(i / 2) + 1) + '.jpg';
+                    const div = document.createElement('div'); div.className = 'capture-thumb'; div.style.cursor = 'grab';
+                    const imgEl = document.createElement('img'); imgEl.src = dataUrl;
+                    const actionsDiv = document.createElement('div'); actionsDiv.className = 'capture-actions'; actionsDiv.style.justifyContent = 'center';
+                    const dlBtn = document.createElement(isIOS ? 'button' : 'a');
+                    dlBtn.className = 'btn-dl-small'; dlBtn.textContent = 'Télécharger'; dlBtn.style.width = '100%'; dlBtn.style.textAlign = 'center';
+                    // iOS : ouvre la modal avec la dataUrl, pas un blob
+                    if (isIOS) { dlBtn.addEventListener('click', () => showIOSModal([{ dataUrl, name }])); }
+                    else { dlBtn.href = dataUrl; dlBtn.download = name; }
+                    actionsDiv.appendChild(dlBtn); div.appendChild(imgEl); div.appendChild(actionsDiv);
+                    previewWrap.appendChild(div);
+                }
+                previewContainer.style.display = 'block';
+                if (window.instaSortable) window.instaSortable.destroy();
+                window.instaSortable = new Sortable(previewWrap, { animation: 200, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen' });
+                showToast('Paires Insta générées !');
+            } catch(e) { console.error(e); showToast('Erreur génération Insta', 'error'); }
         }
         window.generateInstaCollage = generateInstaCollage;
 
@@ -1594,7 +1640,11 @@
             const items = [];
             thumbs.forEach((thumb, i) => {
                 const img = thumb.querySelector('img');
-                if (img) items.push({ url: img.src, name: 'INKU_COLLAGE_INSTA_' + (i + 1) + '.jpg' });
+                if (img) {
+                    const name = 'INKU_COLLAGE_INSTA_' + (i + 1) + '.jpg';
+                    // img.src est une dataUrl — on la passe comme url ET dataUrl
+                    items.push({ url: img.src, dataUrl: img.src, name });
+                }
             });
             smartDownloadAll(items);
         }
