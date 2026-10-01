@@ -3,17 +3,48 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>INKU Studio | Pro Ultra Edition</title>
     <meta name="description"
         content="INKU Studio Pro Ultra — Application de copyright, capture vidéo et collage d'images pour vos contenus manga/anime.">
+    <meta name="theme-color" content="#82278f">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="assets/vendor/jszip.min.js"></script>
+    <script src="assets/vendor/sortable.min.js"></script>
     <script src="assets/logos.js"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        @font-face {
+            font-family: 'Plus Jakarta Sans';
+            font-style: normal;
+            font-weight: 400;
+            font-display: swap;
+            src: url('assets/fonts/plus-jakarta-sans-400.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'Plus Jakarta Sans';
+            font-style: normal;
+            font-weight: 600;
+            font-display: swap;
+            src: url('assets/fonts/plus-jakarta-sans-600.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'Plus Jakarta Sans';
+            font-style: normal;
+            font-weight: 700;
+            font-display: swap;
+            src: url('assets/fonts/plus-jakarta-sans-700.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'Plus Jakarta Sans';
+            font-style: normal;
+            font-weight: 800;
+            font-display: swap;
+            src: url('assets/fonts/plus-jakarta-sans-800.woff2') format('woff2');
+        }
 
         :root {
             --fuchsia: #d91b81;
@@ -103,7 +134,7 @@
         }
 
         .header-sub {
-            font-size: 0.65rem;
+            font-size: 0.72rem;
             color: var(--text-muted);
             font-weight: 600;
             letter-spacing: 0.5px;
@@ -125,6 +156,7 @@
         }
 
         .nav-btn {
+            position: relative;
             padding: 8px 16px;
             border-radius: 100px;
             border: none;
@@ -136,11 +168,6 @@
             transition: var(--transition);
             white-space: nowrap;
             letter-spacing: 0.3px;
-        }
-
-        .nav-btn:hover {
-            background: var(--brand-soft);
-            color: var(--fuchsia);
         }
 
         .nav-btn.active {
@@ -221,7 +248,6 @@
             position: relative;
         }
 
-        .drop-zone:hover,
         .drop-zone.dragover {
             border-color: var(--fuchsia);
             background: rgba(217, 27, 129, 0.03);
@@ -250,7 +276,7 @@
             border-radius: 12px;
             border: 2px solid var(--border);
             outline: none;
-            font-size: 0.88rem;
+            font-size: 16px;
             font-weight: 600;
             margin-bottom: 12px;
             transition: var(--transition);
@@ -300,28 +326,14 @@
             user-select: none;
         }
 
-        .logo-item:hover {
-            border-color: rgba(217, 27, 129, 0.4);
-            background: rgba(217, 27, 129, 0.03);
-            transform: translateY(-2px);
-        }
-
         .logo-item.selected {
             border-color: var(--fuchsia);
             background: rgba(217, 27, 129, 0.06);
             box-shadow: 0 4px 16px rgba(217, 27, 129, 0.15);
         }
 
-        .logo-item img {
-            width: 100%;
-            aspect-ratio: 1/1;
-            object-fit: contain;
-            margin-bottom: 6px;
-            border-radius: 6px;
-        }
-
         .logo-item span {
-            font-size: 0.58rem;
+            font-size: 0.69rem;
             font-weight: 700;
             display: block;
             overflow: hidden;
@@ -385,12 +397,6 @@
             text-decoration: none;
         }
 
-        .big-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(217, 27, 129, 0.3);
-            filter: brightness(1.05);
-        }
-
         .big-btn:active {
             transform: translateY(0);
         }
@@ -399,12 +405,6 @@
             background: white;
             color: var(--fuchsia);
             border: 2px solid var(--border);
-            box-shadow: none;
-        }
-
-        .big-btn.secondary:hover {
-            border-color: var(--fuchsia);
-            background: rgba(217, 27, 129, 0.04);
             box-shadow: none;
         }
 
@@ -665,7 +665,6 @@
             margin-bottom: 14px;
         }
 
-        .collage-dropzone:hover,
         .collage-dropzone.dragover {
             border-color: var(--fuchsia);
             background: rgba(217, 27, 129, 0.03);
@@ -691,10 +690,6 @@
             background: #f0f0f0;
             aspect-ratio: 1/1;
             transition: var(--transition);
-        }
-
-        .collage-item:hover {
-            border-color: var(--fuchsia);
         }
 
         .collage-item.sortable-ghost {
@@ -731,10 +726,6 @@
             justify-content: center;
             opacity: 0;
             transition: opacity 0.2s;
-        }
-
-        .collage-item:hover .collage-remove {
-            opacity: 1;
         }
 
         /* ══════════════════════════════
@@ -803,6 +794,160 @@
                 grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
             }
         }
+
+        /* ── Fallback pour navigateurs sans "gap" en flexbox (Safari < 14.1, vieux Android) ── */
+        @supports not (gap: 1px) {
+            .header-inner > * + * { margin-left: 14px; }
+            nav > * + * { margin-left: 6px; }
+            .section-title::before { margin-right: 6px; }
+            .search-row > * + * { margin-left: 10px; }
+            .custom-logo-preview > * + * { margin-left: 10px; }
+            .loader > * + * { margin-left: 10px; }
+            .interval-grid > * { margin: 0 8px 8px 0; }
+            #iosModalGrid > * + * { margin-top: 14px; }
+            @media (max-width: 540px) {
+                .header-inner > * + * { margin-left: 10px; }
+            }
+        }
+
+        /* ── Fallback "aspect-ratio" (padding-top) pour navigateurs anciens ── */
+        .logo-thumb {
+            position: relative;
+            width: 100%;
+            height: 0;
+            padding-top: 100%;
+            margin-bottom: 6px;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .logo-thumb img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            margin-bottom: 0;
+        }
+
+        .collage-item {
+            aspect-ratio: 1/1;
+            padding-top: 100%;
+            height: 0;
+        }
+
+        @supports (aspect-ratio: 1/1) {
+            .collage-item {
+                padding-top: 0;
+                height: auto;
+            }
+        }
+
+        .collage-item img {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* ── :hover uniquement sur pointeurs capables de survol (pas de hover collant au doigt) ── */
+        @media (hover: hover) and (pointer: fine) {
+            .nav-btn:hover { background: var(--brand-soft); color: var(--fuchsia); }
+            .drop-zone:hover { border-color: var(--fuchsia); background: rgba(217, 27, 129, 0.03); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(217, 27, 129, 0.1); }
+            .logo-item:hover { border-color: rgba(217, 27, 129, 0.4); background: rgba(217, 27, 129, 0.03); transform: translateY(-2px); }
+            .big-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(217, 27, 129, 0.3); filter: brightness(1.05); }
+            .big-btn.secondary:hover { border-color: var(--fuchsia); background: rgba(217, 27, 129, 0.04); box-shadow: none; }
+            .collage-dropzone:hover { border-color: var(--fuchsia); background: rgba(217, 27, 129, 0.03); }
+            .collage-item:hover { border-color: var(--fuchsia); }
+            .collage-item:hover .collage-remove { opacity: 1; }
+        }
+
+        /* Sur tactile (pas de hover fiable), le bouton de suppression reste visible en permanence */
+        .collage-remove {
+            opacity: 1;
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            .collage-remove {
+                opacity: 0;
+            }
+        }
+
+        /* Agrandit la zone tactile sans changer la taille visuelle du bouton (cible >= 44px) */
+        .collage-remove {
+            width: 24px;
+            height: 24px;
+        }
+
+        .collage-remove::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 44px;
+            height: 44px;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Agrandit la zone tactile des petits boutons sans changer leur taille visuelle (cible >= 44px) */
+        .btn-dl-small {
+            position: relative;
+        }
+        .nav-btn::after,
+        .btn-dl-small::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            min-width: 44px;
+            min-height: 44px;
+            width: 100%;
+            height: 100%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Toast : ne doit pas déborder sur petit écran */
+        .toast {
+            max-width: calc(100vw - 32px);
+            white-space: normal;
+            text-align: center;
+            overflow-wrap: break-word;
+        }
+
+        /* Header plus compact sur petits écrans pour laisser de la place au contenu */
+        @media (max-width: 400px) {
+            header {
+                padding: 8px 14px;
+            }
+            .header-sub {
+                display: none;
+            }
+            nav {
+                padding-top: 6px;
+            }
+        }
+
+        /* Fallback couleur si background-clip:text n'est pas supporté */
+        h1 span {
+            color: var(--fuchsia);
+        }
+
+        @supports (background-clip: text) or (-webkit-background-clip: text) {
+            h1 span {
+                color: transparent;
+            }
+        }
+
+        /* Zones de sécurité iOS (encoche, barre d'accueil) */
+        body {
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+            padding-bottom: calc(40px + env(safe-area-inset-bottom));
+        }
+
+        header {
+            padding-top: calc(12px + env(safe-area-inset-top));
+        }
     </style>
 </head>
 
@@ -811,7 +956,7 @@
     <header>
         <div class="header-inner">
             <div class="logo-box">
-                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSb7q9nFw5FkSNLYQNNWYARWgF9q_xsHnKYkQ&s"
+                <img src="assets/logo.png"
                     alt="INKU Studio Logo">
             </div>
             <div class="header-title">
@@ -996,7 +1141,7 @@
             <div class="card">
                 <span class="section-title">✏️ Tweet Libre</span>
                 <div style="position:relative;">
-                    <textarea id="tweetLibreInput" placeholder="Rédige ton tweet ici..." oninput="updateLibreCount()" onfocus="this.style.borderColor='var(--fuchsia)'" onblur="this.style.borderColor='var(--border)'" style="width:100%;min-height:140px;padding:14px;padding-bottom:32px;border-radius:12px;border:2px solid var(--border);font-size:0.92rem;font-weight:600;line-height:1.55;resize:vertical;outline:none;font-family:inherit;color:var(--text);background:#fafbfc;transition:var(--transition);"></textarea>
+                    <textarea id="tweetLibreInput" placeholder="Rédige ton tweet ici..." oninput="updateLibreCount()" onfocus="this.style.borderColor='var(--fuchsia)'" onblur="this.style.borderColor='var(--border)'" style="width:100%;min-height:140px;padding:14px;padding-bottom:32px;border-radius:12px;border:2px solid var(--border);font-size:16px;font-weight:600;line-height:1.55;resize:vertical;outline:none;font-family:inherit;color:var(--text);background:#fafbfc;transition:var(--transition);"></textarea>
                     <span id="libreCount" style="position:absolute;bottom:10px;right:12px;font-size:0.68rem;font-weight:800;color:var(--text-muted);pointer-events:none;">0 / 280</span>
                 </div>
                 <div class="btn-row" style="margin-top:10px;">
@@ -1012,7 +1157,7 @@
                     La balise <strong>「OFFICIEL」</strong> sera ajoutée automatiquement au début lors de la copie.
                 </div>
                 <div style="position:relative;">
-                    <textarea id="tweetOfficielInput" placeholder="Écris ton contenu ici..." oninput="buildOfficiel()" onfocus="this.style.borderColor='var(--fuchsia)'" onblur="this.style.borderColor='var(--border)'" style="width:100%;min-height:130px;padding:14px;padding-bottom:32px;border-radius:12px;border:2px solid var(--border);font-size:0.92rem;font-weight:600;line-height:1.55;resize:vertical;outline:none;font-family:inherit;color:var(--text);background:#fafbfc;transition:var(--transition);"></textarea>
+                    <textarea id="tweetOfficielInput" placeholder="Écris ton contenu ici..." oninput="buildOfficiel()" onfocus="this.style.borderColor='var(--fuchsia)'" onblur="this.style.borderColor='var(--border)'" style="width:100%;min-height:130px;padding:14px;padding-bottom:32px;border-radius:12px;border:2px solid var(--border);font-size:16px;font-weight:600;line-height:1.55;resize:vertical;outline:none;font-family:inherit;color:var(--text);background:#fafbfc;transition:var(--transition);"></textarea>
                     <span id="officielCount" style="position:absolute;bottom:10px;right:12px;font-size:0.68rem;font-weight:800;color:var(--fuchsia);pointer-events:none;">0 / 280</span>
                 </div>
                 <div class="btn-row" style="margin-top:10px;">
@@ -1025,7 +1170,7 @@
             <div class="card">
                 <span class="section-title">📝 Bloc-notes</span>
                 <small style="display:block;margin-bottom:10px;color:var(--text-muted);font-size:0.72rem;font-weight:600;">Sauvegardé automatiquement dans le navigateur</small>
-                <textarea id="blocNotesInput" placeholder="Phrases récurrentes, brouillons, notes..." oninput="saveBlocNotes()" onfocus="this.style.borderColor='var(--fuchsia)'" onblur="this.style.borderColor='var(--border)'" style="width:100%;min-height:180px;padding:14px;border-radius:12px;border:2px solid var(--border);font-size:0.88rem;font-weight:600;line-height:1.55;resize:vertical;outline:none;font-family:inherit;color:var(--text);background:#fafbfc;transition:var(--transition);"></textarea>
+                <textarea id="blocNotesInput" placeholder="Phrases récurrentes, brouillons, notes..." oninput="saveBlocNotes()" onfocus="this.style.borderColor='var(--fuchsia)'" onblur="this.style.borderColor='var(--border)'" style="width:100%;min-height:180px;padding:14px;border-radius:12px;border:2px solid var(--border);font-size:16px;font-weight:600;line-height:1.55;resize:vertical;outline:none;font-family:inherit;color:var(--text);background:#fafbfc;transition:var(--transition);"></textarea>
                 <div class="btn-row" style="margin-top:10px;">
                     <button class="big-btn secondary" style="margin:0;" onclick="copyBlocNotes()">📋 Tout copier</button>
                     <button class="big-btn secondary" style="margin:0;color:#e53e3e;border-color:#fcc;" onclick="clearBlocNotes()">🗑 Effacer</button>
@@ -1040,7 +1185,7 @@
     <div class="toast" id="toast"></div>
 
     <!-- ══ MODAL iOS ══ -->
-    <div id="iosModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:99999; flex-direction:column; align-items:center; overflow-y:auto; padding:20px; -webkit-overflow-scrolling:touch;">
+    <div id="iosModal" style="display:none; position:fixed; top:0; right:0; bottom:0; left:0; background:rgba(0,0,0,0.88); z-index:99999; flex-direction:column; align-items:center; overflow-y:auto; padding:20px; padding-top:calc(20px + env(safe-area-inset-top)); padding-bottom:calc(20px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling:touch;">
         <div style="width:100%; max-width:640px; padding-bottom:30px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
                 <div>
@@ -1062,12 +1207,15 @@
         //  iOS COMPAT — détection (pas de DOM ici)
         // ═══════════════════════════════════════════
         const UA = navigator.userAgent;
-        const isIOS = /iPad|iPhone|iPod/.test(UA) && !window.MSStream;
+        // iPadOS 13+ envoie un UA "Macintosh" en mode desktop : on le détecte via
+        // la combinaison plateforme Mac + écran tactile (un vrai Mac n'a pas de maxTouchPoints > 1).
+        const isModernIPad = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+        const isIOS = (/iPad|iPhone|iPod/.test(UA) || isModernIPad) && !window.MSStream;
         const isChromeiOS = isIOS && /CriOS/.test(UA);
         const isSafariIOS = isIOS && /Safari/.test(UA) && !/CriOS|FxiOS|OPiOS/.test(UA);
         const deviceModel = (() => {
             if (/iPhone/.test(UA)) return 'iPhone';
-            if (/iPad/.test(UA)) return 'iPad';
+            if (/iPad/.test(UA) || isModernIPad) return 'iPad';
             if (/iPod/.test(UA)) return 'iPod';
             return 'Desktop';
         })();
@@ -1089,20 +1237,22 @@
         document.addEventListener('DOMContentLoaded', function() {
 
         // ── Bannière device ──
-        const banner = document.getElementById('deviceBanner');
-        if (banner) {
-            banner.style.display = 'block';
-            if (isIOS) {
-                banner.style.background = 'linear-gradient(135deg,rgba(217,27,129,0.1),rgba(130,39,143,0.1))';
-                banner.style.border = '1px solid rgba(217,27,129,0.25)';
-                banner.style.color = '#82278f';
-                banner.innerHTML = '📱 <strong>' + deviceModel + ' détecté</strong> · ' + browserName + ' · ' + screenInfo + ' · <span style="color:#d91b81">Mode iOS actif</span>';
-            } else {
-                banner.style.background = 'rgba(0,0,0,0.04)';
-                banner.style.color = '#9ca3af';
-                banner.innerHTML = '💻 <strong>' + browserName + '</strong> · ' + screenInfo + ' · Mode standard';
+        try {
+            const banner = document.getElementById('deviceBanner');
+            if (banner) {
+                banner.style.display = 'block';
+                if (isIOS) {
+                    banner.style.background = 'linear-gradient(135deg,rgba(217,27,129,0.1),rgba(130,39,143,0.1))';
+                    banner.style.border = '1px solid rgba(217,27,129,0.25)';
+                    banner.style.color = '#82278f';
+                    banner.innerHTML = '📱 <strong>' + deviceModel + ' détecté</strong> · ' + browserName + ' · ' + screenInfo + ' · <span style="color:#d91b81">Mode iOS actif</span>';
+                } else {
+                    banner.style.background = 'rgba(0,0,0,0.04)';
+                    banner.style.color = '#9ca3af';
+                    banner.innerHTML = '💻 <strong>' + browserName + '</strong> · ' + screenInfo + ' · Mode standard';
+                }
             }
-        }
+        } catch (e) { console.error('[INKU] Bannière device :', e); }
 
         // ── Utilitaires ──
         function dataUrlToBlobUrl(dataUrl) {
@@ -1158,17 +1308,53 @@
             setTimeout(() => t.classList.remove('show'), 3000);
         }
 
-        function loadImg(url) {
+        function loadImg(url, timeoutMs = 20000) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
+                let settled = false;
+                const timer = setTimeout(() => {
+                    if (settled) return;
+                    settled = true;
+                    reject(new Error('Délai dépassé au chargement de l\'image'));
+                }, timeoutMs);
                 // crossOrigin uniquement pour les URLs distantes (pas dataURL ni blob: local)
                 if (url && !url.startsWith('data:') && !url.startsWith('blob:')) {
                     img.crossOrigin = 'anonymous';
                 }
-                img.onload = () => resolve(img);
-                img.onerror = reject;
+                img.onload = async () => {
+                    if (settled) return;
+                    // decode() s'assure que l'image est entièrement décodée avant usage
+                    // (évite un dessin partiel sur canvas) ; si indisponible ou en échec,
+                    // onload suffit déjà à garantir une image utilisable.
+                    try { if (img.decode) await img.decode(); } catch (e) {}
+                    if (settled) return;
+                    settled = true; clearTimeout(timer);
+                    resolve(img);
+                };
+                img.onerror = () => {
+                    if (settled) return;
+                    settled = true; clearTimeout(timer);
+                    reject(new Error('Image illisible ou introuvable'));
+                };
                 img.src = url;
             });
+        }
+
+        // Charge un fichier source en respectant son orientation EXIF quand le
+        // navigateur le permet (createImageBitmap + imageOrientation:'from-image').
+        // Sinon, on retombe sur loadImg() via une object URL (comportement précédent).
+        async function loadSourceImage(file) {
+            if (window.createImageBitmap) {
+                try {
+                    return await createImageBitmap(file, { imageOrientation: 'from-image' });
+                } catch (e) { /* navigateur sans support de l'option, on retombe plus bas */ }
+            }
+            const url = URL.createObjectURL(file);
+            try {
+                return await loadImg(url);
+            } finally {
+                URL.revokeObjectURL(url);
+            }
         }
 
         // Toujours retourner une dataURL — c'est le seul format que Safari iOS
@@ -1222,14 +1408,17 @@
             list.forEach(name => {
                 const div = document.createElement('div');
                 div.className = 'logo-item'; div.dataset.name = name;
+                const thumb = document.createElement('div');
+                thumb.className = 'logo-thumb';
                 const img = document.createElement('img');
                 img.src = 'assets/copyrights/' + name + '.png';
                 img.loading = 'lazy'; img.alt = name.replace(/_/g, ' ');
                 img.onerror = () => { div.style.display = 'none'; };
+                thumb.appendChild(img);
                 const span = document.createElement('span');
                 span.textContent = name.replace(/_/g, ' ');
                 if ('assets/copyrights/' + name + '.png' === SELECTED_WM_URL) div.classList.add('selected');
-                div.appendChild(img); div.appendChild(span);
+                div.appendChild(thumb); div.appendChild(span);
                 div.addEventListener('click', () => selectCloudLogo(name, div));
                 grid.appendChild(div);
             });
@@ -1270,21 +1459,30 @@
         window.handleCustomLogo = handleCustomLogo;
 
         // ── Drop zone applier ──
-        const dropZoneApplier = document.getElementById('dropZoneApplier');
-        const inImgs = document.getElementById('inImgs');
-        dropZoneApplier.addEventListener('dragover', e => { e.preventDefault(); dropZoneApplier.classList.add('dragover'); });
-        dropZoneApplier.addEventListener('dragleave', () => dropZoneApplier.classList.remove('dragover'));
-        dropZoneApplier.addEventListener('drop', e => {
-            e.preventDefault(); dropZoneApplier.classList.remove('dragover');
-            const dt = new DataTransfer();
-            [...e.dataTransfer.files].filter(f => f.type.startsWith('image/')).forEach(f => dt.items.add(f));
-            inImgs.files = dt.files; updateAnimeCount();
-        });
-        inImgs.addEventListener('change', updateAnimeCount);
-        document.getElementById('logoSearch').addEventListener('input', filterLogos);
+        // On garde notre propre tableau de File au lieu de piloter inImgs.files :
+        // new DataTransfer() n'existe pas sur Safari ancien, et ceci permet aussi
+        // de re-sélectionner les mêmes fichiers d'affilée.
+        let applierFiles = [];
+        try {
+            const inImgs = document.getElementById('inImgs');
+            const dropZoneApplier = document.getElementById('dropZoneApplier');
+            dropZoneApplier.addEventListener('dragover', e => { e.preventDefault(); dropZoneApplier.classList.add('dragover'); });
+            dropZoneApplier.addEventListener('dragleave', () => dropZoneApplier.classList.remove('dragover'));
+            dropZoneApplier.addEventListener('drop', e => {
+                e.preventDefault(); dropZoneApplier.classList.remove('dragover');
+                const dropped = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/'));
+                if (dropped.length) { applierFiles = dropped; updateAnimeCount(); }
+            });
+            inImgs.addEventListener('change', () => {
+                applierFiles = [...inImgs.files];
+                inImgs.value = ''; // permet de re-sélectionner les mêmes fichiers plus tard
+                updateAnimeCount();
+            });
+            document.getElementById('logoSearch').addEventListener('input', filterLogos);
+        } catch (e) { console.error('[INKU] Initialisation Appliquer :', e); }
 
         function updateAnimeCount() {
-            const count = inImgs.files.length;
+            const count = applierFiles.length;
             document.getElementById('animeCount').textContent = count ? count + ' image(s) sélectionnée(s)' : 'Sélectionner ou déposer les images';
         }
 
@@ -1292,7 +1490,7 @@
 
         async function fastProcess() {
             if (!SELECTED_WM_URL) return showToast('Sélectionne un copyright d\'abord', 'error');
-            const files = inImgs.files;
+            const files = applierFiles;
             if (!files.length) return showToast('Ajoute des images', 'error');
             const loader = document.getElementById('applierLoader');
             const loaderText = document.getElementById('applierLoaderText');
@@ -1305,14 +1503,13 @@
                 for (let i = 0; i < files.length; i++) {
                     loaderText.textContent = 'Traitement ' + (i + 1) + ' / ' + files.length + '...';
                     const f = files[i];
-                    const srcBlobUrl = URL.createObjectURL(f);
-                    const img = await loadImg(srcBlobUrl);
-                    URL.revokeObjectURL(srcBlobUrl);
+                    const img = await loadSourceImage(f);
                     const cv = document.createElement('canvas');
                     cv.width = img.width; cv.height = img.height;
                     const ctx = cv.getContext('2d');
                     ctx.drawImage(img, 0, 0);
                     ctx.drawImage(wmImg, 0, 0, cv.width, cv.height);
+                    if (img.close) img.close(); // libère la mémoire d'un ImageBitmap
                     // dataUrl = auto-contenu, fonctionne pour la modal iOS "Enregistrer dans Photos"
                     const dataUrl = canvasToDataUrl(cv, 0.92);
                     const finalName = 'INKU_' + f.name.replace(/\.[^.]+$/, '') + '.jpg';
@@ -1359,24 +1556,26 @@
         let isExtracting = false;
         let extractVideoElem = null;
 
-        document.querySelectorAll('.interval-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.interval-btn').forEach(b => b.classList.remove('selected'));
-                btn.classList.add('selected');
-                selectedInterval = parseFloat(btn.dataset.val);
+        try {
+            document.querySelectorAll('.interval-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.interval-btn').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    selectedInterval = parseFloat(btn.dataset.val);
+                });
             });
-        });
 
-        const videoDropZone = document.getElementById('videoDropZone');
-        videoDropZone.addEventListener('dragover', e => { e.preventDefault(); videoDropZone.classList.add('dragover'); });
-        videoDropZone.addEventListener('dragleave', () => videoDropZone.classList.remove('dragover'));
-        videoDropZone.addEventListener('drop', e => {
-            e.preventDefault(); videoDropZone.classList.remove('dragover');
-            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                const input = document.getElementById('videoFile');
-                input.files = e.dataTransfer.files; loadLocalVideo(input);
-            }
-        });
+            const videoDropZone = document.getElementById('videoDropZone');
+            videoDropZone.addEventListener('dragover', e => { e.preventDefault(); videoDropZone.classList.add('dragover'); });
+            videoDropZone.addEventListener('dragleave', () => videoDropZone.classList.remove('dragover'));
+            videoDropZone.addEventListener('drop', e => {
+                e.preventDefault(); videoDropZone.classList.remove('dragover');
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    const input = document.getElementById('videoFile');
+                    input.files = e.dataTransfer.files; loadLocalVideo(input);
+                }
+            });
+        } catch (e) { console.error('[INKU] Initialisation Vidéo :', e); }
 
         function loadLocalVideo(input) {
             if (input.files && input.files[0]) {
@@ -1500,15 +1699,17 @@
         let collageFiles = [];
         let sortableCollage = null;
 
-        const collageDropzone = document.getElementById('collageDropzone');
-        const collageInput = document.getElementById('collageInput');
-        collageDropzone.addEventListener('dragover', e => { e.preventDefault(); collageDropzone.classList.add('dragover'); });
-        collageDropzone.addEventListener('dragleave', () => collageDropzone.classList.remove('dragover'));
-        collageDropzone.addEventListener('drop', e => {
-            e.preventDefault(); collageDropzone.classList.remove('dragover');
-            handleCollageFiles([...e.dataTransfer.files]);
-        });
-        collageInput.addEventListener('change', () => handleCollageFiles([...collageInput.files]));
+        try {
+            const collageDropzone = document.getElementById('collageDropzone');
+            const collageInput = document.getElementById('collageInput');
+            collageDropzone.addEventListener('dragover', e => { e.preventDefault(); collageDropzone.classList.add('dragover'); });
+            collageDropzone.addEventListener('dragleave', () => collageDropzone.classList.remove('dragover'));
+            collageDropzone.addEventListener('drop', e => {
+                e.preventDefault(); collageDropzone.classList.remove('dragover');
+                handleCollageFiles([...e.dataTransfer.files]);
+            });
+            collageInput.addEventListener('change', () => handleCollageFiles([...collageInput.files]));
+        } catch (e) { console.error('[INKU] Initialisation Collage :', e); }
 
         async function handleCollageFiles(files) {
             const imageFiles = files.filter(f => f.type.startsWith('image/'));
@@ -1773,8 +1974,8 @@
         // ═══════════════════════════════════════════
         //  INIT
         // ═══════════════════════════════════════════
-        initLogos();
-        loadBlocNotes();
+        try { initLogos(); } catch (e) { console.error('[INKU] initLogos :', e); }
+        try { loadBlocNotes(); } catch (e) { console.error('[INKU] loadBlocNotes :', e); }
 
         }); // END DOMContentLoaded
 </script>
