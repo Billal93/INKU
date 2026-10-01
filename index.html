@@ -1039,6 +1039,9 @@
                 <div class="video-preview-wrap" id="videoWrap" style="display:none;">
                     <video id="videoPreview" controls playsinline></video>
                 </div>
+                <!-- Vidéo d'extraction : doit rester dans le DOM (pas détachée) pour
+                     que loadedmetadata/seeked se déclenchent de façon fiable sur iOS. -->
+                <video id="extractVideo" muted playsinline preload="auto" style="position:fixed; width:2px; height:2px; left:-9999px; top:-9999px;"></video>
             </div>
 
             <div class="card" id="videoControls" style="display:none;">
@@ -1784,7 +1787,12 @@
         let selectedInterval = 2;
         let liveCapturesList = [];
         let isExtracting = false;
-        let extractVideoElem = null;
+        const extractVideoElem = document.getElementById('extractVideo');
+        const FRAME_TIMEOUT_MS = 6000;
+        const MAX_CAPTURES = 600; // plafond de sécurité mémoire, modifiable ici
+        let frameTimeoutHandle = null;
+        let rvfcHandle = null;
+        let frameInFlight = false;
 
         try {
             document.querySelectorAll('.interval-btn').forEach(btn => {
@@ -1822,75 +1830,147 @@
         }
         window.loadLocalVideo = loadLocalVideo;
 
+        function updateProgressUI(percent, label) {
+            const statusEl = document.getElementById('realtimeStatus');
+            statusEl.style.display = 'block';
+            statusEl.innerHTML = '<span class="pulse"></span> ' + label + (percent !== null ? ' (' + percent + '%)' : '');
+        }
+
+        function estimateMemoryLabel() {
+            if (!liveCapturesList.length) return '';
+            const totalBytes = liveCapturesList.reduce((sum, it) => sum + (it.blob ? it.blob.size : 0), 0);
+            const mb = totalBytes / (1024 * 1024);
+            return ' · ~' + (mb < 1 ? Math.max(1, Math.round(mb * 1024)) + ' Ko' : mb.toFixed(1) + ' Mo') + ' en mémoire';
+        }
+
         function startFastCapture() {
             if (!videoFileUrl) return showToast('Sélectionnez d\'abord une vidéo', 'error');
             if (isExtracting) return;
             isExtracting = true;
+            frameInFlight = false;
             document.getElementById('btnStartRealtime').disabled = true;
             document.getElementById('btnStopRealtime').disabled = false;
-            const statusEl = document.getElementById('realtimeStatus');
-            statusEl.style.display = 'block';
-            statusEl.innerHTML = '<span class="pulse"></span> Extraction ultra-rapide en cours... (0%)';
             document.getElementById('capturesSection').style.display = 'block';
-            extractVideoElem = document.createElement('video');
-            extractVideoElem.src = videoFileUrl;
-            extractVideoElem.muted = true;
-            extractVideoElem.playsInline = true;
-            extractVideoElem.addEventListener('loadeddata', () => { extractNextFrame(0); });
-            extractVideoElem.addEventListener('seeked', () => {
+            updateProgressUI(0, 'Préparation de la vidéo...');
+
+            extractVideoElem.onerror = () => {
                 if (!isExtracting) return;
-                const canvas = document.createElement('canvas');
-                canvas.width = extractVideoElem.videoWidth || 1280;
-                canvas.height = extractVideoElem.videoHeight || 720;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(extractVideoElem, 0, 0, canvas.width, canvas.height);
-                // On garde toujours en dataUrl — c'est la seule chose que Safari iOS
-                // accepte pour "Enregistrer dans Photos" via appui long
-                const dataUrl = canvasToDataUrl(canvas, 0.90);
-                const capName = 'inku_capture_' + String(liveCapturesList.length + 1).padStart(3, '0') + '.jpg';
-                liveCapturesList.push({ dataUrl, name: capName });
-                addCaptureToGrid(dataUrl, liveCapturesList.length, capName);
-                const percent = Math.min(100, Math.floor((extractVideoElem.currentTime / extractVideoElem.duration) * 100));
-                document.getElementById('realtimeStatus').innerHTML = '<span class="pulse"></span> Extraction ultra-rapide en cours... (' + percent + '%)';
-                extractNextFrame(extractVideoElem.currentTime + selectedInterval);
-            });
+                console.error('[INKU] Erreur de lecture vidéo :', extractVideoElem.error);
+                showToast('Format vidéo non supporté par ce navigateur (ex. MOV/HEVC)', 'error');
+                stopFastCapture();
+            };
+            extractVideoElem.onloadedmetadata = async () => {
+                // Amorce le décodeur : sur certains iOS, une recherche avant toute
+                // lecture peut échouer silencieusement ou produire une image noire.
+                try { await extractVideoElem.play(); extractVideoElem.pause(); } catch (e) { /* ignoré, on tente quand même */ }
+                extractNextFrame(0);
+            };
+            extractVideoElem.src = videoFileUrl;
+            extractVideoElem.load();
         }
         window.startFastCapture = startFastCapture;
 
+        function captureCurrentFrame() {
+            const canvas = document.createElement('canvas');
+            canvas.width = extractVideoElem.videoWidth || 1280;
+            canvas.height = extractVideoElem.videoHeight || 720;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(extractVideoElem, 0, 0, canvas.width, canvas.height);
+            return canvas;
+        }
+
+        function onFrameReady() {
+            if (!isExtracting || !frameInFlight) return;
+            frameInFlight = false;
+            clearTimeout(frameTimeoutHandle);
+
+            const canvas = captureCurrentFrame();
+            canvas.toBlob((blob) => {
+                canvas.width = 0; canvas.height = 0; // libère le canvas plein format
+                if (!isExtracting) return;
+                if (!blob) {
+                    console.warn('[INKU] Frame vide ignorée à', extractVideoElem.currentTime);
+                } else {
+                    const capName = 'inku_capture_' + String(liveCapturesList.length + 1).padStart(3, '0') + '.jpg';
+                    const thumbUrl = URL.createObjectURL(blob);
+                    liveCapturesList.push({ blob, name: capName, thumbUrl });
+                    addCaptureToGrid(thumbUrl, blob, liveCapturesList.length, capName);
+                }
+
+                if (liveCapturesList.length >= MAX_CAPTURES) {
+                    showToast('Plafond de ' + MAX_CAPTURES + ' captures atteint', 'error');
+                    finishFastCapture();
+                    return;
+                }
+
+                const percent = Math.min(100, Math.floor((extractVideoElem.currentTime / extractVideoElem.duration) * 100));
+                updateProgressUI(percent, 'Extraction ultra-rapide en cours... ' + liveCapturesList.length + ' image(s)' + estimateMemoryLabel());
+                extractNextFrame(extractVideoElem.currentTime + selectedInterval);
+            }, 'image/jpeg', 0.90);
+        }
+
         function extractNextFrame(time) {
-            if (!isExtracting || !extractVideoElem) return;
+            if (!isExtracting) return;
             if (time > extractVideoElem.duration) { finishFastCapture(); return; }
-            extractVideoElem.currentTime = time;
+
+            frameInFlight = true;
+            frameTimeoutHandle = setTimeout(() => {
+                console.warn('[INKU] Timeout sur une frame, on continue avec la suivante.');
+                onFrameReady();
+            }, FRAME_TIMEOUT_MS);
+
+            if (extractVideoElem.requestVideoFrameCallback) {
+                rvfcHandle = extractVideoElem.requestVideoFrameCallback(() => onFrameReady());
+                extractVideoElem.currentTime = time;
+            } else {
+                // Repli sans requestVideoFrameCallback : on attend "seeked" puis
+                // deux rAF pour laisser le compositeur peindre la nouvelle image
+                // (sinon on risque de capturer l'ancienne frame, voire du noir).
+                const onSeeked = () => {
+                    extractVideoElem.removeEventListener('seeked', onSeeked);
+                    requestAnimationFrame(() => requestAnimationFrame(() => onFrameReady()));
+                };
+                extractVideoElem.addEventListener('seeked', onSeeked);
+                extractVideoElem.currentTime = time;
+            }
         }
 
         function stopFastCapture() {
             if (!isExtracting) return;
             isExtracting = false;
+            frameInFlight = false;
+            clearTimeout(frameTimeoutHandle);
+            if (rvfcHandle && extractVideoElem.cancelVideoFrameCallback) {
+                extractVideoElem.cancelVideoFrameCallback(rvfcHandle);
+            }
             document.getElementById('btnStartRealtime').disabled = false;
             document.getElementById('btnStopRealtime').disabled = true;
             document.getElementById('realtimeStatus').style.display = 'none';
-            if (extractVideoElem) { extractVideoElem.removeAttribute('src'); extractVideoElem.load(); extractVideoElem = null; }
+            extractVideoElem.onloadedmetadata = null;
+            extractVideoElem.onerror = null;
+            extractVideoElem.removeAttribute('src'); extractVideoElem.load();
         }
         window.stopFastCapture = stopFastCapture;
 
         function finishFastCapture() {
+            const count = liveCapturesList.length;
             stopFastCapture();
             document.getElementById('realtimeStatus').style.display = 'block';
-            document.getElementById('realtimeStatus').innerHTML = '✅ Extraction terminée ! (' + liveCapturesList.length + ' images)';
+            document.getElementById('realtimeStatus').innerHTML = '✅ Extraction terminée ! (' + count + ' images)';
             showToast('Extraction terminée !');
         }
 
-        function addCaptureToGrid(dataUrl, index, capName) {
+        function addCaptureToGrid(thumbUrl, blob, index, capName) {
             const grid = document.getElementById('capturesGrid');
             document.getElementById('capTotal').textContent = index;
             const div = document.createElement('div'); div.className = 'capture-thumb';
-            const img = document.createElement('img'); img.src = dataUrl;
+            const img = document.createElement('img'); img.src = thumbUrl;
             const actions = document.createElement('div'); actions.className = 'capture-actions';
             const num = document.createElement('span'); num.className = 'cap-num'; num.textContent = '#' + index;
             const dlBtn = document.createElement('button');
             dlBtn.className = 'btn-dl-small'; dlBtn.textContent = 'Télécharger';
             dlBtn.dataset.name = capName;
-            dlBtn.addEventListener('click', () => saveFiles([{ dataUrl, name: capName }]));
+            dlBtn.addEventListener('click', () => saveFiles([{ blob, name: capName }]));
             actions.appendChild(num); actions.appendChild(dlBtn);
             div.appendChild(img); div.appendChild(actions);
             grid.prepend(div);
@@ -1902,8 +1982,7 @@
             const zip = new JSZip();
             liveCapturesList.forEach((item, i) => {
                 const fname = item.name || ('inku_capture_' + String(i + 1).padStart(3, '0') + '.jpg');
-                // item.dataUrl est toujours une dataURL base64
-                zip.file(fname, item.dataUrl.split(',')[1], { base64: true });
+                zip.file(fname, item.blob);
             });
             const blob = await zip.generateAsync({ type: 'blob' });
             saveFiles([{ blob, name: 'INKU_STUDIO_CAPTURES.zip' }]);
@@ -1911,6 +1990,7 @@
         window.downloadCaptures = downloadCaptures;
 
         function clearCaptures() {
+            liveCapturesList.forEach(item => { if (item.thumbUrl) URL.revokeObjectURL(item.thumbUrl); });
             liveCapturesList = [];
             document.getElementById('capturesGrid').innerHTML = '';
             document.getElementById('capTotal').textContent = '0';

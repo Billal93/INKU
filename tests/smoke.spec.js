@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import path from 'node:path';
 
 const img = (n) => path.join(process.cwd(), 'test-assets', `test${n}.jpg`);
+const testVideo = path.join(process.cwd(), 'test-assets', 'test-video.mp4');
 
 test.describe('Smoke INKU Studio', () => {
   test('pas d\'erreur JS au chargement + tous les onglets changent', async ({ page }) => {
@@ -73,6 +74,36 @@ test.describe('Smoke INKU Studio', () => {
         page.click('text=Tout Télécharger'),
       ]);
       expect(download.suggestedFilename()).toMatch(/\.jpg$/);
+    }
+  });
+
+  test('Vidéo : extraction de frames', async ({ page, browserName }) => {
+    // Le WebKit embarqué par Playwright échoue à lire une blob: URL dans
+    // <video> (MEDIA_ERR_SRC_NOT_SUPPORTED) même si une URL http classique
+    // fonctionne : limite connue de ce WebKit headless, pas un comportement
+    // de vrai Safari. À vérifier manuellement sur iPhone/iPad réels.
+    test.skip(browserName === 'webkit', 'blob: URL non lisible par le WebKit headless de Playwright — à tester sur un vrai Safari');
+    await page.goto('/index.html');
+    await page.click('#btn-extractor');
+    await page.setInputFiles('#videoFile', testVideo);
+    await expect(page.locator('#videoControls')).toBeVisible();
+    await page.click('[data-val="1"]'); // intervalle 1s sur une vidéo de 6s
+    await page.click('#btnStartRealtime');
+    await expect(page.locator('#capturesGrid .capture-thumb').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('#realtimeStatus')).toContainText('terminée', { timeout: 20000 });
+    const count = await page.locator('#capturesGrid .capture-thumb').count();
+    expect(count).toBeGreaterThanOrEqual(5); // ~6-7 frames attendues (0,1,2,3,4,5,6s)
+
+    const isIOSProject = /iPhone|iPad/.test(test.info().project.name);
+    if (isIOSProject) {
+      await page.click('text=ZIP Complet');
+      await expect(page.locator('#iosModal')).toBeVisible();
+    } else {
+      const [download] = await Promise.all([
+        page.waitForEvent('download'),
+        page.click('text=ZIP Complet'),
+      ]);
+      expect(download.suggestedFilename()).toMatch(/\.zip$/);
     }
   });
 
