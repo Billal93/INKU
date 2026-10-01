@@ -1,0 +1,24 @@
+{
+  "name": "inku-github",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Billal93/INKU.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Billal93/INKU/issues"
+  },
+  "homepage": "https://github.com/Billal93/INKU#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
+}

@@ -3,17 +3,48 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>INKU Studio | Pro Ultra Edition</title>
     <meta name="description"
         content="INKU Studio Pro Ultra — Application de copyright, capture vidéo et collage d'images pour vos contenus manga/anime.">
+    <meta name="theme-color" content="#82278f">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-    <script src="assets/logos.js"></script>
+    <script src="assets/vendor/jszip.min.js"></script>
+    <script src="assets/vendor/sortable.min.js"></script>
+    <script src="assets/logos.js?v=2a76f737"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        @font-face {
+            font-family: 'Plus Jakarta Sans';
+            font-style: normal;
+            font-weight: 400;
+            font-display: swap;
+            src: url('assets/fonts/plus-jakarta-sans-400.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'Plus Jakarta Sans';
+            font-style: normal;
+            font-weight: 600;
+            font-display: swap;
+            src: url('assets/fonts/plus-jakarta-sans-600.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'Plus Jakarta Sans';
+            font-style: normal;
+            font-weight: 700;
+            font-display: swap;
+            src: url('assets/fonts/plus-jakarta-sans-700.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'Plus Jakarta Sans';
+            font-style: normal;
+            font-weight: 800;
+            font-display: swap;
+            src: url('assets/fonts/plus-jakarta-sans-800.woff2') format('woff2');
+        }
 
         :root {
             --fuchsia: #d91b81;
@@ -103,7 +134,7 @@
         }
 
         .header-sub {
-            font-size: 0.65rem;
+            font-size: 0.72rem;
             color: var(--text-muted);
             font-weight: 600;
             letter-spacing: 0.5px;
@@ -125,6 +156,7 @@
         }
 
         .nav-btn {
+            position: relative;
             padding: 8px 16px;
             border-radius: 100px;
             border: none;
@@ -136,11 +168,6 @@
             transition: var(--transition);
             white-space: nowrap;
             letter-spacing: 0.3px;
-        }
-
-        .nav-btn:hover {
-            background: var(--brand-soft);
-            color: var(--fuchsia);
         }
 
         .nav-btn.active {
@@ -221,7 +248,6 @@
             position: relative;
         }
 
-        .drop-zone:hover,
         .drop-zone.dragover {
             border-color: var(--fuchsia);
             background: rgba(217, 27, 129, 0.03);
@@ -250,7 +276,7 @@
             border-radius: 12px;
             border: 2px solid var(--border);
             outline: none;
-            font-size: 0.88rem;
+            font-size: 16px;
             font-weight: 600;
             margin-bottom: 12px;
             transition: var(--transition);
@@ -300,28 +326,14 @@
             user-select: none;
         }
 
-        .logo-item:hover {
-            border-color: rgba(217, 27, 129, 0.4);
-            background: rgba(217, 27, 129, 0.03);
-            transform: translateY(-2px);
-        }
-
         .logo-item.selected {
             border-color: var(--fuchsia);
             background: rgba(217, 27, 129, 0.06);
             box-shadow: 0 4px 16px rgba(217, 27, 129, 0.15);
         }
 
-        .logo-item img {
-            width: 100%;
-            aspect-ratio: 1/1;
-            object-fit: contain;
-            margin-bottom: 6px;
-            border-radius: 6px;
-        }
-
         .logo-item span {
-            font-size: 0.58rem;
+            font-size: 0.69rem;
             font-weight: 700;
             display: block;
             overflow: hidden;
@@ -385,12 +397,6 @@
             text-decoration: none;
         }
 
-        .big-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(217, 27, 129, 0.3);
-            filter: brightness(1.05);
-        }
-
         .big-btn:active {
             transform: translateY(0);
         }
@@ -399,12 +405,6 @@
             background: white;
             color: var(--fuchsia);
             border: 2px solid var(--border);
-            box-shadow: none;
-        }
-
-        .big-btn.secondary:hover {
-            border-color: var(--fuchsia);
-            background: rgba(217, 27, 129, 0.04);
             box-shadow: none;
         }
 
@@ -665,7 +665,6 @@
             margin-bottom: 14px;
         }
 
-        .collage-dropzone:hover,
         .collage-dropzone.dragover {
             border-color: var(--fuchsia);
             background: rgba(217, 27, 129, 0.03);
@@ -691,10 +690,6 @@
             background: #f0f0f0;
             aspect-ratio: 1/1;
             transition: var(--transition);
-        }
-
-        .collage-item:hover {
-            border-color: var(--fuchsia);
         }
 
         .collage-item.sortable-ghost {
@@ -731,10 +726,6 @@
             justify-content: center;
             opacity: 0;
             transition: opacity 0.2s;
-        }
-
-        .collage-item:hover .collage-remove {
-            opacity: 1;
         }
 
         /* ══════════════════════════════
@@ -803,6 +794,160 @@
                 grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
             }
         }
+
+        /* ── Fallback pour navigateurs sans "gap" en flexbox (Safari < 14.1, vieux Android) ── */
+        @supports not (gap: 1px) {
+            .header-inner > * + * { margin-left: 14px; }
+            nav > * + * { margin-left: 6px; }
+            .section-title::before { margin-right: 6px; }
+            .search-row > * + * { margin-left: 10px; }
+            .custom-logo-preview > * + * { margin-left: 10px; }
+            .loader > * + * { margin-left: 10px; }
+            .interval-grid > * { margin: 0 8px 8px 0; }
+            #iosModalGrid > * + * { margin-top: 14px; }
+            @media (max-width: 540px) {
+                .header-inner > * + * { margin-left: 10px; }
+            }
+        }
+
+        /* ── Fallback "aspect-ratio" (padding-top) pour navigateurs anciens ── */
+        .logo-thumb {
+            position: relative;
+            width: 100%;
+            height: 0;
+            padding-top: 100%;
+            margin-bottom: 6px;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .logo-thumb img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            margin-bottom: 0;
+        }
+
+        .collage-item {
+            aspect-ratio: 1/1;
+            padding-top: 100%;
+            height: 0;
+        }
+
+        @supports (aspect-ratio: 1/1) {
+            .collage-item {
+                padding-top: 0;
+                height: auto;
+            }
+        }
+
+        .collage-item img {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* ── :hover uniquement sur pointeurs capables de survol (pas de hover collant au doigt) ── */
+        @media (hover: hover) and (pointer: fine) {
+            .nav-btn:hover { background: var(--brand-soft); color: var(--fuchsia); }
+            .drop-zone:hover { border-color: var(--fuchsia); background: rgba(217, 27, 129, 0.03); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(217, 27, 129, 0.1); }
+            .logo-item:hover { border-color: rgba(217, 27, 129, 0.4); background: rgba(217, 27, 129, 0.03); transform: translateY(-2px); }
+            .big-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(217, 27, 129, 0.3); filter: brightness(1.05); }
+            .big-btn.secondary:hover { border-color: var(--fuchsia); background: rgba(217, 27, 129, 0.04); box-shadow: none; }
+            .collage-dropzone:hover { border-color: var(--fuchsia); background: rgba(217, 27, 129, 0.03); }
+            .collage-item:hover { border-color: var(--fuchsia); }
+            .collage-item:hover .collage-remove { opacity: 1; }
+        }
+
+        /* Sur tactile (pas de hover fiable), le bouton de suppression reste visible en permanence */
+        .collage-remove {
+            opacity: 1;
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            .collage-remove {
+                opacity: 0;
+            }
+        }
+
+        /* Agrandit la zone tactile sans changer la taille visuelle du bouton (cible >= 44px) */
+        .collage-remove {
+            width: 24px;
+            height: 24px;
+        }
+
+        .collage-remove::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 44px;
+            height: 44px;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Agrandit la zone tactile des petits boutons sans changer leur taille visuelle (cible >= 44px) */
+        .btn-dl-small {
+            position: relative;
+        }
+        .nav-btn::after,
+        .btn-dl-small::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            min-width: 44px;
+            min-height: 44px;
+            width: 100%;
+            height: 100%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Toast : ne doit pas déborder sur petit écran */
+        .toast {
+            max-width: calc(100vw - 32px);
+            white-space: normal;
+            text-align: center;
+            overflow-wrap: break-word;
+        }
+
+        /* Header plus compact sur petits écrans pour laisser de la place au contenu */
+        @media (max-width: 400px) {
+            header {
+                padding: 8px 14px;
+            }
+            .header-sub {
+                display: none;
+            }
+            nav {
+                padding-top: 6px;
+            }
+        }
+
+        /* Fallback couleur si background-clip:text n'est pas supporté */
+        h1 span {
+            color: var(--fuchsia);
+        }
+
+        @supports (background-clip: text) or (-webkit-background-clip: text) {
+            h1 span {
+                color: transparent;
+            }
+        }
+
+        /* Zones de sécurité iOS (encoche, barre d'accueil) */
+        body {
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+            padding-bottom: calc(40px + env(safe-area-inset-bottom));
+        }
+
+        header {
+            padding-top: calc(12px + env(safe-area-inset-top));
+        }
     </style>
 </head>
 
@@ -811,7 +956,7 @@
     <header>
         <div class="header-inner">
             <div class="logo-box">
-                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSb7q9nFw5FkSNLYQNNWYARWgF9q_xsHnKYkQ&s"
+                <img src="assets/logo.png"
                     alt="INKU Studio Logo">
             </div>
             <div class="header-title">
@@ -862,7 +1007,10 @@
 
             <div class="card">
                 <span class="section-title">3. Appliquer</span>
-                <button class="big-btn" onclick="fastProcess()">Appliquer les Copyrights</button>
+                <div class="btn-row">
+                    <button class="big-btn" style="margin-top:0;" onclick="fastProcess()">Appliquer les Copyrights</button>
+                    <button class="big-btn secondary" style="margin-top:0;" onclick="resetApplier()">Réinitialiser</button>
+                </div>
                 <div class="loader" id="applierLoader">
                     <div class="spinner"></div>
                     <span id="applierLoaderText">Traitement en cours...</span>
@@ -870,8 +1018,8 @@
                 <div id="bulkActions" style="display:none; margin-top:14px;">
                     <button class="big-btn" onclick="downloadAllProcessed()">Tout Télécharger</button>
                     <small
-                        style="display:block; text-align:center; margin-top:6px; font-size:0.7rem; color:var(--text-muted);">Les
-                        images seront enregistrées une par une dans votre dossier de téléchargement.</small>
+                        style="display:block; text-align:center; margin-top:6px; font-size:0.7rem; color:var(--text-muted);">Selon
+                        l'appareil : partage natif, téléchargement direct, ou appui long sur chaque image.</small>
                 </div>
                 <div id="appPreview" class="app-grid"></div>
             </div>
@@ -891,6 +1039,9 @@
                 <div class="video-preview-wrap" id="videoWrap" style="display:none;">
                     <video id="videoPreview" controls playsinline></video>
                 </div>
+                <!-- Vidéo d'extraction : doit rester dans le DOM (pas détachée) pour
+                     que loadedmetadata/seeked se déclenchent de façon fiable sur iOS. -->
+                <video id="extractVideo" muted playsinline preload="auto" style="position:fixed; width:2px; height:2px; left:-9999px; top:-9999px;"></video>
             </div>
 
             <div class="card" id="videoControls" style="display:none;">
@@ -996,7 +1147,7 @@
             <div class="card">
                 <span class="section-title">✏️ Tweet Libre</span>
                 <div style="position:relative;">
-                    <textarea id="tweetLibreInput" placeholder="Rédige ton tweet ici..." oninput="updateLibreCount()" onfocus="this.style.borderColor='var(--fuchsia)'" onblur="this.style.borderColor='var(--border)'" style="width:100%;min-height:140px;padding:14px;padding-bottom:32px;border-radius:12px;border:2px solid var(--border);font-size:0.92rem;font-weight:600;line-height:1.55;resize:vertical;outline:none;font-family:inherit;color:var(--text);background:#fafbfc;transition:var(--transition);"></textarea>
+                    <textarea id="tweetLibreInput" placeholder="Rédige ton tweet ici..." oninput="updateLibreCount()" onfocus="this.style.borderColor='var(--fuchsia)'" onblur="this.style.borderColor='var(--border)'" style="width:100%;min-height:140px;padding:14px;padding-bottom:32px;border-radius:12px;border:2px solid var(--border);font-size:16px;font-weight:600;line-height:1.55;resize:vertical;outline:none;font-family:inherit;color:var(--text);background:#fafbfc;transition:var(--transition);"></textarea>
                     <span id="libreCount" style="position:absolute;bottom:10px;right:12px;font-size:0.68rem;font-weight:800;color:var(--text-muted);pointer-events:none;">0 / 280</span>
                 </div>
                 <div class="btn-row" style="margin-top:10px;">
@@ -1012,7 +1163,7 @@
                     La balise <strong>「OFFICIEL」</strong> sera ajoutée automatiquement au début lors de la copie.
                 </div>
                 <div style="position:relative;">
-                    <textarea id="tweetOfficielInput" placeholder="Écris ton contenu ici..." oninput="buildOfficiel()" onfocus="this.style.borderColor='var(--fuchsia)'" onblur="this.style.borderColor='var(--border)'" style="width:100%;min-height:130px;padding:14px;padding-bottom:32px;border-radius:12px;border:2px solid var(--border);font-size:0.92rem;font-weight:600;line-height:1.55;resize:vertical;outline:none;font-family:inherit;color:var(--text);background:#fafbfc;transition:var(--transition);"></textarea>
+                    <textarea id="tweetOfficielInput" placeholder="Écris ton contenu ici..." oninput="buildOfficiel()" onfocus="this.style.borderColor='var(--fuchsia)'" onblur="this.style.borderColor='var(--border)'" style="width:100%;min-height:130px;padding:14px;padding-bottom:32px;border-radius:12px;border:2px solid var(--border);font-size:16px;font-weight:600;line-height:1.55;resize:vertical;outline:none;font-family:inherit;color:var(--text);background:#fafbfc;transition:var(--transition);"></textarea>
                     <span id="officielCount" style="position:absolute;bottom:10px;right:12px;font-size:0.68rem;font-weight:800;color:var(--fuchsia);pointer-events:none;">0 / 280</span>
                 </div>
                 <div class="btn-row" style="margin-top:10px;">
@@ -1025,7 +1176,7 @@
             <div class="card">
                 <span class="section-title">📝 Bloc-notes</span>
                 <small style="display:block;margin-bottom:10px;color:var(--text-muted);font-size:0.72rem;font-weight:600;">Sauvegardé automatiquement dans le navigateur</small>
-                <textarea id="blocNotesInput" placeholder="Phrases récurrentes, brouillons, notes..." oninput="saveBlocNotes()" onfocus="this.style.borderColor='var(--fuchsia)'" onblur="this.style.borderColor='var(--border)'" style="width:100%;min-height:180px;padding:14px;border-radius:12px;border:2px solid var(--border);font-size:0.88rem;font-weight:600;line-height:1.55;resize:vertical;outline:none;font-family:inherit;color:var(--text);background:#fafbfc;transition:var(--transition);"></textarea>
+                <textarea id="blocNotesInput" placeholder="Phrases récurrentes, brouillons, notes..." oninput="saveBlocNotes()" onfocus="this.style.borderColor='var(--fuchsia)'" onblur="this.style.borderColor='var(--border)'" style="width:100%;min-height:180px;padding:14px;border-radius:12px;border:2px solid var(--border);font-size:16px;font-weight:600;line-height:1.55;resize:vertical;outline:none;font-family:inherit;color:var(--text);background:#fafbfc;transition:var(--transition);"></textarea>
                 <div class="btn-row" style="margin-top:10px;">
                     <button class="big-btn secondary" style="margin:0;" onclick="copyBlocNotes()">📋 Tout copier</button>
                     <button class="big-btn secondary" style="margin:0;color:#e53e3e;border-color:#fcc;" onclick="clearBlocNotes()">🗑 Effacer</button>
@@ -1040,20 +1191,20 @@
     <div class="toast" id="toast"></div>
 
     <!-- ══ MODAL iOS ══ -->
-    <div id="iosModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:99999; flex-direction:column; align-items:center; overflow-y:auto; padding:20px; -webkit-overflow-scrolling:touch;">
+    <div id="iosModal" style="display:none; position:fixed; top:0; right:0; bottom:0; left:0; background:rgba(0,0,0,0.88); z-index:99999; flex-direction:column; align-items:center; overflow-y:auto; padding:20px; padding-top:calc(20px + env(safe-area-inset-top)); padding-bottom:calc(20px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling:touch;">
         <div style="width:100%; max-width:640px; padding-bottom:30px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
                 <div>
                     <div style="color:white; font-weight:800; font-size:0.95rem;">📱 Sauvegarde iPhone</div>
                     <div style="color:rgba(255,255,255,0.55); font-size:0.68rem; margin-top:2px;">Appui long sur chaque image → "Enregistrer dans Photos"</div>
                 </div>
-                <button onclick="document.getElementById('iosModal').style.display='none'" style="background:rgba(255,255,255,0.15); border:none; border-radius:50%; width:34px; height:34px; color:white; font-weight:800; cursor:pointer; font-size:1.1rem; flex-shrink:0;">✕</button>
+                <button onclick="closeIOSModal()" style="background:rgba(255,255,255,0.15); border:none; border-radius:50%; width:34px; height:34px; color:white; font-weight:800; cursor:pointer; font-size:1.1rem; flex-shrink:0;">✕</button>
             </div>
             <div id="iosModalSub" style="background:rgba(217,27,129,0.18); border:1px solid rgba(217,27,129,0.4); border-radius:12px; padding:11px 14px; margin-bottom:16px; font-size:0.72rem; font-weight:700; color:#f9a8d4; text-align:center;">
                 Appui long → "Enregistrer dans Photos" pour chaque image.
             </div>
             <div id="iosModalGrid" style="display:flex; flex-direction:column; gap:14px;"></div>
-            <button onclick="document.getElementById('iosModal').style.display='none'" style="width:100%; margin-top:20px; padding:16px; border-radius:14px; border:none; background:linear-gradient(135deg,#d91b81,#82278f); color:white; font-weight:800; font-size:0.88rem; cursor:pointer; text-transform:uppercase; letter-spacing:0.5px;">Fermer</button>
+            <button onclick="closeIOSModal()" style="width:100%; margin-top:20px; padding:16px; border-radius:14px; border:none; background:linear-gradient(135deg,#d91b81,#82278f); color:white; font-weight:800; font-size:0.88rem; cursor:pointer; text-transform:uppercase; letter-spacing:0.5px;">Fermer</button>
         </div>
     </div>
 
@@ -1062,12 +1213,15 @@
         //  iOS COMPAT — détection (pas de DOM ici)
         // ═══════════════════════════════════════════
         const UA = navigator.userAgent;
-        const isIOS = /iPad|iPhone|iPod/.test(UA) && !window.MSStream;
+        // iPadOS 13+ envoie un UA "Macintosh" en mode desktop : on le détecte via
+        // la combinaison plateforme Mac + écran tactile (un vrai Mac n'a pas de maxTouchPoints > 1).
+        const isModernIPad = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+        const isIOS = (/iPad|iPhone|iPod/.test(UA) || isModernIPad) && !window.MSStream;
         const isChromeiOS = isIOS && /CriOS/.test(UA);
         const isSafariIOS = isIOS && /Safari/.test(UA) && !/CriOS|FxiOS|OPiOS/.test(UA);
         const deviceModel = (() => {
             if (/iPhone/.test(UA)) return 'iPhone';
-            if (/iPad/.test(UA)) return 'iPad';
+            if (/iPad/.test(UA) || isModernIPad) return 'iPad';
             if (/iPod/.test(UA)) return 'iPod';
             return 'Desktop';
         })();
@@ -1089,66 +1243,162 @@
         document.addEventListener('DOMContentLoaded', function() {
 
         // ── Bannière device ──
-        const banner = document.getElementById('deviceBanner');
-        if (banner) {
-            banner.style.display = 'block';
-            if (isIOS) {
-                banner.style.background = 'linear-gradient(135deg,rgba(217,27,129,0.1),rgba(130,39,143,0.1))';
-                banner.style.border = '1px solid rgba(217,27,129,0.25)';
-                banner.style.color = '#82278f';
-                banner.innerHTML = '📱 <strong>' + deviceModel + ' détecté</strong> · ' + browserName + ' · ' + screenInfo + ' · <span style="color:#d91b81">Mode iOS actif</span>';
-            } else {
-                banner.style.background = 'rgba(0,0,0,0.04)';
-                banner.style.color = '#9ca3af';
-                banner.innerHTML = '💻 <strong>' + browserName + '</strong> · ' + screenInfo + ' · Mode standard';
+        try {
+            const banner = document.getElementById('deviceBanner');
+            if (banner) {
+                banner.style.display = 'block';
+                if (isIOS) {
+                    banner.style.background = 'linear-gradient(135deg,rgba(217,27,129,0.1),rgba(130,39,143,0.1))';
+                    banner.style.border = '1px solid rgba(217,27,129,0.25)';
+                    banner.style.color = '#82278f';
+                    banner.innerHTML = '📱 <strong>' + deviceModel + ' détecté</strong> · ' + browserName + ' · ' + screenInfo + ' · <span style="color:#d91b81">Mode iOS actif</span>';
+                } else {
+                    banner.style.background = 'rgba(0,0,0,0.04)';
+                    banner.style.color = '#9ca3af';
+                    banner.innerHTML = '💻 <strong>' + browserName + '</strong> · ' + screenInfo + ' · Mode standard';
+                }
             }
-        }
+        } catch (e) { console.error('[INKU] Bannière device :', e); }
 
-        // ── Utilitaires ──
-        function dataUrlToBlobUrl(dataUrl) {
+        // ── Téléchargement unifié ──
+        function blobFromDataUrl(dataUrl) {
             const arr = dataUrl.split(',');
             const mime = arr[0].match(/:(.*?);/)[1];
             const bstr = atob(arr[1]);
             let n = bstr.length;
             const u8arr = new Uint8Array(n);
             while (n--) u8arr[n] = bstr.charCodeAt(n);
-            return URL.createObjectURL(new Blob([u8arr], { type: mime }));
+            return new Blob([u8arr], { type: mime });
         }
 
-        function smartDownload(url, filename) {
-            if (isIOS) { showIOSModal([{ url, name: filename }]); }
-            else { const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+        function guessMime(name) {
+            if (/\.png$/i.test(name)) return 'image/png';
+            if (/\.jpe?g$/i.test(name)) return 'image/jpeg';
+            if (/\.webp$/i.test(name)) return 'image/webp';
+            if (/\.zip$/i.test(name)) return 'application/zip';
+            return 'application/octet-stream';
         }
 
-        function smartDownloadAll(items) {
-            if (isIOS) { showIOSModal(items); }
-            else { items.forEach((item, i) => { setTimeout(() => { const a = document.createElement('a'); a.href = item.url; a.download = item.name; document.body.appendChild(a); a.click(); document.body.removeChild(a); }, i * 220); }); }
-        }
+        // Point d'entrée UNIQUE pour tout téléchargement (Appliquer, captures,
+        // collages, Insta, 4K) : items = [{ blob?, dataUrl?, name }]
+        // 1. Partage natif si le navigateur le permet (feuille de partage mobile,
+        //    plusieurs fichiers d'un coup, fonctionne aussi pour un ZIP).
+        // 2. Sinon <a download> sur une Blob URL (pas de dataURL brute dans href,
+        //    qui échoue sur certains Chrome pour les gros fichiers).
+        // 3. Sinon (vieux iOS sans partage) : modale d'appui long existante.
+        async function saveFiles(items) {
+            if (!items || !items.length) return;
 
+            if (navigator.canShare && navigator.share) {
+                try {
+                    const files = items.map(it => new File(
+                        [it.blob || blobFromDataUrl(it.dataUrl)],
+                        it.name,
+                        { type: guessMime(it.name) }
+                    ));
+                    if (navigator.canShare({ files })) {
+                        await navigator.share({ files });
+                        return;
+                    }
+                } catch (e) {
+                    if (e && e.name === 'AbortError') return; // annulé par l'utilisateur
+                    console.warn('[INKU] Partage natif indisponible, repli sur le téléchargement :', e);
+                }
+            }
+
+            if (!isIOS) {
+                items.forEach((it, i) => {
+                    setTimeout(() => {
+                        const blob = it.blob || blobFromDataUrl(it.dataUrl);
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a'); a.href = url; a.download = it.name;
+                        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                        setTimeout(() => URL.revokeObjectURL(url), 30000);
+                    }, i * 220);
+                });
+                return;
+            }
+
+            // iOS sans partage de fichiers (anciennes versions) : modale existante.
+            showIOSModal(items.map(it => ({
+                name: it.name,
+                dataUrl: it.dataUrl || null,
+                blob: it.blob || null,
+                isImage: guessMime(it.name).startsWith('image/'),
+            })));
+        }
+        window.saveFiles = saveFiles;
+
+        // Charge les images de la modale iOS par petits lots (IntersectionObserver
+        // quand disponible) pour ne pas décoder des dizaines de dataURL d'un coup.
+        let iosModalObserver = null;
         function showIOSModal(items) {
             const grid = document.getElementById('iosModalGrid');
             const modalSub = document.getElementById('iosModalSub');
             grid.innerHTML = '';
+            if (iosModalObserver) { iosModalObserver.disconnect(); iosModalObserver = null; }
             if (modalSub) modalSub.innerHTML = isChromeiOS
                 ? '⚠️ Chrome iOS : appui long → <strong>"Enregistrer l\'image"</strong>'
                 : '👆 Safari : appui long → <strong>"Enregistrer dans Photos"</strong>';
+
+            const lazyWraps = [];
             items.forEach(item => {
+                const isImage = item.isImage !== undefined ? item.isImage : true; // compat anciens appels
                 const wrap = document.createElement('div');
-                wrap.style.cssText = 'border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.12);background:#111;';
-                const img = document.createElement('img');
-                // CRITIQUE : on met TOUJOURS la dataURL directement dans src.
-                // Un blob: URL affiche "pas de connexion" quand Safari essaie de l'enregistrer dans Photos.
-                // La dataURL est auto-contenue et fonctionne toujours.
-                img.src = item.dataUrl || item.url;
-                img.style.cssText = 'width:100%;display:block;-webkit-touch-callout:default;';
-                const label = document.createElement('div');
-                label.textContent = isChromeiOS ? '👆 Appui long → "Enregistrer l\'image"' : '👆 Appui long → "Enregistrer dans Photos"';
-                label.style.cssText = 'font-size:0.7rem;font-weight:800;color:#d91b81;padding:9px 12px;background:#fff;text-align:center;';
-                wrap.appendChild(img); wrap.appendChild(label);
+                wrap.style.cssText = 'border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.12);background:#111;min-height:80px;';
+
+                if (isImage) {
+                    const img = document.createElement('img');
+                    if (item.dataUrl || item.url) { img.dataset.src = item.dataUrl || item.url; }
+                    else if (item.blob) { img._lazyBlob = item.blob; }
+                    img.style.cssText = 'width:100%;display:block;-webkit-touch-callout:default;';
+                    const label = document.createElement('div');
+                    label.textContent = isChromeiOS ? '👆 Appui long → "Enregistrer l\'image"' : '👆 Appui long → "Enregistrer dans Photos"';
+                    label.style.cssText = 'font-size:0.7rem;font-weight:800;color:#d91b81;padding:9px 12px;background:#fff;text-align:center;';
+                    wrap.appendChild(img); wrap.appendChild(label);
+                    lazyWraps.push(img);
+                } else {
+                    // Fichier non affichable (ex: ZIP) : lien cliquable par l'utilisateur,
+                    // jamais de window.open() programmatique (bloqué après un await).
+                    const blob = item.blob || (item.dataUrl ? blobFromDataUrl(item.dataUrl) : null);
+                    const a = document.createElement('a');
+                    a.href = blob ? URL.createObjectURL(blob) : (item.dataUrl || item.url);
+                    a.download = item.name;
+                    a.textContent = '⬇️ Toucher pour enregistrer ' + item.name;
+                    a.style.cssText = 'display:block;padding:18px 14px;text-align:center;color:#fff;font-weight:800;font-size:0.85rem;text-decoration:none;';
+                    wrap.appendChild(a);
+                }
                 grid.appendChild(wrap);
             });
+
+            const hydrate = (img) => {
+                if (img.dataset.src) { img.src = img.dataset.src; delete img.dataset.src; return; }
+                if (img._lazyBlob) {
+                    const reader = new FileReader();
+                    reader.onload = () => { img.src = reader.result; };
+                    reader.readAsDataURL(img._lazyBlob);
+                    img._lazyBlob = null;
+                }
+            };
+            if (window.IntersectionObserver) {
+                iosModalObserver = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => { if (entry.isIntersecting) { hydrate(entry.target); iosModalObserver.unobserve(entry.target); } });
+                }, { root: document.getElementById('iosModal'), rootMargin: '200px 0px' });
+                lazyWraps.forEach(img => iosModalObserver.observe(img));
+            } else {
+                // Pas d'IntersectionObserver : on charge par petits lots espacés.
+                lazyWraps.forEach((img, i) => setTimeout(() => hydrate(img), Math.floor(i / 4) * 150));
+            }
+
             document.getElementById('iosModal').style.display = 'flex';
         }
+
+        function closeIOSModal() {
+            document.getElementById('iosModal').style.display = 'none';
+            if (iosModalObserver) { iosModalObserver.disconnect(); iosModalObserver = null; }
+            document.getElementById('iosModalGrid').innerHTML = ''; // libère les images décodées
+        }
+        window.closeIOSModal = closeIOSModal;
 
         function showToast(msg, type = 'success') {
             const t = document.getElementById('toast');
@@ -1158,17 +1408,53 @@
             setTimeout(() => t.classList.remove('show'), 3000);
         }
 
-        function loadImg(url) {
+        function loadImg(url, timeoutMs = 20000) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
+                let settled = false;
+                const timer = setTimeout(() => {
+                    if (settled) return;
+                    settled = true;
+                    reject(new Error('Délai dépassé au chargement de l\'image'));
+                }, timeoutMs);
                 // crossOrigin uniquement pour les URLs distantes (pas dataURL ni blob: local)
                 if (url && !url.startsWith('data:') && !url.startsWith('blob:')) {
                     img.crossOrigin = 'anonymous';
                 }
-                img.onload = () => resolve(img);
-                img.onerror = reject;
+                img.onload = async () => {
+                    if (settled) return;
+                    // decode() s'assure que l'image est entièrement décodée avant usage
+                    // (évite un dessin partiel sur canvas) ; si indisponible ou en échec,
+                    // onload suffit déjà à garantir une image utilisable.
+                    try { if (img.decode) await img.decode(); } catch (e) {}
+                    if (settled) return;
+                    settled = true; clearTimeout(timer);
+                    resolve(img);
+                };
+                img.onerror = () => {
+                    if (settled) return;
+                    settled = true; clearTimeout(timer);
+                    reject(new Error('Image illisible ou introuvable'));
+                };
                 img.src = url;
             });
+        }
+
+        // Charge un fichier source en respectant son orientation EXIF quand le
+        // navigateur le permet (createImageBitmap + imageOrientation:'from-image').
+        // Sinon, on retombe sur loadImg() via une object URL (comportement précédent).
+        async function loadSourceImage(file) {
+            if (window.createImageBitmap) {
+                try {
+                    return await createImageBitmap(file, { imageOrientation: 'from-image' });
+                } catch (e) { /* navigateur sans support de l'option, on retombe plus bas */ }
+            }
+            const url = URL.createObjectURL(file);
+            try {
+                return await loadImg(url);
+            } finally {
+                URL.revokeObjectURL(url);
+            }
         }
 
         // Toujours retourner une dataURL — c'est le seul format que Safari iOS
@@ -1208,43 +1494,113 @@
             }
         }
 
+        // Enlève les accents et uniformise espaces/underscores/casse, pour que
+        // "pokémon" trouve "pokemon" (les noms stockés sont sans accents).
+        function normalizeForSearch(s) {
+            return s.normalize('NFD').replace(/[̀-ͯ]/g, '')
+                .toLowerCase().replace(/[_\s]+/g, ' ').trim();
+        }
+
+        let logoResultsLimit = 40;
+        let logoGridObserver = null;
+
         function displayLogos(list) {
             const grid = document.getElementById('logoResults');
             const emptyMsg = document.getElementById('emptyLogoMsg');
             grid.innerHTML = '';
-            const q = document.getElementById('logoSearch').value.toLowerCase().trim();
-            if (!q) { grid.style.display = 'none'; emptyMsg.style.display = 'block'; return; }
+            if (logoGridObserver) { logoGridObserver.disconnect(); logoGridObserver = null; }
+            const q = document.getElementById('logoSearch').value.trim();
+            if (!q) {
+                grid.style.display = 'none'; emptyMsg.style.display = 'block';
+                emptyMsg.textContent = logosData.length
+                    ? 'Tapez un nom pour rechercher un copyright existant.'
+                    : 'Base de logos introuvable (assets/logos.js ou assets/logos.json manquant).';
+                return;
+            }
             if (list.length === 0) {
                 grid.style.display = 'none'; emptyMsg.style.display = 'block';
                 emptyMsg.textContent = 'Aucun copyright trouvé.'; return;
             }
             emptyMsg.style.display = 'none'; grid.style.display = 'grid';
-            list.forEach(name => {
+
+            const visible = list.slice(0, logoResultsLimit);
+            const nativeLazy = 'loading' in HTMLImageElement.prototype;
+            const lazyImgs = [];
+            visible.forEach(name => {
                 const div = document.createElement('div');
                 div.className = 'logo-item'; div.dataset.name = name;
+                const thumb = document.createElement('div');
+                thumb.className = 'logo-thumb';
                 const img = document.createElement('img');
-                img.src = 'assets/copyrights/' + name + '.png';
-                img.loading = 'lazy'; img.alt = name.replace(/_/g, ' ');
-                img.onerror = () => { div.style.display = 'none'; };
+                const fullSrc = 'assets/copyrights/' + name + '.png';
+                const thumbSrc = 'assets/thumbs/' + name + '.png';
+                // Repli sur l'image complète si la miniature n'a pas encore été
+                // générée (python creer_index.py --thumbnails).
+                img.onerror = () => {
+                    if (img.dataset.triedFull !== '1') { img.dataset.triedFull = '1'; img.src = fullSrc; }
+                    else { div.style.display = 'none'; }
+                };
+                if (nativeLazy) { img.loading = 'lazy'; img.src = thumbSrc; }
+                else { img.dataset.src = thumbSrc; lazyImgs.push(img); }
+                img.alt = name.replace(/_/g, ' ');
+                thumb.appendChild(img);
                 const span = document.createElement('span');
                 span.textContent = name.replace(/_/g, ' ');
-                if ('assets/copyrights/' + name + '.png' === SELECTED_WM_URL) div.classList.add('selected');
-                div.appendChild(img); div.appendChild(span);
+                if (fullSrc === SELECTED_WM_URL) div.classList.add('selected');
+                div.appendChild(thumb); div.appendChild(span);
                 div.addEventListener('click', () => selectCloudLogo(name, div));
                 grid.appendChild(div);
             });
+
+            // Repli pour les navigateurs sans loading="lazy" natif (ignoré sans
+            // erreur, mais sans le bénéfice du chargement différé).
+            if (!nativeLazy && lazyImgs.length) {
+                if (window.IntersectionObserver) {
+                    logoGridObserver = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            if (entry.isIntersecting) {
+                                const img = entry.target;
+                                img.src = img.dataset.src; delete img.dataset.src;
+                                logoGridObserver.unobserve(img);
+                            }
+                        });
+                    }, { rootMargin: '150px 0px' });
+                    lazyImgs.forEach(img => logoGridObserver.observe(img));
+                } else {
+                    lazyImgs.forEach(img => { img.src = img.dataset.src; delete img.dataset.src; });
+                }
+            }
+
+            if (list.length > visible.length) {
+                const more = document.createElement('button');
+                more.type = 'button';
+                more.className = 'big-btn secondary';
+                more.style.cssText = 'grid-column:1/-1; margin:6px 0 0;';
+                more.textContent = 'Voir plus (' + (list.length - visible.length) + ')';
+                more.addEventListener('click', () => { logoResultsLimit += 40; displayLogos(list); });
+                grid.appendChild(more);
+            }
         }
 
         function filterLogos() {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
-                const q = document.getElementById('logoSearch').value.toLowerCase().trim();
-                const filtered = q ? logosData.filter(n => n.toLowerCase().replace(/_/g, ' ').includes(q)) : [];
+                logoResultsLimit = 40;
+                const q = normalizeForSearch(document.getElementById('logoSearch').value.trim());
+                const filtered = q ? logosData.filter(n => normalizeForSearch(n).includes(q)) : [];
                 displayLogos(filtered);
             }, 200);
         }
 
+        // URL du logo personnalisé importé, pour pouvoir la révoquer quand on
+        // en choisit un autre (sinon fuite mémoire à chaque import).
+        let customLogoObjectUrl = null;
+        function revokeCustomLogoUrl() {
+            if (customLogoObjectUrl) { URL.revokeObjectURL(customLogoObjectUrl); customLogoObjectUrl = null; }
+        }
+
         function selectCloudLogo(name, el) {
+            revokeCustomLogoUrl();
             SELECTED_WM_URL = 'assets/copyrights/' + name + '.png';
             document.querySelectorAll('.logo-item').forEach(i => i.classList.remove('selected'));
             el.classList.add('selected');
@@ -1255,7 +1611,9 @@
         function handleCustomLogo() {
             const input = document.getElementById('customLogoInput');
             if (input.files && input.files[0]) {
+                revokeCustomLogoUrl();
                 const url = URL.createObjectURL(input.files[0]);
+                customLogoObjectUrl = url;
                 SELECTED_WM_URL = url;
                 document.querySelectorAll('.logo-item').forEach(i => i.classList.remove('selected'));
                 document.getElementById('logoSearch').value = '';
@@ -1270,29 +1628,67 @@
         window.handleCustomLogo = handleCustomLogo;
 
         // ── Drop zone applier ──
-        const dropZoneApplier = document.getElementById('dropZoneApplier');
-        const inImgs = document.getElementById('inImgs');
-        dropZoneApplier.addEventListener('dragover', e => { e.preventDefault(); dropZoneApplier.classList.add('dragover'); });
-        dropZoneApplier.addEventListener('dragleave', () => dropZoneApplier.classList.remove('dragover'));
-        dropZoneApplier.addEventListener('drop', e => {
-            e.preventDefault(); dropZoneApplier.classList.remove('dragover');
-            const dt = new DataTransfer();
-            [...e.dataTransfer.files].filter(f => f.type.startsWith('image/')).forEach(f => dt.items.add(f));
-            inImgs.files = dt.files; updateAnimeCount();
-        });
-        inImgs.addEventListener('change', updateAnimeCount);
-        document.getElementById('logoSearch').addEventListener('input', filterLogos);
+        // On garde notre propre tableau de File au lieu de piloter inImgs.files :
+        // new DataTransfer() n'existe pas sur Safari ancien, et ceci permet aussi
+        // de re-sélectionner les mêmes fichiers d'affilée.
+        let applierFiles = [];
+        try {
+            const inImgs = document.getElementById('inImgs');
+            const dropZoneApplier = document.getElementById('dropZoneApplier');
+            dropZoneApplier.addEventListener('dragover', e => { e.preventDefault(); dropZoneApplier.classList.add('dragover'); });
+            dropZoneApplier.addEventListener('dragleave', () => dropZoneApplier.classList.remove('dragover'));
+            dropZoneApplier.addEventListener('drop', e => {
+                e.preventDefault(); dropZoneApplier.classList.remove('dragover');
+                const dropped = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/'));
+                if (dropped.length) { applierFiles = dropped; updateAnimeCount(); }
+            });
+            inImgs.addEventListener('change', () => {
+                applierFiles = [...inImgs.files];
+                inImgs.value = ''; // permet de re-sélectionner les mêmes fichiers plus tard
+                updateAnimeCount();
+            });
+            document.getElementById('logoSearch').addEventListener('input', filterLogos);
+        } catch (e) { console.error('[INKU] Initialisation Appliquer :', e); }
 
         function updateAnimeCount() {
-            const count = inImgs.files.length;
+            const count = applierFiles.length;
             document.getElementById('animeCount').textContent = count ? count + ' image(s) sélectionnée(s)' : 'Sélectionner ou déposer les images';
         }
 
         let processedImagesList = [];
 
+        // Évite de recharger/redécoder le PNG du copyright à chaque clic sur
+        // "Appliquer" tant que la sélection n'a pas changé.
+        let cachedWmUrl = null;
+        let cachedWmImg = null;
+        async function getWatermarkImage() {
+            if (cachedWmImg && cachedWmUrl === SELECTED_WM_URL) return cachedWmImg;
+            cachedWmImg = await loadImg(SELECTED_WM_URL);
+            cachedWmUrl = SELECTED_WM_URL;
+            return cachedWmImg;
+        }
+
+        // Miniature légère pour l'aperçu (le fichier complet reste dans le Blob
+        // téléchargeable, pas dans le <img src> de la grille).
+        function makeThumbnailDataUrl(sourceCanvas, maxSize) {
+            const scale = Math.min(1, maxSize / Math.max(sourceCanvas.width, sourceCanvas.height));
+            const tw = Math.max(1, Math.round(sourceCanvas.width * scale));
+            const th = Math.max(1, Math.round(sourceCanvas.height * scale));
+            const tcv = document.createElement('canvas');
+            tcv.width = tw; tcv.height = th;
+            tcv.getContext('2d').drawImage(sourceCanvas, 0, 0, tw, th);
+            const url = tcv.toDataURL('image/jpeg', 0.7);
+            tcv.width = 0; tcv.height = 0;
+            return url;
+        }
+
+        function canvasToBlob(canvas, quality) {
+            return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality || 0.92));
+        }
+
         async function fastProcess() {
             if (!SELECTED_WM_URL) return showToast('Sélectionne un copyright d\'abord', 'error');
-            const files = inImgs.files;
+            const files = applierFiles;
             if (!files.length) return showToast('Ajoute des images', 'error');
             const loader = document.getElementById('applierLoader');
             const loaderText = document.getElementById('applierLoaderText');
@@ -1300,53 +1696,93 @@
             const preview = document.getElementById('appPreview');
             preview.innerHTML = '';
             processedImagesList = [];
+            let successCount = 0;
+            let errorCount = 0;
+
+            let wmImg;
             try {
-                const wmImg = await loadImg(SELECTED_WM_URL);
-                for (let i = 0; i < files.length; i++) {
-                    loaderText.textContent = 'Traitement ' + (i + 1) + ' / ' + files.length + '...';
-                    const f = files[i];
-                    const srcBlobUrl = URL.createObjectURL(f);
-                    const img = await loadImg(srcBlobUrl);
-                    URL.revokeObjectURL(srcBlobUrl);
+                wmImg = await getWatermarkImage();
+            } catch (e) {
+                console.error('[INKU] Copyright illisible :', e);
+                loader.classList.remove('active');
+                return showToast('Impossible de charger le copyright sélectionné', 'error');
+            }
+
+            for (let i = 0; i < files.length; i++) {
+                loaderText.textContent = 'Traitement ' + (i + 1) + ' / ' + files.length + '...';
+                const f = files[i];
+                // Une image cassée ne doit pas interrompre le reste du lot.
+                try {
+                    const img = await loadSourceImage(f);
                     const cv = document.createElement('canvas');
                     cv.width = img.width; cv.height = img.height;
                     const ctx = cv.getContext('2d');
                     ctx.drawImage(img, 0, 0);
                     ctx.drawImage(wmImg, 0, 0, cv.width, cv.height);
-                    // dataUrl = auto-contenu, fonctionne pour la modal iOS "Enregistrer dans Photos"
-                    const dataUrl = canvasToDataUrl(cv, 0.92);
+                    if (img.close) img.close(); // libère la mémoire d'un ImageBitmap
+
+                    const blob = await canvasToBlob(cv, 0.92);
+                    const thumbDataUrl = makeThumbnailDataUrl(cv, 220);
+                    cv.width = 0; cv.height = 0; // libère le canvas plein format
+
                     const finalName = 'INKU_' + f.name.replace(/\.[^.]+$/, '') + '.jpg';
-                    // { url, dataUrl, name } — url et dataUrl sont identiques ici mais on nomme clairement
-                    processedImagesList.push({ url: dataUrl, dataUrl: dataUrl, name: finalName });
+                    processedImagesList.push({ blob, name: finalName });
+
                     const div = document.createElement('div'); div.className = 'app-item';
-                    const imgEl = document.createElement('img'); imgEl.src = dataUrl; imgEl.alt = f.name;
+                    const imgEl = document.createElement('img'); imgEl.src = thumbDataUrl; imgEl.alt = f.name;
                     const actionsDiv = document.createElement('div'); actionsDiv.className = 'app-item-actions';
                     const nameSpan = document.createElement('span'); nameSpan.className = 'app-item-name';
                     nameSpan.textContent = finalName; nameSpan.title = finalName;
-                    const dlBtn = document.createElement(isIOS ? 'button' : 'a');
+                    const dlBtn = document.createElement('button');
                     dlBtn.className = 'btn-dl-small'; dlBtn.textContent = 'D/L';
-                    if (isIOS) { dlBtn.addEventListener('click', () => showIOSModal([{ dataUrl, name: finalName }])); }
-                    else { dlBtn.href = dataUrl; dlBtn.download = finalName; }
+                    dlBtn.addEventListener('click', () => saveFiles([{ blob, name: finalName }]));
                     actionsDiv.appendChild(nameSpan); actionsDiv.appendChild(dlBtn);
                     div.appendChild(imgEl); div.appendChild(actionsDiv);
                     preview.appendChild(div);
+                    successCount++;
+                } catch (e) {
+                    console.error('[INKU] Échec sur', f.name, e);
+                    errorCount++;
+                    const div = document.createElement('div'); div.className = 'app-item';
+                    const errDiv = document.createElement('div');
+                    errDiv.style.cssText = 'padding:14px 8px;text-align:center;font-size:0.68rem;font-weight:700;color:#e53e3e;';
+                    errDiv.textContent = 'Échec : ' + f.name;
+                    div.appendChild(errDiv);
+                    preview.appendChild(div);
                 }
-                document.getElementById('bulkActions').style.display = 'block';
-                showToast(files.length + ' image(s) traitée(s)');
-            } catch (e) {
-                console.error(e);
-                showToast('Erreur pendant le traitement', 'error');
-            } finally {
-                loader.classList.remove('active');
             }
+
+            if (successCount) document.getElementById('bulkActions').style.display = 'block';
+            if (errorCount && successCount) showToast(successCount + ' image(s) traitée(s), ' + errorCount + ' échec(s)', 'error');
+            else if (errorCount) showToast('Échec sur les ' + errorCount + ' image(s)', 'error');
+            else showToast(successCount + ' image(s) traitée(s)');
+            loader.classList.remove('active');
         }
         window.fastProcess = fastProcess;
 
+        function resetApplier() {
+            applierFiles = [];
+            processedImagesList = [];
+            updateAnimeCount();
+            document.getElementById('appPreview').innerHTML = '';
+            document.getElementById('bulkActions').style.display = 'none';
+            document.getElementById('logoSearch').value = '';
+            document.getElementById('logoResults').innerHTML = '';
+            document.getElementById('logoResults').style.display = 'none';
+            document.getElementById('emptyLogoMsg').style.display = 'block';
+            document.getElementById('emptyLogoMsg').textContent = 'Tapez un nom pour rechercher un copyright existant.';
+            revokeCustomLogoUrl();
+            document.getElementById('customLogoPreview').style.display = 'none';
+            SELECTED_WM_URL = null;
+            cachedWmImg = null; cachedWmUrl = null;
+            showToast('Réinitialisé');
+        }
+        window.resetApplier = resetApplier;
+
         function downloadAllProcessed() {
             if (!processedImagesList.length) return showToast('Aucune image à télécharger', 'error');
-            showToast(isIOS ? 'Ouverture galerie...' : 'Téléchargement de ' + processedImagesList.length + ' images...');
-            // On passe dataUrl pour que showIOSModal l'utilise directement
-            smartDownloadAll(processedImagesList.map(img => ({ url: img.url, dataUrl: img.dataUrl, name: img.name })));
+            showToast('Préparation de ' + processedImagesList.length + ' image(s)...');
+            saveFiles(processedImagesList.map(img => ({ blob: img.blob, name: img.name })));
         }
         window.downloadAllProcessed = downloadAllProcessed;
 
@@ -1357,26 +1793,33 @@
         let selectedInterval = 2;
         let liveCapturesList = [];
         let isExtracting = false;
-        let extractVideoElem = null;
+        const extractVideoElem = document.getElementById('extractVideo');
+        const FRAME_TIMEOUT_MS = 6000;
+        const MAX_CAPTURES = 600; // plafond de sécurité mémoire, modifiable ici
+        let frameTimeoutHandle = null;
+        let rvfcHandle = null;
+        let frameInFlight = false;
 
-        document.querySelectorAll('.interval-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.interval-btn').forEach(b => b.classList.remove('selected'));
-                btn.classList.add('selected');
-                selectedInterval = parseFloat(btn.dataset.val);
+        try {
+            document.querySelectorAll('.interval-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.interval-btn').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    selectedInterval = parseFloat(btn.dataset.val);
+                });
             });
-        });
 
-        const videoDropZone = document.getElementById('videoDropZone');
-        videoDropZone.addEventListener('dragover', e => { e.preventDefault(); videoDropZone.classList.add('dragover'); });
-        videoDropZone.addEventListener('dragleave', () => videoDropZone.classList.remove('dragover'));
-        videoDropZone.addEventListener('drop', e => {
-            e.preventDefault(); videoDropZone.classList.remove('dragover');
-            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                const input = document.getElementById('videoFile');
-                input.files = e.dataTransfer.files; loadLocalVideo(input);
-            }
-        });
+            const videoDropZone = document.getElementById('videoDropZone');
+            videoDropZone.addEventListener('dragover', e => { e.preventDefault(); videoDropZone.classList.add('dragover'); });
+            videoDropZone.addEventListener('dragleave', () => videoDropZone.classList.remove('dragover'));
+            videoDropZone.addEventListener('drop', e => {
+                e.preventDefault(); videoDropZone.classList.remove('dragover');
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    const input = document.getElementById('videoFile');
+                    input.files = e.dataTransfer.files; loadLocalVideo(input);
+                }
+            });
+        } catch (e) { console.error('[INKU] Initialisation Vidéo :', e); }
 
         function loadLocalVideo(input) {
             if (input.files && input.files[0]) {
@@ -1393,76 +1836,147 @@
         }
         window.loadLocalVideo = loadLocalVideo;
 
+        function updateProgressUI(percent, label) {
+            const statusEl = document.getElementById('realtimeStatus');
+            statusEl.style.display = 'block';
+            statusEl.innerHTML = '<span class="pulse"></span> ' + label + (percent !== null ? ' (' + percent + '%)' : '');
+        }
+
+        function estimateMemoryLabel() {
+            if (!liveCapturesList.length) return '';
+            const totalBytes = liveCapturesList.reduce((sum, it) => sum + (it.blob ? it.blob.size : 0), 0);
+            const mb = totalBytes / (1024 * 1024);
+            return ' · ~' + (mb < 1 ? Math.max(1, Math.round(mb * 1024)) + ' Ko' : mb.toFixed(1) + ' Mo') + ' en mémoire';
+        }
+
         function startFastCapture() {
             if (!videoFileUrl) return showToast('Sélectionnez d\'abord une vidéo', 'error');
             if (isExtracting) return;
             isExtracting = true;
+            frameInFlight = false;
             document.getElementById('btnStartRealtime').disabled = true;
             document.getElementById('btnStopRealtime').disabled = false;
-            const statusEl = document.getElementById('realtimeStatus');
-            statusEl.style.display = 'block';
-            statusEl.innerHTML = '<span class="pulse"></span> Extraction ultra-rapide en cours... (0%)';
             document.getElementById('capturesSection').style.display = 'block';
-            extractVideoElem = document.createElement('video');
-            extractVideoElem.src = videoFileUrl;
-            extractVideoElem.muted = true;
-            extractVideoElem.playsInline = true;
-            extractVideoElem.addEventListener('loadeddata', () => { extractNextFrame(0); });
-            extractVideoElem.addEventListener('seeked', () => {
+            updateProgressUI(0, 'Préparation de la vidéo...');
+
+            extractVideoElem.onerror = () => {
                 if (!isExtracting) return;
-                const canvas = document.createElement('canvas');
-                canvas.width = extractVideoElem.videoWidth || 1280;
-                canvas.height = extractVideoElem.videoHeight || 720;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(extractVideoElem, 0, 0, canvas.width, canvas.height);
-                // On garde toujours en dataUrl — c'est la seule chose que Safari iOS
-                // accepte pour "Enregistrer dans Photos" via appui long
-                const dataUrl = canvasToDataUrl(canvas, 0.90);
-                const capName = 'inku_capture_' + String(liveCapturesList.length + 1).padStart(3, '0') + '.jpg';
-                liveCapturesList.push({ dataUrl, name: capName });
-                addCaptureToGrid(dataUrl, liveCapturesList.length, capName);
-                const percent = Math.min(100, Math.floor((extractVideoElem.currentTime / extractVideoElem.duration) * 100));
-                document.getElementById('realtimeStatus').innerHTML = '<span class="pulse"></span> Extraction ultra-rapide en cours... (' + percent + '%)';
-                extractNextFrame(extractVideoElem.currentTime + selectedInterval);
-            });
+                console.error('[INKU] Erreur de lecture vidéo :', extractVideoElem.error);
+                showToast('Format vidéo non supporté par ce navigateur (ex. MOV/HEVC)', 'error');
+                stopFastCapture();
+            };
+            extractVideoElem.onloadedmetadata = async () => {
+                // Amorce le décodeur : sur certains iOS, une recherche avant toute
+                // lecture peut échouer silencieusement ou produire une image noire.
+                try { await extractVideoElem.play(); extractVideoElem.pause(); } catch (e) { /* ignoré, on tente quand même */ }
+                extractNextFrame(0);
+            };
+            extractVideoElem.src = videoFileUrl;
+            extractVideoElem.load();
         }
         window.startFastCapture = startFastCapture;
 
+        function captureCurrentFrame() {
+            const canvas = document.createElement('canvas');
+            canvas.width = extractVideoElem.videoWidth || 1280;
+            canvas.height = extractVideoElem.videoHeight || 720;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(extractVideoElem, 0, 0, canvas.width, canvas.height);
+            return canvas;
+        }
+
+        function onFrameReady() {
+            if (!isExtracting || !frameInFlight) return;
+            frameInFlight = false;
+            clearTimeout(frameTimeoutHandle);
+
+            const canvas = captureCurrentFrame();
+            canvas.toBlob((blob) => {
+                canvas.width = 0; canvas.height = 0; // libère le canvas plein format
+                if (!isExtracting) return;
+                if (!blob) {
+                    console.warn('[INKU] Frame vide ignorée à', extractVideoElem.currentTime);
+                } else {
+                    const capName = 'inku_capture_' + String(liveCapturesList.length + 1).padStart(3, '0') + '.jpg';
+                    const thumbUrl = URL.createObjectURL(blob);
+                    liveCapturesList.push({ blob, name: capName, thumbUrl });
+                    addCaptureToGrid(thumbUrl, blob, liveCapturesList.length, capName);
+                }
+
+                if (liveCapturesList.length >= MAX_CAPTURES) {
+                    showToast('Plafond de ' + MAX_CAPTURES + ' captures atteint', 'error');
+                    finishFastCapture();
+                    return;
+                }
+
+                const percent = Math.min(100, Math.floor((extractVideoElem.currentTime / extractVideoElem.duration) * 100));
+                updateProgressUI(percent, 'Extraction ultra-rapide en cours... ' + liveCapturesList.length + ' image(s)' + estimateMemoryLabel());
+                extractNextFrame(extractVideoElem.currentTime + selectedInterval);
+            }, 'image/jpeg', 0.90);
+        }
+
         function extractNextFrame(time) {
-            if (!isExtracting || !extractVideoElem) return;
+            if (!isExtracting) return;
             if (time > extractVideoElem.duration) { finishFastCapture(); return; }
-            extractVideoElem.currentTime = time;
+
+            frameInFlight = true;
+            frameTimeoutHandle = setTimeout(() => {
+                console.warn('[INKU] Timeout sur une frame, on continue avec la suivante.');
+                onFrameReady();
+            }, FRAME_TIMEOUT_MS);
+
+            if (extractVideoElem.requestVideoFrameCallback) {
+                rvfcHandle = extractVideoElem.requestVideoFrameCallback(() => onFrameReady());
+                extractVideoElem.currentTime = time;
+            } else {
+                // Repli sans requestVideoFrameCallback : on attend "seeked" puis
+                // deux rAF pour laisser le compositeur peindre la nouvelle image
+                // (sinon on risque de capturer l'ancienne frame, voire du noir).
+                const onSeeked = () => {
+                    extractVideoElem.removeEventListener('seeked', onSeeked);
+                    requestAnimationFrame(() => requestAnimationFrame(() => onFrameReady()));
+                };
+                extractVideoElem.addEventListener('seeked', onSeeked);
+                extractVideoElem.currentTime = time;
+            }
         }
 
         function stopFastCapture() {
             if (!isExtracting) return;
             isExtracting = false;
+            frameInFlight = false;
+            clearTimeout(frameTimeoutHandle);
+            if (rvfcHandle && extractVideoElem.cancelVideoFrameCallback) {
+                extractVideoElem.cancelVideoFrameCallback(rvfcHandle);
+            }
             document.getElementById('btnStartRealtime').disabled = false;
             document.getElementById('btnStopRealtime').disabled = true;
             document.getElementById('realtimeStatus').style.display = 'none';
-            if (extractVideoElem) { extractVideoElem.removeAttribute('src'); extractVideoElem.load(); extractVideoElem = null; }
+            extractVideoElem.onloadedmetadata = null;
+            extractVideoElem.onerror = null;
+            extractVideoElem.removeAttribute('src'); extractVideoElem.load();
         }
         window.stopFastCapture = stopFastCapture;
 
         function finishFastCapture() {
+            const count = liveCapturesList.length;
             stopFastCapture();
             document.getElementById('realtimeStatus').style.display = 'block';
-            document.getElementById('realtimeStatus').innerHTML = '✅ Extraction terminée ! (' + liveCapturesList.length + ' images)';
+            document.getElementById('realtimeStatus').innerHTML = '✅ Extraction terminée ! (' + count + ' images)';
             showToast('Extraction terminée !');
         }
 
-        function addCaptureToGrid(dataUrl, index, capName) {
+        function addCaptureToGrid(thumbUrl, blob, index, capName) {
             const grid = document.getElementById('capturesGrid');
             document.getElementById('capTotal').textContent = index;
             const div = document.createElement('div'); div.className = 'capture-thumb';
-            const img = document.createElement('img'); img.src = dataUrl;
+            const img = document.createElement('img'); img.src = thumbUrl;
             const actions = document.createElement('div'); actions.className = 'capture-actions';
             const num = document.createElement('span'); num.className = 'cap-num'; num.textContent = '#' + index;
-            const dlBtn = document.createElement(isIOS ? 'button' : 'a');
+            const dlBtn = document.createElement('button');
             dlBtn.className = 'btn-dl-small'; dlBtn.textContent = 'Télécharger';
-            // iOS : passer dataUrl à showIOSModal (pas blob) pour que "Enregistrer dans Photos" marche
-            if (isIOS) { dlBtn.addEventListener('click', () => showIOSModal([{ dataUrl, name: capName }])); }
-            else { dlBtn.href = dataUrl; dlBtn.download = capName; dlBtn.dataset.name = capName; }
+            dlBtn.dataset.name = capName;
+            dlBtn.addEventListener('click', () => saveFiles([{ blob, name: capName }]));
             actions.appendChild(num); actions.appendChild(dlBtn);
             div.appendChild(img); div.appendChild(actions);
             grid.prepend(div);
@@ -1474,17 +1988,15 @@
             const zip = new JSZip();
             liveCapturesList.forEach((item, i) => {
                 const fname = item.name || ('inku_capture_' + String(i + 1).padStart(3, '0') + '.jpg');
-                // item.dataUrl est toujours une dataURL base64
-                zip.file(fname, item.dataUrl.split(',')[1], { base64: true });
+                zip.file(fname, item.blob);
             });
             const blob = await zip.generateAsync({ type: 'blob' });
-            const blobUrl = URL.createObjectURL(blob);
-            if (isIOS) { window.open(blobUrl, '_blank'); showToast('ZIP ouvert — enregistre depuis Fichiers'); }
-            else { const a = document.createElement('a'); a.href = blobUrl; a.download = 'INKU_STUDIO_CAPTURES.zip'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+            saveFiles([{ blob, name: 'INKU_STUDIO_CAPTURES.zip' }]);
         }
         window.downloadCaptures = downloadCaptures;
 
         function clearCaptures() {
+            liveCapturesList.forEach(item => { if (item.thumbUrl) URL.revokeObjectURL(item.thumbUrl); });
             liveCapturesList = [];
             document.getElementById('capturesGrid').innerHTML = '';
             document.getElementById('capTotal').textContent = '0';
@@ -1500,82 +2012,113 @@
         let collageFiles = [];
         let sortableCollage = null;
 
-        const collageDropzone = document.getElementById('collageDropzone');
-        const collageInput = document.getElementById('collageInput');
-        collageDropzone.addEventListener('dragover', e => { e.preventDefault(); collageDropzone.classList.add('dragover'); });
-        collageDropzone.addEventListener('dragleave', () => collageDropzone.classList.remove('dragover'));
-        collageDropzone.addEventListener('drop', e => {
-            e.preventDefault(); collageDropzone.classList.remove('dragover');
-            handleCollageFiles([...e.dataTransfer.files]);
-        });
-        collageInput.addEventListener('change', () => handleCollageFiles([...collageInput.files]));
-
-        async function handleCollageFiles(files) {
-            const imageFiles = files.filter(f => f.type.startsWith('image/'));
-            for (const f of imageFiles) {
-                const dataUrl = await fileToDataUrl(f);
-                collageFiles.push({ name: f.name, dataUrl });
-            }
-            renderCollageGrid();
-        }
-
-        function fileToDataUrl(file) {
-            return new Promise(resolve => {
-                const reader = new FileReader();
-                reader.onload = e => resolve(e.target.result);
-                reader.readAsDataURL(file);
+        try {
+            const collageDropzone = document.getElementById('collageDropzone');
+            const collageInput = document.getElementById('collageInput');
+            collageDropzone.addEventListener('dragover', e => { e.preventDefault(); collageDropzone.classList.add('dragover'); });
+            collageDropzone.addEventListener('dragleave', () => collageDropzone.classList.remove('dragover'));
+            collageDropzone.addEventListener('drop', e => {
+                e.preventDefault(); collageDropzone.classList.remove('dragover');
+                handleCollageFiles([...e.dataTransfer.files]);
             });
+            collageInput.addEventListener('change', () => handleCollageFiles([...collageInput.files]));
+        } catch (e) { console.error('[INKU] Initialisation Collage :', e); }
+
+        // Plus de fileToDataUrl : une Object URL suffit (pas de lecture base64
+        // complète en mémoire pour chaque image du collage).
+        function handleCollageFiles(files) {
+            const imageFiles = files.filter(f => f.type.startsWith('image/'));
+            if (!imageFiles.length) return;
+            const grid = document.getElementById('collageGrid');
+            imageFiles.forEach(f => {
+                const item = { file: f, name: f.name, objectUrl: URL.createObjectURL(f) };
+                collageFiles.push(item);
+                grid.appendChild(createCollageItemEl(item));
+            });
+            syncCollageVisibility();
+            attachCollageSortable();
         }
 
-        function renderCollageGrid() {
+        function createCollageItemEl(item) {
+            const div = document.createElement('div'); div.className = 'collage-item';
+            div._collageItem = item;
+            const img = document.createElement('img'); img.src = item.objectUrl; img.alt = item.name;
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'collage-remove'; removeBtn.innerHTML = 'X'; removeBtn.title = 'Supprimer';
+            removeBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                const idx = collageFiles.indexOf(item);
+                if (idx > -1) collageFiles.splice(idx, 1);
+                URL.revokeObjectURL(item.objectUrl);
+                div.remove();
+                syncCollageVisibility();
+            });
+            div.appendChild(img); div.appendChild(removeBtn);
+            return div;
+        }
+
+        function syncCollageVisibility() {
             const grid = document.getElementById('collageGrid');
             const actions = document.getElementById('collageActions');
-            const count = collageFiles.length;
-            if (!count) { grid.style.display = 'none'; actions.style.display = 'none'; return; }
-            grid.style.display = 'grid'; actions.style.display = 'block';
-            grid.dataset.count = count; grid.innerHTML = '';
-            collageFiles.forEach((item, idx) => {
-                const div = document.createElement('div'); div.className = 'collage-item'; div.dataset.index = idx;
-                const img = document.createElement('img'); img.src = item.dataUrl; img.alt = item.name;
-                const removeBtn = document.createElement('button');
-                removeBtn.className = 'collage-remove'; removeBtn.innerHTML = 'X'; removeBtn.title = 'Supprimer';
-                removeBtn.addEventListener('click', e => { e.stopPropagation(); collageFiles.splice(idx, 1); renderCollageGrid(); });
-                div.appendChild(img); div.appendChild(removeBtn); grid.appendChild(div);
-            });
-            if (sortableCollage) sortableCollage.destroy();
+            if (!grid.children.length) { grid.style.display = 'none'; actions.style.display = 'none'; }
+            else { grid.style.display = 'grid'; actions.style.display = 'block'; }
+        }
+
+        // N'attache Sortable qu'une fois ; on ne reconstruit plus toute la
+        // grille à chaque glisser-déposer, on resynchronise juste le tableau.
+        function attachCollageSortable() {
+            if (sortableCollage) return;
+            const grid = document.getElementById('collageGrid');
             sortableCollage = new Sortable(grid, {
                 animation: 200, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen',
+                delay: 150, delayOnTouchOnly: true, touchStartThreshold: 5,
                 onEnd: () => {
-                    const newOrder = [];
-                    grid.querySelectorAll('.collage-item').forEach(el => { newOrder.push(collageFiles[parseInt(el.dataset.index)]); });
-                    collageFiles = newOrder; renderCollageGrid();
+                    collageFiles = Array.from(grid.children).map(el => el._collageItem).filter(Boolean);
                 }
             });
         }
 
         function getOrderedCollageFiles() {
-            const orderedFiles = [];
-            document.querySelectorAll('#collageGrid .collage-item').forEach(el => { orderedFiles.push(collageFiles[parseInt(el.dataset.index)]); });
-            return orderedFiles;
+            return Array.from(document.getElementById('collageGrid').children)
+                .map(el => el._collageItem).filter(Boolean);
         }
 
+        // Limites connues du canvas sur iOS Safari : on redimensionne le
+        // collage fusionné plutôt que de risquer une image vide/noire.
+        const MAX_CANVAS_AREA = 16000000;
+        const MAX_CANVAS_DIM = 4096;
+
         async function createMergedCanvas(files, cols) {
-            const loadedImgs = await Promise.all(files.map(item => loadImg(item.dataUrl)));
+            const loadedImgs = await Promise.all(files.map(item => loadImg(item.objectUrl)));
             if (!loadedImgs.length) return null;
             const cellWidth = Math.max(...loadedImgs.map(img => img.width));
             const cellHeight = Math.max(...loadedImgs.map(img => img.height));
             const rows = Math.ceil(loadedImgs.length / cols);
+            const totalWidth = cellWidth * cols;
+            const totalHeight = cellHeight * rows;
+
+            let scale = 1;
+            if (totalWidth > MAX_CANVAS_DIM || totalHeight > MAX_CANVAS_DIM) {
+                scale = Math.min(scale, MAX_CANVAS_DIM / Math.max(totalWidth, totalHeight));
+            }
+            if (totalWidth * totalHeight * scale * scale > MAX_CANVAS_AREA) {
+                scale = Math.min(scale, Math.sqrt(MAX_CANVAS_AREA / (totalWidth * totalHeight)));
+            }
+            if (scale < 1) showToast('Images redimensionnées pour rester compatible avec tous les appareils');
+
+            const cw = Math.max(1, Math.round(cellWidth * scale));
+            const ch = Math.max(1, Math.round(cellHeight * scale));
             const canvas = document.createElement('canvas');
-            canvas.width = cellWidth * cols; canvas.height = cellHeight * rows;
+            canvas.width = cw * cols; canvas.height = ch * rows;
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
             loadedImgs.forEach((img, index) => {
                 const col = index % cols; const row = Math.floor(index / cols);
-                const x = col * cellWidth; const y = row * cellHeight;
-                const ratio = Math.max(cellWidth / img.width, cellHeight / img.height);
+                const x = col * cw; const y = row * ch;
+                const ratio = Math.max(cw / img.width, ch / img.height);
                 const drawWidth = img.width * ratio; const drawHeight = img.height * ratio;
-                const drawX = x + (cellWidth - drawWidth) / 2; const drawY = y + (cellHeight - drawHeight) / 2;
-                ctx.save(); ctx.beginPath(); ctx.rect(x, y, cellWidth, cellHeight); ctx.clip();
+                const drawX = x + (cw - drawWidth) / 2; const drawY = y + (ch - drawHeight) / 2;
+                ctx.save(); ctx.beginPath(); ctx.rect(x, y, cw, ch); ctx.clip();
                 ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight); ctx.restore();
             });
             return canvas;
@@ -1588,15 +2131,9 @@
             try {
                 const canvas = await createMergedCanvas(orderedFiles, 2);
                 if (!canvas) return;
-                const dataUrl = canvasToDataUrl(canvas, 1.0);
-                const name = 'INKU_COLLAGE_2_COLONNES.jpg';
-                if (isIOS) {
-                    showIOSModal([{ dataUrl, name }]);
-                } else {
-                    const a = document.createElement('a'); a.href = dataUrl; a.download = name;
-                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                    showToast('Collage téléchargé !');
-                }
+                const blob = await canvasToBlob(canvas, 0.88);
+                canvas.width = 0; canvas.height = 0;
+                saveFiles([{ blob, name: 'INKU_COLLAGE_2_COLONNES.jpg' }]);
             } catch(e) { console.error(e); showToast('Erreur collage', 'error'); }
         }
         window.generateClassicCollage = generateClassicCollage;
@@ -1607,28 +2144,40 @@
             showToast('Génération Collages Insta...');
             const previewContainer = document.getElementById('instaPreviewContainer');
             const previewWrap = document.getElementById('instaPreview');
+            previewWrap.querySelectorAll('img').forEach(img => { if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src); });
             previewWrap.innerHTML = '';
             try {
+                // Nombre d'images impair : la dernière paire ne contient qu'une
+                // image (comportement existant conservé tel quel).
                 for (let i = 0; i < orderedFiles.length; i += 2) {
                     const pair = orderedFiles.slice(i, i + 2);
                     const canvas = await createMergedCanvas(pair, 1);
                     if (!canvas) continue;
-                    const dataUrl = canvasToDataUrl(canvas, 1.0);
-                    const name = 'INKU_COLLAGE_INSTA_' + (Math.floor(i / 2) + 1) + '.jpg';
+                    const blob = await canvasToBlob(canvas, 0.9);
+                    canvas.width = 0; canvas.height = 0;
+                    const objectUrl = URL.createObjectURL(blob);
+
                     const div = document.createElement('div'); div.className = 'capture-thumb'; div.style.cursor = 'grab';
-                    const imgEl = document.createElement('img'); imgEl.src = dataUrl;
+                    div._instaBlob = blob;
+                    const imgEl = document.createElement('img'); imgEl.src = objectUrl;
                     const actionsDiv = document.createElement('div'); actionsDiv.className = 'capture-actions'; actionsDiv.style.justifyContent = 'center';
-                    const dlBtn = document.createElement(isIOS ? 'button' : 'a');
+                    const dlBtn = document.createElement('button');
                     dlBtn.className = 'btn-dl-small'; dlBtn.textContent = 'Télécharger'; dlBtn.style.width = '100%'; dlBtn.style.textAlign = 'center';
-                    // iOS : ouvre la modal avec la dataUrl, pas un blob
-                    if (isIOS) { dlBtn.addEventListener('click', () => showIOSModal([{ dataUrl, name }])); }
-                    else { dlBtn.href = dataUrl; dlBtn.download = name; }
+                    // Le nom est recalculé sur la position actuelle dans le DOM au
+                    // moment du clic, pour rester juste après un glisser-déposer.
+                    dlBtn.addEventListener('click', () => {
+                        const pos = Array.from(previewWrap.children).indexOf(div);
+                        saveFiles([{ blob: div._instaBlob, name: 'INKU_COLLAGE_INSTA_' + (pos + 1) + '.jpg' }]);
+                    });
                     actionsDiv.appendChild(dlBtn); div.appendChild(imgEl); div.appendChild(actionsDiv);
                     previewWrap.appendChild(div);
                 }
                 previewContainer.style.display = 'block';
                 if (window.instaSortable) window.instaSortable.destroy();
-                window.instaSortable = new Sortable(previewWrap, { animation: 200, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen' });
+                window.instaSortable = new Sortable(previewWrap, {
+                    animation: 200, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen',
+                    delay: 150, delayOnTouchOnly: true, touchStartThreshold: 5,
+                });
                 showToast('Paires Insta générées !');
             } catch(e) { console.error(e); showToast('Erreur génération Insta', 'error'); }
         }
@@ -1639,25 +2188,25 @@
             if (!thumbs.length) return;
             const items = [];
             thumbs.forEach((thumb, i) => {
-                const img = thumb.querySelector('img');
-                if (img) {
-                    const name = 'INKU_COLLAGE_INSTA_' + (i + 1) + '.jpg';
-                    // img.src est une dataUrl — on la passe comme url ET dataUrl
-                    items.push({ url: img.src, dataUrl: img.src, name });
-                }
+                items.push({ blob: thumb._instaBlob, name: 'INKU_COLLAGE_INSTA_' + (i + 1) + '.jpg' });
             });
-            smartDownloadAll(items);
+            saveFiles(items);
         }
         window.downloadAllInsta = downloadAllInsta;
 
         function clearCollage() {
+            collageFiles.forEach(item => URL.revokeObjectURL(item.objectUrl));
             collageFiles = [];
-            renderCollageGrid();
+            document.getElementById('collageGrid').innerHTML = '';
+            syncCollageVisibility();
             if (sortableCollage) { sortableCollage.destroy(); sortableCollage = null; }
             const pv = document.getElementById('instaPreviewContainer');
             if (pv) pv.style.display = 'none';
             const wrap = document.getElementById('instaPreview');
-            if (wrap) wrap.innerHTML = '';
+            if (wrap) {
+                wrap.querySelectorAll('img').forEach(img => { if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src); });
+                wrap.innerHTML = '';
+            }
             showToast('Collage effacé');
         }
         window.clearCollage = clearCollage;
@@ -1665,6 +2214,12 @@
         // ═══════════════════════════════════════════
         //  GÉNÉRATEUR PNG 4K
         // ═══════════════════════════════════════════
+        // Caractères interdits dans un nom de fichier (Windows/macOS/Linux).
+        function sanitizeFilename(name) {
+            const cleaned = name.replace(/[\\/:*?"<>|\u0000-\u001F]/g, '_').replace(/[. ]+$/, '');
+            return cleaned || 'copyright';
+        }
+
         function generatePNG() {
             let text = document.getElementById('wmText').value.trim();
             if (!text) text = 'INKU Studio';
@@ -1672,25 +2227,61 @@
             const ctx = canvas.getContext('2d');
             canvas.width = 3840; canvas.height = 2160;
             ctx.clearRect(0, 0, 3840, 2160);
-            ctx.font = '45px Arial'; ctx.fillStyle = 'white';
+            // Rendu pixel-identique : seule la police de secours change (Arial
+            // reste en premier, donc même rendu partout où Arial est présent).
+            ctx.font = '45px Arial, Helvetica, "Liberation Sans", sans-serif';
+            ctx.fillStyle = 'white';
             ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
             ctx.fillText('© ' + text, 100, 2160 - 67);
-            const u = canvas.toDataURL('image/png');
+
             const dlLink = document.getElementById('genDl');
-            dlLink.onclick = (e) => { e.preventDefault(); smartDownload(u, (text || 'copyright') + '.png'); };
+            const filename = sanitizeFilename(text) + '.png';
+            canvas.toBlob((blob) => {
+                dlLink.onclick = (e) => { e.preventDefault(); saveFiles([{ blob, name: filename }]); };
+            }, 'image/png');
             dlLink.href = '#';
             document.getElementById('genOutput').style.display = 'block';
             showToast('PNG 4K généré');
         }
         window.generatePNG = generatePNG;
 
+        try {
+            document.getElementById('wmText').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); generatePNG(); }
+            });
+        } catch (e) { console.error('[INKU] Initialisation Créateur 4K :', e); }
+
         // ═══════════════════════════════════════════
         //  RÉDACTION TWEETS
         // ═══════════════════════════════════════════
+        // Comptage pondéré façon twitter-text : une URL compte toujours 23,
+        // et les caractères hors plages "simples" (CJK, emoji, 「」...) comptent
+        // double — reprend les plages de poids 1 du config officiel twitter-text
+        // (Latin/Cyrillic/Grec/Hébreu/Arabe jusqu'à U+10FF, espaces/ZWJ U+2000-
+        // U+200D, tirets/guillemets U+2010-U+201F, primes U+2032-U+2037).
+        function weightedCharLength(ch) {
+            const cp = ch.codePointAt(0);
+            if ((cp >= 0 && cp <= 4351) ||
+                (cp >= 8192 && cp <= 8205) ||
+                (cp >= 8208 && cp <= 8223) ||
+                (cp >= 8242 && cp <= 8247)) {
+                return 1;
+            }
+            return 2;
+        }
+
+        function weightedTweetLength(text) {
+            let urlCount = 0;
+            const withoutUrls = text.replace(/https?:\/\/\S+/g, () => { urlCount++; return ''; });
+            let length = urlCount * 23;
+            for (const ch of withoutUrls) length += weightedCharLength(ch);
+            return length;
+        }
+
         function updateLibreCount() {
             const txt = document.getElementById('tweetLibreInput').value;
             const el = document.getElementById('libreCount');
-            const len = [...txt].length;
+            const len = weightedTweetLength(txt);
             el.textContent = len + ' / 280';
             el.style.color = len > 280 ? '#e53e3e' : len > 240 ? '#f59e0b' : 'var(--text-muted)';
         }
@@ -1704,10 +2295,31 @@
 
         function fallbackCopy(text, successMsg) {
             const ta = document.createElement('textarea');
-            ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
-            document.body.appendChild(ta); ta.focus(); ta.select();
-            try { document.execCommand('copy'); showToast(successMsg); } catch(e) { showToast('Erreur copie', 'error'); }
+            ta.value = text;
+            ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;padding:0;border:none;opacity:0.01;font-size:16px;';
+            document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            ta.setSelectionRange(0, text.length); // requis par Safari iOS
+
+            let ok = false;
+            try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
             document.body.removeChild(ta);
+
+            if (ok) showToast(successMsg);
+            else showManualCopyFallback(text);
+        }
+
+        // Dernier recours si la copie automatique échoue vraiment : le texte
+        // est affiché déjà sélectionné pour que l'utilisateur le copie lui-même.
+        function showManualCopyFallback(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text; ta.readOnly = true;
+            ta.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(90vw,480px);height:160px;z-index:100000;padding:14px;border-radius:12px;border:2px solid var(--fuchsia);font-size:16px;font-family:inherit;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,0.3);';
+            document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            ta.setSelectionRange(0, text.length);
+            showToast('Copie auto impossible : texte sélectionné, appuyez sur Cmd/Ctrl+C', 'error');
+            ta.addEventListener('blur', () => ta.remove(), { once: true });
         }
 
         function copyLibre() {
@@ -1727,7 +2339,7 @@
             const input = document.getElementById('tweetOfficielInput').value;
             const countEl = document.getElementById('officielCount');
             const full = input.trim() ? '「OFFICIEL」' + input : '';
-            const len = [...full].length;
+            const len = weightedTweetLength(full);
             countEl.textContent = len + ' / 280';
             countEl.style.color = len > 280 ? '#e53e3e' : len > 240 ? '#f59e0b' : 'var(--fuchsia)';
         }
@@ -1773,8 +2385,8 @@
         // ═══════════════════════════════════════════
         //  INIT
         // ═══════════════════════════════════════════
-        initLogos();
-        loadBlocNotes();
+        try { initLogos(); } catch (e) { console.error('[INKU] initLogos :', e); }
+        try { loadBlocNotes(); } catch (e) { console.error('[INKU] loadBlocNotes :', e); }
 
         }); // END DOMContentLoaded
 </script>
