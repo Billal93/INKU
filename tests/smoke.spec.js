@@ -181,4 +181,36 @@ test.describe('Smoke INKU Studio', () => {
     await page.click('#btn-redaction');
     await expect(page.locator('#blocNotesInput')).toHaveValue('note de test');
   });
+
+  test('Tweets : comptage pondéré façon twitter-text (URL=23, CJK/emoji=2)', async ({ page }) => {
+    await page.goto('/index.html');
+    await page.click('#btn-redaction');
+
+    // Une URL compte toujours 23, quelle que soit sa longueur réelle.
+    await page.fill('#tweetLibreInput', 'Voir https://example.com/un-chemin-tres-long-ici');
+    await expect(page.locator('#libreCount')).toHaveText('28 / 280'); // "Voir " (5) + URL (23)
+
+    // Caractères CJK/emoji comptent double.
+    await page.fill('#tweetLibreInput', '日本語');
+    await expect(page.locator('#libreCount')).toHaveText('6 / 280');
+
+    // Tweet officiel : la balise 「OFFICIEL」 (8 lettres + 2 crochets à 2) = 12.
+    await page.fill('#tweetOfficielInput', 'test');
+    await expect(page.locator('#officielCount')).toHaveText('16 / 280'); // 12 + 4
+  });
+
+  test('Tweets : repli de copie manuelle si execCommand échoue', async ({ page }) => {
+    await page.goto('/index.html');
+    await page.click('#btn-redaction');
+    // Supprime la Clipboard API et force execCommand à échouer pour vérifier
+    // que le texte est proposé en sélection manuelle plutôt que de prétendre
+    // avoir copié avec succès.
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+      document.execCommand = () => false;
+    });
+    await page.fill('#tweetLibreInput', 'Texte de test');
+    await page.click('text=📋 Copier');
+    await expect(page.locator('textarea[readonly]')).toBeVisible();
+  });
 });

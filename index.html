@@ -2248,10 +2248,34 @@
         // ═══════════════════════════════════════════
         //  RÉDACTION TWEETS
         // ═══════════════════════════════════════════
+        // Comptage pondéré façon twitter-text : une URL compte toujours 23,
+        // et les caractères hors plages "simples" (CJK, emoji, 「」...) comptent
+        // double — reprend les plages de poids 1 du config officiel twitter-text
+        // (Latin/Cyrillic/Grec/Hébreu/Arabe jusqu'à U+10FF, espaces/ZWJ U+2000-
+        // U+200D, tirets/guillemets U+2010-U+201F, primes U+2032-U+2037).
+        function weightedCharLength(ch) {
+            const cp = ch.codePointAt(0);
+            if ((cp >= 0 && cp <= 4351) ||
+                (cp >= 8192 && cp <= 8205) ||
+                (cp >= 8208 && cp <= 8223) ||
+                (cp >= 8242 && cp <= 8247)) {
+                return 1;
+            }
+            return 2;
+        }
+
+        function weightedTweetLength(text) {
+            let urlCount = 0;
+            const withoutUrls = text.replace(/https?:\/\/\S+/g, () => { urlCount++; return ''; });
+            let length = urlCount * 23;
+            for (const ch of withoutUrls) length += weightedCharLength(ch);
+            return length;
+        }
+
         function updateLibreCount() {
             const txt = document.getElementById('tweetLibreInput').value;
             const el = document.getElementById('libreCount');
-            const len = [...txt].length;
+            const len = weightedTweetLength(txt);
             el.textContent = len + ' / 280';
             el.style.color = len > 280 ? '#e53e3e' : len > 240 ? '#f59e0b' : 'var(--text-muted)';
         }
@@ -2265,10 +2289,31 @@
 
         function fallbackCopy(text, successMsg) {
             const ta = document.createElement('textarea');
-            ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
-            document.body.appendChild(ta); ta.focus(); ta.select();
-            try { document.execCommand('copy'); showToast(successMsg); } catch(e) { showToast('Erreur copie', 'error'); }
+            ta.value = text;
+            ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;padding:0;border:none;opacity:0.01;font-size:16px;';
+            document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            ta.setSelectionRange(0, text.length); // requis par Safari iOS
+
+            let ok = false;
+            try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
             document.body.removeChild(ta);
+
+            if (ok) showToast(successMsg);
+            else showManualCopyFallback(text);
+        }
+
+        // Dernier recours si la copie automatique échoue vraiment : le texte
+        // est affiché déjà sélectionné pour que l'utilisateur le copie lui-même.
+        function showManualCopyFallback(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text; ta.readOnly = true;
+            ta.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(90vw,480px);height:160px;z-index:100000;padding:14px;border-radius:12px;border:2px solid var(--fuchsia);font-size:16px;font-family:inherit;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,0.3);';
+            document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            ta.setSelectionRange(0, text.length);
+            showToast('Copie auto impossible : texte sélectionné, appuyez sur Cmd/Ctrl+C', 'error');
+            ta.addEventListener('blur', () => ta.remove(), { once: true });
         }
 
         function copyLibre() {
@@ -2288,7 +2333,7 @@
             const input = document.getElementById('tweetOfficielInput').value;
             const countEl = document.getElementById('officielCount');
             const full = input.trim() ? '「OFFICIEL」' + input : '';
-            const len = [...full].length;
+            const len = weightedTweetLength(full);
             countEl.textContent = len + ' / 280';
             countEl.style.color = len > 280 ? '#e53e3e' : len > 240 ? '#f59e0b' : 'var(--fuchsia)';
         }
