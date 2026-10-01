@@ -95,6 +95,27 @@ test.describe('Smoke INKU Studio', () => {
     expect(dims).toEqual([3840, 2160]);
   });
 
+  test('Créateur 4K : touche Entrée + nom de fichier assaini', async ({ page, browserName }) => {
+    await page.goto('/index.html');
+    await page.click('#btn-generator');
+    await page.fill('#wmText', 'Test / 4K : "spécial"');
+    await page.press('#wmText', 'Enter');
+    await expect(page.locator('#genOutput')).toBeVisible();
+
+    const isIOSProject = /iPhone|iPad/.test(test.info().project.name);
+    if (isIOSProject) {
+      await page.click('text=Télécharger l\'image 4K');
+      await expect(page.locator('#iosModal')).toBeVisible();
+    } else {
+      const [download] = await Promise.all([
+        page.waitForEvent('download'),
+        page.click('text=Télécharger l\'image 4K'),
+      ]);
+      const name = download.suggestedFilename();
+      expect(name).not.toMatch(/[\\/:*?"<>|]/);
+    }
+  });
+
   test('Appliquer : téléchargement via saveFiles (Blob URL, pas de dataURL brute)', async ({ page }) => {
     await page.goto('/index.html');
     await page.setInputFiles('#inImgs', [img(1)]);

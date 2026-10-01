@@ -2208,6 +2208,12 @@
         // ═══════════════════════════════════════════
         //  GÉNÉRATEUR PNG 4K
         // ═══════════════════════════════════════════
+        // Caractères interdits dans un nom de fichier (Windows/macOS/Linux).
+        function sanitizeFilename(name) {
+            const cleaned = name.replace(/[\\/:*?"<>|\u0000-\u001F]/g, '_').replace(/[. ]+$/, '');
+            return cleaned || 'copyright';
+        }
+
         function generatePNG() {
             let text = document.getElementById('wmText').value.trim();
             if (!text) text = 'INKU Studio';
@@ -2215,17 +2221,29 @@
             const ctx = canvas.getContext('2d');
             canvas.width = 3840; canvas.height = 2160;
             ctx.clearRect(0, 0, 3840, 2160);
-            ctx.font = '45px Arial'; ctx.fillStyle = 'white';
+            // Rendu pixel-identique : seule la police de secours change (Arial
+            // reste en premier, donc même rendu partout où Arial est présent).
+            ctx.font = '45px Arial, Helvetica, "Liberation Sans", sans-serif';
+            ctx.fillStyle = 'white';
             ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
             ctx.fillText('© ' + text, 100, 2160 - 67);
-            const u = canvas.toDataURL('image/png');
+
             const dlLink = document.getElementById('genDl');
-            dlLink.onclick = (e) => { e.preventDefault(); saveFiles([{ dataUrl: u, name: (text || 'copyright') + '.png' }]); };
+            const filename = sanitizeFilename(text) + '.png';
+            canvas.toBlob((blob) => {
+                dlLink.onclick = (e) => { e.preventDefault(); saveFiles([{ blob, name: filename }]); };
+            }, 'image/png');
             dlLink.href = '#';
             document.getElementById('genOutput').style.display = 'block';
             showToast('PNG 4K généré');
         }
         window.generatePNG = generatePNG;
+
+        try {
+            document.getElementById('wmText').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); generatePNG(); }
+            });
+        } catch (e) { console.error('[INKU] Initialisation Créateur 4K :', e); }
 
         // ═══════════════════════════════════════════
         //  RÉDACTION TWEETS
