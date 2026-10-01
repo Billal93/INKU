@@ -14,7 +14,7 @@
 
     <script src="assets/vendor/jszip.min.js"></script>
     <script src="assets/vendor/sortable.min.js"></script>
-    <script src="assets/logos.js"></script>
+    <script src="assets/logos.js?v=2a76f737"></script>
 
     <style>
         @font-face {
@@ -1532,15 +1532,21 @@
                 const thumb = document.createElement('div');
                 thumb.className = 'logo-thumb';
                 const img = document.createElement('img');
-                const src = 'assets/copyrights/' + name + '.png';
-                if (nativeLazy) { img.loading = 'lazy'; img.src = src; }
-                else { img.dataset.src = src; lazyImgs.push(img); }
+                const fullSrc = 'assets/copyrights/' + name + '.png';
+                const thumbSrc = 'assets/thumbs/' + name + '.png';
+                // Repli sur l'image complète si la miniature n'a pas encore été
+                // générée (python creer_index.py --thumbnails).
+                img.onerror = () => {
+                    if (img.dataset.triedFull !== '1') { img.dataset.triedFull = '1'; img.src = fullSrc; }
+                    else { div.style.display = 'none'; }
+                };
+                if (nativeLazy) { img.loading = 'lazy'; img.src = thumbSrc; }
+                else { img.dataset.src = thumbSrc; lazyImgs.push(img); }
                 img.alt = name.replace(/_/g, ' ');
-                img.onerror = () => { div.style.display = 'none'; };
                 thumb.appendChild(img);
                 const span = document.createElement('span');
                 span.textContent = name.replace(/_/g, ' ');
-                if (src === SELECTED_WM_URL) div.classList.add('selected');
+                if (fullSrc === SELECTED_WM_URL) div.classList.add('selected');
                 div.appendChild(thumb); div.appendChild(span);
                 div.addEventListener('click', () => selectCloudLogo(name, div));
                 grid.appendChild(div);
