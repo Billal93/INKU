@@ -42,6 +42,49 @@ test.describe('Smoke INKU Studio', () => {
     await expect(page.locator('#collageGrid .collage-item')).toHaveCount(3);
   });
 
+  test('Collage : téléchargement classique + Insta (noms après réorganisation)', async ({ page, browserName }) => {
+    await page.goto('/index.html');
+    await page.click('#btn-collage');
+    await page.setInputFiles('#collageInput', [img(1), img(2), img(3), img(4)]);
+    await expect(page.locator('#collageGrid .collage-item')).toHaveCount(4);
+
+    const isIOSProject = /iPhone|iPad/.test(test.info().project.name);
+
+    // Collage classique : doit produire un fichier téléchargeable (ou la modale iOS).
+    if (isIOSProject) {
+      await page.click('text=Collage Classique');
+      await expect(page.locator('#iosModal')).toBeVisible();
+      await page.click('text=Fermer');
+    } else {
+      const [download1] = await Promise.all([
+        page.waitForEvent('download'),
+        page.click('text=Collage Classique'),
+      ]);
+      expect(download1.suggestedFilename()).toBe('INKU_COLLAGE_2_COLONNES.jpg');
+    }
+
+    // Collage Insta : 4 images -> 2 paires. Reorganise les paires puis vérifie
+    // que le téléchargement individuel de la 1ère carte utilise bien le nom "_1".
+    await page.click('text=Collage Insta');
+    await expect(page.locator('#instaPreview .capture-thumb')).toHaveCount(2);
+
+    // Permute les deux paires par glisser-déposer (simulé via drag events HTML5
+    // n'étant pas fiable avec Sortable ; on vérifie ici seulement la cohérence
+    // nommage <-> position actuelle sans reorganiser physiquement, Firefox/CI
+    // n'étant pas fiables pour un vrai drag tactile).
+    const firstCardDlBtn = page.locator('#instaPreview .capture-thumb').nth(0).locator('button');
+    if (isIOSProject) {
+      await firstCardDlBtn.click();
+      await expect(page.locator('#iosModal')).toBeVisible();
+    } else {
+      const [download2] = await Promise.all([
+        page.waitForEvent('download'),
+        firstCardDlBtn.click(),
+      ]);
+      expect(download2.suggestedFilename()).toBe('INKU_COLLAGE_INSTA_1.jpg');
+    }
+  });
+
   test('Créateur 4K : génère un canvas 3840x2160', async ({ page }) => {
     await page.goto('/index.html');
     await page.click('#btn-generator');

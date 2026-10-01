@@ -2018,72 +2018,101 @@
             collageInput.addEventListener('change', () => handleCollageFiles([...collageInput.files]));
         } catch (e) { console.error('[INKU] Initialisation Collage :', e); }
 
-        async function handleCollageFiles(files) {
+        // Plus de fileToDataUrl : une Object URL suffit (pas de lecture base64
+        // complète en mémoire pour chaque image du collage).
+        function handleCollageFiles(files) {
             const imageFiles = files.filter(f => f.type.startsWith('image/'));
-            for (const f of imageFiles) {
-                const dataUrl = await fileToDataUrl(f);
-                collageFiles.push({ name: f.name, dataUrl });
-            }
-            renderCollageGrid();
-        }
-
-        function fileToDataUrl(file) {
-            return new Promise(resolve => {
-                const reader = new FileReader();
-                reader.onload = e => resolve(e.target.result);
-                reader.readAsDataURL(file);
+            if (!imageFiles.length) return;
+            const grid = document.getElementById('collageGrid');
+            imageFiles.forEach(f => {
+                const item = { file: f, name: f.name, objectUrl: URL.createObjectURL(f) };
+                collageFiles.push(item);
+                grid.appendChild(createCollageItemEl(item));
             });
+            syncCollageVisibility();
+            attachCollageSortable();
         }
 
-        function renderCollageGrid() {
+        function createCollageItemEl(item) {
+            const div = document.createElement('div'); div.className = 'collage-item';
+            div._collageItem = item;
+            const img = document.createElement('img'); img.src = item.objectUrl; img.alt = item.name;
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'collage-remove'; removeBtn.innerHTML = 'X'; removeBtn.title = 'Supprimer';
+            removeBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                const idx = collageFiles.indexOf(item);
+                if (idx > -1) collageFiles.splice(idx, 1);
+                URL.revokeObjectURL(item.objectUrl);
+                div.remove();
+                syncCollageVisibility();
+            });
+            div.appendChild(img); div.appendChild(removeBtn);
+            return div;
+        }
+
+        function syncCollageVisibility() {
             const grid = document.getElementById('collageGrid');
             const actions = document.getElementById('collageActions');
-            const count = collageFiles.length;
-            if (!count) { grid.style.display = 'none'; actions.style.display = 'none'; return; }
-            grid.style.display = 'grid'; actions.style.display = 'block';
-            grid.dataset.count = count; grid.innerHTML = '';
-            collageFiles.forEach((item, idx) => {
-                const div = document.createElement('div'); div.className = 'collage-item'; div.dataset.index = idx;
-                const img = document.createElement('img'); img.src = item.dataUrl; img.alt = item.name;
-                const removeBtn = document.createElement('button');
-                removeBtn.className = 'collage-remove'; removeBtn.innerHTML = 'X'; removeBtn.title = 'Supprimer';
-                removeBtn.addEventListener('click', e => { e.stopPropagation(); collageFiles.splice(idx, 1); renderCollageGrid(); });
-                div.appendChild(img); div.appendChild(removeBtn); grid.appendChild(div);
-            });
-            if (sortableCollage) sortableCollage.destroy();
+            if (!grid.children.length) { grid.style.display = 'none'; actions.style.display = 'none'; }
+            else { grid.style.display = 'grid'; actions.style.display = 'block'; }
+        }
+
+        // N'attache Sortable qu'une fois ; on ne reconstruit plus toute la
+        // grille à chaque glisser-déposer, on resynchronise juste le tableau.
+        function attachCollageSortable() {
+            if (sortableCollage) return;
+            const grid = document.getElementById('collageGrid');
             sortableCollage = new Sortable(grid, {
                 animation: 200, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen',
+                delay: 150, delayOnTouchOnly: true, touchStartThreshold: 5,
                 onEnd: () => {
-                    const newOrder = [];
-                    grid.querySelectorAll('.collage-item').forEach(el => { newOrder.push(collageFiles[parseInt(el.dataset.index)]); });
-                    collageFiles = newOrder; renderCollageGrid();
+                    collageFiles = Array.from(grid.children).map(el => el._collageItem).filter(Boolean);
                 }
             });
         }
 
         function getOrderedCollageFiles() {
-            const orderedFiles = [];
-            document.querySelectorAll('#collageGrid .collage-item').forEach(el => { orderedFiles.push(collageFiles[parseInt(el.dataset.index)]); });
-            return orderedFiles;
+            return Array.from(document.getElementById('collageGrid').children)
+                .map(el => el._collageItem).filter(Boolean);
         }
 
+        // Limites connues du canvas sur iOS Safari : on redimensionne le
+        // collage fusionné plutôt que de risquer une image vide/noire.
+        const MAX_CANVAS_AREA = 16000000;
+        const MAX_CANVAS_DIM = 4096;
+
         async function createMergedCanvas(files, cols) {
-            const loadedImgs = await Promise.all(files.map(item => loadImg(item.dataUrl)));
+            const loadedImgs = await Promise.all(files.map(item => loadImg(item.objectUrl)));
             if (!loadedImgs.length) return null;
             const cellWidth = Math.max(...loadedImgs.map(img => img.width));
             const cellHeight = Math.max(...loadedImgs.map(img => img.height));
             const rows = Math.ceil(loadedImgs.length / cols);
+            const totalWidth = cellWidth * cols;
+            const totalHeight = cellHeight * rows;
+
+            let scale = 1;
+            if (totalWidth > MAX_CANVAS_DIM || totalHeight > MAX_CANVAS_DIM) {
+                scale = Math.min(scale, MAX_CANVAS_DIM / Math.max(totalWidth, totalHeight));
+            }
+            if (totalWidth * totalHeight * scale * scale > MAX_CANVAS_AREA) {
+                scale = Math.min(scale, Math.sqrt(MAX_CANVAS_AREA / (totalWidth * totalHeight)));
+            }
+            if (scale < 1) showToast('Images redimensionnées pour rester compatible avec tous les appareils');
+
+            const cw = Math.max(1, Math.round(cellWidth * scale));
+            const ch = Math.max(1, Math.round(cellHeight * scale));
             const canvas = document.createElement('canvas');
-            canvas.width = cellWidth * cols; canvas.height = cellHeight * rows;
+            canvas.width = cw * cols; canvas.height = ch * rows;
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
             loadedImgs.forEach((img, index) => {
                 const col = index % cols; const row = Math.floor(index / cols);
-                const x = col * cellWidth; const y = row * cellHeight;
-                const ratio = Math.max(cellWidth / img.width, cellHeight / img.height);
+                const x = col * cw; const y = row * ch;
+                const ratio = Math.max(cw / img.width, ch / img.height);
                 const drawWidth = img.width * ratio; const drawHeight = img.height * ratio;
-                const drawX = x + (cellWidth - drawWidth) / 2; const drawY = y + (cellHeight - drawHeight) / 2;
-                ctx.save(); ctx.beginPath(); ctx.rect(x, y, cellWidth, cellHeight); ctx.clip();
+                const drawX = x + (cw - drawWidth) / 2; const drawY = y + (ch - drawHeight) / 2;
+                ctx.save(); ctx.beginPath(); ctx.rect(x, y, cw, ch); ctx.clip();
                 ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight); ctx.restore();
             });
             return canvas;
@@ -2096,9 +2125,9 @@
             try {
                 const canvas = await createMergedCanvas(orderedFiles, 2);
                 if (!canvas) return;
-                const dataUrl = canvasToDataUrl(canvas, 1.0);
-                const name = 'INKU_COLLAGE_2_COLONNES.jpg';
-                saveFiles([{ dataUrl, name }]);
+                const blob = await canvasToBlob(canvas, 0.88);
+                canvas.width = 0; canvas.height = 0;
+                saveFiles([{ blob, name: 'INKU_COLLAGE_2_COLONNES.jpg' }]);
             } catch(e) { console.error(e); showToast('Erreur collage', 'error'); }
         }
         window.generateClassicCollage = generateClassicCollage;
@@ -2109,26 +2138,40 @@
             showToast('Génération Collages Insta...');
             const previewContainer = document.getElementById('instaPreviewContainer');
             const previewWrap = document.getElementById('instaPreview');
+            previewWrap.querySelectorAll('img').forEach(img => { if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src); });
             previewWrap.innerHTML = '';
             try {
+                // Nombre d'images impair : la dernière paire ne contient qu'une
+                // image (comportement existant conservé tel quel).
                 for (let i = 0; i < orderedFiles.length; i += 2) {
                     const pair = orderedFiles.slice(i, i + 2);
                     const canvas = await createMergedCanvas(pair, 1);
                     if (!canvas) continue;
-                    const dataUrl = canvasToDataUrl(canvas, 1.0);
-                    const name = 'INKU_COLLAGE_INSTA_' + (Math.floor(i / 2) + 1) + '.jpg';
+                    const blob = await canvasToBlob(canvas, 0.9);
+                    canvas.width = 0; canvas.height = 0;
+                    const objectUrl = URL.createObjectURL(blob);
+
                     const div = document.createElement('div'); div.className = 'capture-thumb'; div.style.cursor = 'grab';
-                    const imgEl = document.createElement('img'); imgEl.src = dataUrl;
+                    div._instaBlob = blob;
+                    const imgEl = document.createElement('img'); imgEl.src = objectUrl;
                     const actionsDiv = document.createElement('div'); actionsDiv.className = 'capture-actions'; actionsDiv.style.justifyContent = 'center';
                     const dlBtn = document.createElement('button');
                     dlBtn.className = 'btn-dl-small'; dlBtn.textContent = 'Télécharger'; dlBtn.style.width = '100%'; dlBtn.style.textAlign = 'center';
-                    dlBtn.addEventListener('click', () => saveFiles([{ dataUrl, name }]));
+                    // Le nom est recalculé sur la position actuelle dans le DOM au
+                    // moment du clic, pour rester juste après un glisser-déposer.
+                    dlBtn.addEventListener('click', () => {
+                        const pos = Array.from(previewWrap.children).indexOf(div);
+                        saveFiles([{ blob: div._instaBlob, name: 'INKU_COLLAGE_INSTA_' + (pos + 1) + '.jpg' }]);
+                    });
                     actionsDiv.appendChild(dlBtn); div.appendChild(imgEl); div.appendChild(actionsDiv);
                     previewWrap.appendChild(div);
                 }
                 previewContainer.style.display = 'block';
                 if (window.instaSortable) window.instaSortable.destroy();
-                window.instaSortable = new Sortable(previewWrap, { animation: 200, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen' });
+                window.instaSortable = new Sortable(previewWrap, {
+                    animation: 200, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen',
+                    delay: 150, delayOnTouchOnly: true, touchStartThreshold: 5,
+                });
                 showToast('Paires Insta générées !');
             } catch(e) { console.error(e); showToast('Erreur génération Insta', 'error'); }
         }
@@ -2139,24 +2182,25 @@
             if (!thumbs.length) return;
             const items = [];
             thumbs.forEach((thumb, i) => {
-                const img = thumb.querySelector('img');
-                if (img) {
-                    const name = 'INKU_COLLAGE_INSTA_' + (i + 1) + '.jpg';
-                    items.push({ dataUrl: img.src, name });
-                }
+                items.push({ blob: thumb._instaBlob, name: 'INKU_COLLAGE_INSTA_' + (i + 1) + '.jpg' });
             });
             saveFiles(items);
         }
         window.downloadAllInsta = downloadAllInsta;
 
         function clearCollage() {
+            collageFiles.forEach(item => URL.revokeObjectURL(item.objectUrl));
             collageFiles = [];
-            renderCollageGrid();
+            document.getElementById('collageGrid').innerHTML = '';
+            syncCollageVisibility();
             if (sortableCollage) { sortableCollage.destroy(); sortableCollage = null; }
             const pv = document.getElementById('instaPreviewContainer');
             if (pv) pv.style.display = 'none';
             const wrap = document.getElementById('instaPreview');
-            if (wrap) wrap.innerHTML = '';
+            if (wrap) {
+                wrap.querySelectorAll('img').forEach(img => { if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src); });
+                wrap.innerHTML = '';
+            }
             showToast('Collage effacé');
         }
         window.clearCollage = clearCollage;
