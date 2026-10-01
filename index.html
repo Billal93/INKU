@@ -1007,7 +1007,10 @@
 
             <div class="card">
                 <span class="section-title">3. Appliquer</span>
-                <button class="big-btn" onclick="fastProcess()">Appliquer les Copyrights</button>
+                <div class="btn-row">
+                    <button class="big-btn" style="margin-top:0;" onclick="fastProcess()">Appliquer les Copyrights</button>
+                    <button class="big-btn secondary" style="margin-top:0;" onclick="resetApplier()">Réinitialiser</button>
+                </div>
                 <div class="loader" id="applierLoader">
                     <div class="spinner"></div>
                     <span id="applierLoaderText">Traitement en cours...</span>
@@ -1015,8 +1018,8 @@
                 <div id="bulkActions" style="display:none; margin-top:14px;">
                     <button class="big-btn" onclick="downloadAllProcessed()">Tout Télécharger</button>
                     <small
-                        style="display:block; text-align:center; margin-top:6px; font-size:0.7rem; color:var(--text-muted);">Les
-                        images seront enregistrées une par une dans votre dossier de téléchargement.</small>
+                        style="display:block; text-align:center; margin-top:6px; font-size:0.7rem; color:var(--text-muted);">Selon
+                        l'appareil : partage natif, téléchargement direct, ou appui long sur chaque image.</small>
                 </div>
                 <div id="appPreview" class="app-grid"></div>
             </div>
@@ -1343,7 +1346,8 @@
 
                 if (isImage) {
                     const img = document.createElement('img');
-                    img.dataset.src = item.dataUrl || item.url;
+                    if (item.dataUrl || item.url) { img.dataset.src = item.dataUrl || item.url; }
+                    else if (item.blob) { img._lazyBlob = item.blob; }
                     img.style.cssText = 'width:100%;display:block;-webkit-touch-callout:default;';
                     const label = document.createElement('div');
                     label.textContent = isChromeiOS ? '👆 Appui long → "Enregistrer l\'image"' : '👆 Appui long → "Enregistrer dans Photos"';
@@ -1364,7 +1368,15 @@
                 grid.appendChild(wrap);
             });
 
-            const hydrate = (img) => { if (img.dataset.src) { img.src = img.dataset.src; delete img.dataset.src; } };
+            const hydrate = (img) => {
+                if (img.dataset.src) { img.src = img.dataset.src; delete img.dataset.src; return; }
+                if (img._lazyBlob) {
+                    const reader = new FileReader();
+                    reader.onload = () => { img.src = reader.result; };
+                    reader.readAsDataURL(img._lazyBlob);
+                    img._lazyBlob = null;
+                }
+            };
             if (window.IntersectionObserver) {
                 iosModalObserver = new IntersectionObserver((entries) => {
                     entries.forEach(entry => { if (entry.isIntersecting) { hydrate(entry.target); iosModalObserver.unobserve(entry.target); } });
@@ -1479,46 +1491,107 @@
             }
         }
 
+        // Enlève les accents et uniformise espaces/underscores/casse, pour que
+        // "pokémon" trouve "pokemon" (les noms stockés sont sans accents).
+        function normalizeForSearch(s) {
+            return s.normalize('NFD').replace(/[̀-ͯ]/g, '')
+                .toLowerCase().replace(/[_\s]+/g, ' ').trim();
+        }
+
+        let logoResultsLimit = 40;
+        let logoGridObserver = null;
+
         function displayLogos(list) {
             const grid = document.getElementById('logoResults');
             const emptyMsg = document.getElementById('emptyLogoMsg');
             grid.innerHTML = '';
-            const q = document.getElementById('logoSearch').value.toLowerCase().trim();
-            if (!q) { grid.style.display = 'none'; emptyMsg.style.display = 'block'; return; }
+            if (logoGridObserver) { logoGridObserver.disconnect(); logoGridObserver = null; }
+            const q = document.getElementById('logoSearch').value.trim();
+            if (!q) {
+                grid.style.display = 'none'; emptyMsg.style.display = 'block';
+                emptyMsg.textContent = logosData.length
+                    ? 'Tapez un nom pour rechercher un copyright existant.'
+                    : 'Base de logos introuvable (assets/logos.js ou assets/logos.json manquant).';
+                return;
+            }
             if (list.length === 0) {
                 grid.style.display = 'none'; emptyMsg.style.display = 'block';
                 emptyMsg.textContent = 'Aucun copyright trouvé.'; return;
             }
             emptyMsg.style.display = 'none'; grid.style.display = 'grid';
-            list.forEach(name => {
+
+            const visible = list.slice(0, logoResultsLimit);
+            const nativeLazy = 'loading' in HTMLImageElement.prototype;
+            const lazyImgs = [];
+            visible.forEach(name => {
                 const div = document.createElement('div');
                 div.className = 'logo-item'; div.dataset.name = name;
                 const thumb = document.createElement('div');
                 thumb.className = 'logo-thumb';
                 const img = document.createElement('img');
-                img.src = 'assets/copyrights/' + name + '.png';
-                img.loading = 'lazy'; img.alt = name.replace(/_/g, ' ');
+                const src = 'assets/copyrights/' + name + '.png';
+                if (nativeLazy) { img.loading = 'lazy'; img.src = src; }
+                else { img.dataset.src = src; lazyImgs.push(img); }
+                img.alt = name.replace(/_/g, ' ');
                 img.onerror = () => { div.style.display = 'none'; };
                 thumb.appendChild(img);
                 const span = document.createElement('span');
                 span.textContent = name.replace(/_/g, ' ');
-                if ('assets/copyrights/' + name + '.png' === SELECTED_WM_URL) div.classList.add('selected');
+                if (src === SELECTED_WM_URL) div.classList.add('selected');
                 div.appendChild(thumb); div.appendChild(span);
                 div.addEventListener('click', () => selectCloudLogo(name, div));
                 grid.appendChild(div);
             });
+
+            // Repli pour les navigateurs sans loading="lazy" natif (ignoré sans
+            // erreur, mais sans le bénéfice du chargement différé).
+            if (!nativeLazy && lazyImgs.length) {
+                if (window.IntersectionObserver) {
+                    logoGridObserver = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            if (entry.isIntersecting) {
+                                const img = entry.target;
+                                img.src = img.dataset.src; delete img.dataset.src;
+                                logoGridObserver.unobserve(img);
+                            }
+                        });
+                    }, { rootMargin: '150px 0px' });
+                    lazyImgs.forEach(img => logoGridObserver.observe(img));
+                } else {
+                    lazyImgs.forEach(img => { img.src = img.dataset.src; delete img.dataset.src; });
+                }
+            }
+
+            if (list.length > visible.length) {
+                const more = document.createElement('button');
+                more.type = 'button';
+                more.className = 'big-btn secondary';
+                more.style.cssText = 'grid-column:1/-1; margin:6px 0 0;';
+                more.textContent = 'Voir plus (' + (list.length - visible.length) + ')';
+                more.addEventListener('click', () => { logoResultsLimit += 40; displayLogos(list); });
+                grid.appendChild(more);
+            }
         }
 
         function filterLogos() {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
-                const q = document.getElementById('logoSearch').value.toLowerCase().trim();
-                const filtered = q ? logosData.filter(n => n.toLowerCase().replace(/_/g, ' ').includes(q)) : [];
+                logoResultsLimit = 40;
+                const q = normalizeForSearch(document.getElementById('logoSearch').value.trim());
+                const filtered = q ? logosData.filter(n => normalizeForSearch(n).includes(q)) : [];
                 displayLogos(filtered);
             }, 200);
         }
 
+        // URL du logo personnalisé importé, pour pouvoir la révoquer quand on
+        // en choisit un autre (sinon fuite mémoire à chaque import).
+        let customLogoObjectUrl = null;
+        function revokeCustomLogoUrl() {
+            if (customLogoObjectUrl) { URL.revokeObjectURL(customLogoObjectUrl); customLogoObjectUrl = null; }
+        }
+
         function selectCloudLogo(name, el) {
+            revokeCustomLogoUrl();
             SELECTED_WM_URL = 'assets/copyrights/' + name + '.png';
             document.querySelectorAll('.logo-item').forEach(i => i.classList.remove('selected'));
             el.classList.add('selected');
@@ -1529,7 +1602,9 @@
         function handleCustomLogo() {
             const input = document.getElementById('customLogoInput');
             if (input.files && input.files[0]) {
+                revokeCustomLogoUrl();
                 const url = URL.createObjectURL(input.files[0]);
+                customLogoObjectUrl = url;
                 SELECTED_WM_URL = url;
                 document.querySelectorAll('.logo-item').forEach(i => i.classList.remove('selected'));
                 document.getElementById('logoSearch').value = '';
@@ -1573,6 +1648,35 @@
 
         let processedImagesList = [];
 
+        // Évite de recharger/redécoder le PNG du copyright à chaque clic sur
+        // "Appliquer" tant que la sélection n'a pas changé.
+        let cachedWmUrl = null;
+        let cachedWmImg = null;
+        async function getWatermarkImage() {
+            if (cachedWmImg && cachedWmUrl === SELECTED_WM_URL) return cachedWmImg;
+            cachedWmImg = await loadImg(SELECTED_WM_URL);
+            cachedWmUrl = SELECTED_WM_URL;
+            return cachedWmImg;
+        }
+
+        // Miniature légère pour l'aperçu (le fichier complet reste dans le Blob
+        // téléchargeable, pas dans le <img src> de la grille).
+        function makeThumbnailDataUrl(sourceCanvas, maxSize) {
+            const scale = Math.min(1, maxSize / Math.max(sourceCanvas.width, sourceCanvas.height));
+            const tw = Math.max(1, Math.round(sourceCanvas.width * scale));
+            const th = Math.max(1, Math.round(sourceCanvas.height * scale));
+            const tcv = document.createElement('canvas');
+            tcv.width = tw; tcv.height = th;
+            tcv.getContext('2d').drawImage(sourceCanvas, 0, 0, tw, th);
+            const url = tcv.toDataURL('image/jpeg', 0.7);
+            tcv.width = 0; tcv.height = 0;
+            return url;
+        }
+
+        function canvasToBlob(canvas, quality) {
+            return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality || 0.92));
+        }
+
         async function fastProcess() {
             if (!SELECTED_WM_URL) return showToast('Sélectionne un copyright d\'abord', 'error');
             const files = applierFiles;
@@ -1583,11 +1687,23 @@
             const preview = document.getElementById('appPreview');
             preview.innerHTML = '';
             processedImagesList = [];
+            let successCount = 0;
+            let errorCount = 0;
+
+            let wmImg;
             try {
-                const wmImg = await loadImg(SELECTED_WM_URL);
-                for (let i = 0; i < files.length; i++) {
-                    loaderText.textContent = 'Traitement ' + (i + 1) + ' / ' + files.length + '...';
-                    const f = files[i];
+                wmImg = await getWatermarkImage();
+            } catch (e) {
+                console.error('[INKU] Copyright illisible :', e);
+                loader.classList.remove('active');
+                return showToast('Impossible de charger le copyright sélectionné', 'error');
+            }
+
+            for (let i = 0; i < files.length; i++) {
+                loaderText.textContent = 'Traitement ' + (i + 1) + ' / ' + files.length + '...';
+                const f = files[i];
+                // Une image cassée ne doit pas interrompre le reste du lot.
+                try {
                     const img = await loadSourceImage(f);
                     const cv = document.createElement('canvas');
                     cv.width = img.width; cv.height = img.height;
@@ -1595,38 +1711,69 @@
                     ctx.drawImage(img, 0, 0);
                     ctx.drawImage(wmImg, 0, 0, cv.width, cv.height);
                     if (img.close) img.close(); // libère la mémoire d'un ImageBitmap
-                    // dataUrl = auto-contenu, fonctionne pour la modal iOS "Enregistrer dans Photos"
-                    const dataUrl = canvasToDataUrl(cv, 0.92);
+
+                    const blob = await canvasToBlob(cv, 0.92);
+                    const thumbDataUrl = makeThumbnailDataUrl(cv, 220);
+                    cv.width = 0; cv.height = 0; // libère le canvas plein format
+
                     const finalName = 'INKU_' + f.name.replace(/\.[^.]+$/, '') + '.jpg';
-                    // { url, dataUrl, name } — url et dataUrl sont identiques ici mais on nomme clairement
-                    processedImagesList.push({ url: dataUrl, dataUrl: dataUrl, name: finalName });
+                    processedImagesList.push({ blob, name: finalName });
+
                     const div = document.createElement('div'); div.className = 'app-item';
-                    const imgEl = document.createElement('img'); imgEl.src = dataUrl; imgEl.alt = f.name;
+                    const imgEl = document.createElement('img'); imgEl.src = thumbDataUrl; imgEl.alt = f.name;
                     const actionsDiv = document.createElement('div'); actionsDiv.className = 'app-item-actions';
                     const nameSpan = document.createElement('span'); nameSpan.className = 'app-item-name';
                     nameSpan.textContent = finalName; nameSpan.title = finalName;
                     const dlBtn = document.createElement('button');
                     dlBtn.className = 'btn-dl-small'; dlBtn.textContent = 'D/L';
-                    dlBtn.addEventListener('click', () => saveFiles([{ dataUrl, name: finalName }]));
+                    dlBtn.addEventListener('click', () => saveFiles([{ blob, name: finalName }]));
                     actionsDiv.appendChild(nameSpan); actionsDiv.appendChild(dlBtn);
                     div.appendChild(imgEl); div.appendChild(actionsDiv);
                     preview.appendChild(div);
+                    successCount++;
+                } catch (e) {
+                    console.error('[INKU] Échec sur', f.name, e);
+                    errorCount++;
+                    const div = document.createElement('div'); div.className = 'app-item';
+                    const errDiv = document.createElement('div');
+                    errDiv.style.cssText = 'padding:14px 8px;text-align:center;font-size:0.68rem;font-weight:700;color:#e53e3e;';
+                    errDiv.textContent = 'Échec : ' + f.name;
+                    div.appendChild(errDiv);
+                    preview.appendChild(div);
                 }
-                document.getElementById('bulkActions').style.display = 'block';
-                showToast(files.length + ' image(s) traitée(s)');
-            } catch (e) {
-                console.error(e);
-                showToast('Erreur pendant le traitement', 'error');
-            } finally {
-                loader.classList.remove('active');
             }
+
+            if (successCount) document.getElementById('bulkActions').style.display = 'block';
+            if (errorCount && successCount) showToast(successCount + ' image(s) traitée(s), ' + errorCount + ' échec(s)', 'error');
+            else if (errorCount) showToast('Échec sur les ' + errorCount + ' image(s)', 'error');
+            else showToast(successCount + ' image(s) traitée(s)');
+            loader.classList.remove('active');
         }
         window.fastProcess = fastProcess;
+
+        function resetApplier() {
+            applierFiles = [];
+            processedImagesList = [];
+            updateAnimeCount();
+            document.getElementById('appPreview').innerHTML = '';
+            document.getElementById('bulkActions').style.display = 'none';
+            document.getElementById('logoSearch').value = '';
+            document.getElementById('logoResults').innerHTML = '';
+            document.getElementById('logoResults').style.display = 'none';
+            document.getElementById('emptyLogoMsg').style.display = 'block';
+            document.getElementById('emptyLogoMsg').textContent = 'Tapez un nom pour rechercher un copyright existant.';
+            revokeCustomLogoUrl();
+            document.getElementById('customLogoPreview').style.display = 'none';
+            SELECTED_WM_URL = null;
+            cachedWmImg = null; cachedWmUrl = null;
+            showToast('Réinitialisé');
+        }
+        window.resetApplier = resetApplier;
 
         function downloadAllProcessed() {
             if (!processedImagesList.length) return showToast('Aucune image à télécharger', 'error');
             showToast('Préparation de ' + processedImagesList.length + ' image(s)...');
-            saveFiles(processedImagesList.map(img => ({ dataUrl: img.dataUrl, name: img.name })));
+            saveFiles(processedImagesList.map(img => ({ blob: img.blob, name: img.name })));
         }
         window.downloadAllProcessed = downloadAllProcessed;
 

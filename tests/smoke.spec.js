@@ -60,11 +60,20 @@ test.describe('Smoke INKU Studio', () => {
     await page.click('text=Appliquer les Copyrights');
     await expect(page.locator('#bulkActions')).toBeVisible({ timeout: 15000 });
 
-    const [download] = await Promise.all([
-      page.waitForEvent('download'),
-      page.click('text=Tout Télécharger'),
-    ]);
-    expect(download.suggestedFilename()).toMatch(/\.jpg$/);
+    // Sur iOS (simulé ici), saveFiles() ouvre la modale d'appui long au lieu
+    // d'émettre un événement "download" — c'est le comportement attendu.
+    const isIOSProject = /iPhone|iPad/.test(test.info().project.name);
+    if (isIOSProject) {
+      await page.click('text=Tout Télécharger');
+      await expect(page.locator('#iosModal')).toBeVisible();
+      await expect(page.locator('#iosModalGrid img')).toHaveCount(1);
+    } else {
+      const [download] = await Promise.all([
+        page.waitForEvent('download'),
+        page.click('text=Tout Télécharger'),
+      ]);
+      expect(download.suggestedFilename()).toMatch(/\.jpg$/);
+    }
   });
 
   test('Tweets : compteur et bloc-notes', async ({ page }) => {
