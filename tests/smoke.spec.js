@@ -51,6 +51,22 @@ test.describe('Smoke INKU Studio', () => {
     expect(dims).toEqual([3840, 2160]);
   });
 
+  test('Appliquer : téléchargement via saveFiles (Blob URL, pas de dataURL brute)', async ({ page }) => {
+    await page.goto('/index.html');
+    await page.setInputFiles('#inImgs', [img(1)]);
+    await page.fill('#logoSearch', 'naruto');
+    await page.waitForTimeout(400);
+    await page.locator('#logoResults .logo-item').first().click();
+    await page.click('text=Appliquer les Copyrights');
+    await expect(page.locator('#bulkActions')).toBeVisible({ timeout: 15000 });
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.click('text=Tout Télécharger'),
+    ]);
+    expect(download.suggestedFilename()).toMatch(/\.jpg$/);
+  });
+
   test('Tweets : compteur et bloc-notes', async ({ page }) => {
     await page.goto('/index.html');
     await page.click('#btn-redaction');
