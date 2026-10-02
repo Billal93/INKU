@@ -1,9 +1,9 @@
 // Analyses de sources : bandes noires, couverture d'une transition, cartons de texte.
 import { CanvasSink } from '../vendor/mediabunny.min.mjs';
 
+// Fonctionne sur le thread principal ET dans un worker (OffscreenCanvas).
 function smallCtx(w, h) {
-  const c = document.createElement('canvas');
-  c.width = w; c.height = h;
+  const c = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h });
   return c.getContext('2d', { willReadFrequently: true });
 }
 
