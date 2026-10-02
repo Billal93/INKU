@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>INKU Studio | Montage — Maquette</title>
+<meta name="theme-color" content="#0f0d16">
+<style>
+  @font-face { font-family:'Plus Jakarta Sans'; font-weight:400; font-display:swap; src:url('../assets/fonts/plus-jakarta-sans-400.woff2') format('woff2'); }
+  @font-face { font-family:'Plus Jakarta Sans'; font-weight:700; font-display:swap; src:url('../assets/fonts/plus-jakarta-sans-700.woff2') format('woff2'); }
+  @font-face { font-family:'Plus Jakarta Sans'; font-weight:800; font-display:swap; src:url('../assets/fonts/plus-jakarta-sans-800.woff2') format('woff2'); }
+</style>
+<link rel="stylesheet" href="studio.css">
+<style>
+  .mock-sub { position:absolute; left:0; right:0; top:50%; transform:translateY(-50%); text-align:center; font-weight:800; font-size:6cqh; line-height:1; text-transform:uppercase; color:#fff; text-shadow:0 2px 4px rgba(0,0,0,.6); }
+  .mock-sub em { color:#ffea00; font-style:normal; font-size:1.05em; display:block; }
+  .mock-bg { background:linear-gradient(160deg,#3b2a63,#c2327f 55%,#f08a4b); }
+  .mock-logo { position:absolute; right:4%; top:3%; width:11%; aspect-ratio:1; border-radius:50%; background:var(--fuchsia); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:2.4cqh; color:#fff; }
+  .mock-cr { position:absolute; left:0; right:0; bottom:1.2%; text-align:center; font-size:1.5cqh; color:rgba(255,255,255,.8); font-weight:700; }
+  .cropbox { position:absolute; border:2px solid #fff; border-radius:3px; box-shadow:0 0 0 999px rgba(0,0,0,.45); }
+  .th-mock { position:absolute; inset:0; }
+  .theme { position:fixed; left:8px; bottom:8px; z-index:60; font-size:.68rem; } @media (max-width:899px) { .theme { display:none; } }
+  .gif { background:linear-gradient(90deg,#5a3d8a,#c2327f,#e08a4b); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4v16l13-8z" fill="currentColor"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 4h4v16H7zM13 4h4v16h-4z" fill="currentColor"/></symbol>
+  <symbol id="i-prev" viewBox="0 0 24 24"><path d="M6 5v14M19 5l-9 7 9 7z"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M18 5v14M5 5l9 7-9 7z"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3"/></symbol>
+  <symbol id="i-redo" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5M20 9H10a6 6 0 000 12h3"/></symbol>
+  <symbol id="i-cut" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.1 15.9M14.5 14.5L20 20M8.1 8.1L12 12"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v6M14 10v6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-magnet" viewBox="0 0 24 24"><path d="M5 3v8a7 7 0 0014 0V3h-4v8a3 3 0 01-6 0V3zM5 7h4M15 7h4"/></symbol>
+  <symbol id="i-zin" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5M11 8v6M8 11h6"/></symbol>
+  <symbol id="i-zout" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5M8 11h6"/></symbol>
+  <symbol id="i-lib" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+  <symbol id="i-wand" viewBox="0 0 24 24"><path d="M5 19L17 7M14 4l1 2 2 1-2 1-1 2-1-2-2-1 2-1zM19 12l.7 1.3L21 14l-1.3.7L19 16l-.7-1.3L17 14l1.3-.7z"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3l10 18H2zM12 10v5M12 18h0"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h12l-2 4 2 4H5"/></symbol>
+</defs></svg>
+
+<div class="studio pro" id="studio">
+  <header class="top">
+    <a class="brand" href="../index.html" style="color:inherit;text-decoration:none">INKU <b>Studio</b></a>
+    <span class="proj">Annonce film · preset « INKU actu anime »</span>
+    <span class="sp"></span>
+    <button class="ibtn undo" aria-label="Annuler"><svg class="i"><use href="#i-undo"/></svg></button>
+    <button class="ibtn redo" aria-label="Rétablir"><svg class="i"><use href="#i-redo"/></svg></button>
+    <button class="ibtn primary export">Exporter</button>
+    <div style="display:contents"><span class="dur warn" title="Durée totale / cible">58,4 s / 61,4 s · −3,0</span>
+    <span class="seg" role="group" aria-label="Mode"><button class="on">Simple</button><button>Pro</button></span></div>
+  </header>
+
+  <section class="preview" aria-label="Aperçu">
+    <div class="frame">
+      <div class="mock mock-bg"></div>
+      <div class="mock-logo">K</div>
+      <div class="mock-sub">DEUX GARÇONS<em>INSÉPARABLES</em></div>
+      <div class="mock-cr">© NOM DU STUDIO, CO-PRODUCTEUR</div>
+      <div class="safe show"></div>
+      <div class="hud">00:23:12 · V1 clip 9 · 540p proxy</div>
+    </div>
+  </section>
+
+  <div class="transport">
+    <button class="ibtn" aria-label="Image précédente"><svg class="i"><use href="#i-prev"/></svg></button>
+    <button class="ibtn primary" aria-label="Lecture" style="border-radius:99px;min-width:56px"><svg class="i"><use href="#i-play"/></svg></button>
+    <button class="ibtn" aria-label="Image suivante"><svg class="i"><use href="#i-next"/></svg></button>
+    <span class="tc">00:23:12</span>
+  </div>
+
+  <section class="timeline" aria-label="Timeline">
+    <div class="tl-tools">
+      <button class="ibtn"><svg class="i"><use href="#i-cut"/></svg></button>
+      <button class="ibtn"><svg class="i"><use href="#i-trash"/></svg></button>
+      <button class="ibtn on"><svg class="i"><use href="#i-magnet"/></svg></button>
+      <button class="ibtn"><svg class="i"><use href="#i-flag"/></svg></button>
+      <span class="sp"></span>
+      <button class="ibtn"><svg class="i"><use href="#i-zout"/></svg></button>
+      <button class="ibtn"><svg class="i"><use href="#i-zin"/></svg></button>
+      <button class="ibtn"><svg class="i"><use href="#i-wand"/></svg></button>
+    </div>
+    <div class="tl-scroll">
+      <div class="tl-content" style="width:1500px">
+        <div class="row ruler"><div class="hd"></div><div class="lane" style="width:1456px">
+          <span class="tick" style="left:0">0</span><span class="tick" style="left:120px">5</span><span class="tick" style="left:240px">10</span><span class="tick" style="left:360px">15</span><span class="tick" style="left:480px">20</span><span class="tick" style="left:600px">25</span><span class="tick" style="left:720px">30</span><span class="tick" style="left:840px">35</span><span class="tick" style="left:960px">40</span><span class="tick" style="left:1080px">45</span><span class="tick" style="left:1200px">50</span><span class="tick" style="left:1320px">55</span><span class="marker" style="left:396px"></span>
+        </div></div>
+        <div class="row"><div class="hd"><span class="nm">V1</span><span class="mini"><button>🔒</button></span></div><div class="lane h-v1" style="width:1456px">
+          <div class="clip" style="left:0;width:58px"><div class="gif th-mock"></div><span class="nm">1</span></div>
+          <div class="clip" style="left:60px;width:74px"><div class="gif th-mock" style="opacity:.6"></div><span class="nm">2</span></div>
+          <div class="clip" style="left:136px;width:52px"><span class="nm">3</span></div>
+          <div class="clip sel" style="left:190px;width:66px"><span class="nm">4 · 2,7 s</span></div>
+          <div class="clip" style="left:258px;width:60px"><span class="badge">!</span><span class="nm">5</span></div>
+          <div class="clip" style="left:320px;width:70px"><span class="nm">6</span></div>
+          <div class="clip" style="left:392px;width:62px"><span class="nm">7</span></div>
+          <div class="clip" style="left:456px;width:80px"><span class="nm">8</span></div>
+          <div class="clip" style="left:538px;width:58px"><span class="nm">9</span></div>
+          <div class="clip" style="left:598px;width:72px"><span class="badge err">!</span><span class="nm">10</span></div>
+          <div class="clip" style="left:672px;width:90px"><span class="nm">11</span></div>
+        </div></div>
+        <div class="row"><div class="hd"><span class="nm">V2</span></div><div class="lane h-v2" style="width:1456px">
+          <div class="clip v2" style="left:0;width:54px">Ouverture</div>
+          <div class="clip v2" style="left:250px;width:74px">Transition</div>
+          <div class="clip v2" style="left:700px;width:60px">Abonne-toi</div>
+          <div class="clip v2" style="left:0;width:1456px;top:auto;bottom:0;height:5px;opacity:.5"></div>
+        </div></div>
+        <div class="row"><div class="hd"><span class="nm">T1</span></div><div class="lane h-t1" style="width:1456px">
+          <div class="clip t1" style="left:24px;width:60px">UN NOUVEAU</div>
+          <div class="clip t1" style="left:88px;width:70px">FILM D'ANIM</div>
+          <div class="clip t1" style="left:190px;width:90px">DEUX GARÇONS</div>
+        </div></div>
+        <div class="row"><div class="hd"><span class="nm">A1</span><span class="mini"><button>M</button><button>S</button></span></div><div class="lane h-a1" style="width:1456px">
+          <div class="clip a1" style="left:0;width:1380px">
+            <span class="word" style="left:6px;width:30px">un</span><span class="word" style="left:38px;width:50px">nouveau</span><span class="word imp" style="left:92px;width:36px">film</span><span class="word" style="left:132px;width:60px">d'animation</span><span class="word sus" style="left:196px;width:44px">euh…</span><span class="word cut" style="left:244px;width:40px">deux</span><span class="word" style="left:288px;width:46px">deux</span><span class="word" style="left:338px;width:52px">garçons</span><span class="word imp" style="left:394px;width:78px">inséparables</span>
+          </div>
+        </div></div>
+        <div class="row"><div class="hd"><span class="nm">A2</span></div><div class="lane h-a2" style="width:1456px"><div class="clip a2" style="left:0;width:1456px">Musique −16 dB</div></div></div>
+        <div class="row"><div class="hd"><span class="nm">A3</span></div><div class="lane h-a3" style="width:1456px"><div class="clip a3" style="left:92px;width:16px"></div><div class="clip a3" style="left:394px;width:16px"></div></div></div>
+        <div class="row"><div class="hd"><span class="nm">A4</span></div><div class="lane h-a4" style="width:1456px"><div class="clip a4" style="left:0;width:54px"></div><div class="clip a4" style="left:250px;width:74px"></div></div></div>
+        <div class="playhead" style="left:300px"></div>
+      </div>
+    </div>
+  </section>
+
+  <nav class="dock">
+    <button data-sheet="sheetSources"><svg class="i"><use href="#i-lib"/></svg>Sources</button>
+    <button><svg class="i"><use href="#i-plus"/></svg>Plan</button>
+    <button><svg class="i"><use href="#i-cut"/></svg>Couper</button>
+    <button><svg class="i"><use href="#i-wand"/></svg>Actions</button>
+    <button data-sheet="sheetProps"><svg class="i"><use href="#i-sliders"/></svg>Réglages</button>
+  </nav>
+
+  <aside class="sheet" id="sheetSources" aria-label="Sources">
+    <div class="grab"></div>
+    <div class="panel-h">Sources<span class="sp"></span><button class="ibtn primary" style="min-height:34px">Importer</button><button class="ibtn close-sheet" data-close>✕</button></div>
+    <div class="panel-b">
+      <div class="src"><div class="src-h">trailer-film.mp4<small>1:02 · 14 plans · bandes 22 px</small><span class="sp"></span></div><div class="prog"><i style="width:100%"></i></div>
+        <div class="strip"><div class="shot used"><img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='54'%3E%3Crect width='96' height='54' fill='%235a3d8a'/%3E%3C/svg%3E"><span class="meta">0:03</span><span class="add">+</span></div><div class="shot"><img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='54'%3E%3Crect width='96' height='54' fill='%23c2327f'/%3E%3C/svg%3E"><span class="meta">0:02</span><span class="add">+</span></div><div class="shot"><img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='54'%3E%3Crect width='96' height='54' fill='%23e08a4b'/%3E%3C/svg%3E"><span class="meta">0:04</span><span class="add">+</span></div><div class="shot"><img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='54'%3E%3Crect width='96' height='54' fill='%232f7fb8'/%3E%3C/svg%3E"><span class="meta">0:01</span><span class="add">+</span></div></div></div>
+      <div class="src"><div class="src-h">teaser.mp4<small>0:38 · analyse…</small></div><div class="prog"><i style="width:46%"></i></div></div>
+      <div class="src"><div class="src-h">voix-brute.wav<small>2:10 · 6 prises détectées</small></div><div class="prog"><i style="width:100%"></i></div></div>
+    </div>
+  </aside>
+
+  <aside class="sheet" id="sheetProps" aria-label="Propriétés">
+    <div class="grab"></div>
+    <div class="panel-h">Clip 4 · V1<span class="sp"></span><button class="ibtn close-sheet" data-close>✕</button></div>
+    <div class="panel-b">
+      <div class="field"><label>Début</label><input type="text" value="00:06:15" readonly></div>
+      <div class="field"><label>Durée</label><input type="text" value="2,7 s" readonly></div>
+      <div class="field"><label>Cadrage 9:16</label><select><option>Fixe (glisser sur l'aperçu)</option><option>Travelling →</option></select></div>
+      <div class="field pro-only"><label>Début dans la source</label><input type="text" value="00:41:03" readonly></div>
+      <div class="field pro-only"><label>Amplitude du travelling</label><input type="text" value="12 %" readonly></div>
+      <button class="bigbtn sec">Autre plan (6 candidats)</button>
+      <div class="panel-h" style="padding-left:0;margin-top:10px">Alertes <span class="sp"></span></div>
+      <div class="lint"><span class="sp">Plan 5 : réutilise un passage déjà employé (0:12–0:14 de trailer-film.mp4).</span><button>Remplacer</button></div>
+      <div class="lint err"><span class="sp">Clip 10 : 0,8 s, sous le minimum de 1,0 s.</span><button>Étendre</button></div>
+    </div>
+  </aside>
+</div>
+<div class="theme"><button class="ibtn" id="btnTheme" style="min-height:34px;background:var(--panel2);padding:0 10px;font-size:.7rem;font-weight:800">Thème clair/sombre</button></div>
+<script>
+  if (new URLSearchParams(location.search).get('theme') === 'light') document.documentElement.dataset.theme = 'light';
+  document.getElementById('btnTheme').onclick = () => { const h = document.documentElement; h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark'; };
+  document.querySelectorAll('[data-sheet]').forEach(b => b.onclick = () => document.getElementById(b.dataset.sheet).classList.toggle('open'));
+  document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('.sheet').classList.remove('open'));
+  document.querySelectorAll('.seg button').forEach(b => b.onclick = () => { b.parentNode.querySelectorAll('button').forEach(x => x.classList.remove('on')); b.classList.add('on'); document.getElementById('studio').classList.toggle('pro', b.textContent === 'Pro'); });
+</script>
+</body>
+</html>
