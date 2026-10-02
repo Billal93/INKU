@@ -174,7 +174,6 @@ test('Ops : ajustement bornées par la source et les voisins ; roll déplace la 
   assert.ok(applyTrim(store, lib, a, 'R', -10, { roll: true }));                // roll : a raccourci, b rallongé... 
   assert.equal(A().dur + B().dur, sumBefore);                                   // le point de coupe bouge, pas la durée totale
   assert.equal(B().start, A().start + A().dur);                                 // toujours jointifs
-  assert.ok(applyTrim(store, lib, b, 'L', 5) === true || true);
 });
 
 test('Ops : glissement (slip) borné à la durée de la source', () => {

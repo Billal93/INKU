@@ -103,6 +103,7 @@ export class Library extends EventTarget {
         this.thumbUrls.set(rec.id, urls);
         rec.thumbs = m.thumbs;
       }
+      if (m.scrub) rec.scrub = m.scrub;
       if (m.waveform) rec.waveform = m.waveform;
       if (m.file) this.memFiles.set(rec.id, m.file);
       await this._persist(rec);

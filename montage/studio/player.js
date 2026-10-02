@@ -24,6 +24,8 @@ export class Player {
     mount.appendChild(this.comp.canvas);
     this.handles = new Map();         // `${srcId}:${kind}` -> { input, sink, kind, usable, track }
     this.cache = new LRU(10);
+    this.scrubBitmaps = new LRU(48);   // images basse définition décodées (ImageBitmap) pour le défilement instantané
+    this.lastSeekAt = 0;
     this.token = 0; this.pending = null; this.rendering = false;
     this.playing = false; this.raf = 0;
     this.pump = null; this.nextPump = null;
@@ -92,8 +94,28 @@ export class Player {
     this.onFrame(frame, clip);
   }
 
+  // Image approximative issue du cache basse définition (instantanée, ~ms) ; null si indisponible.
+  async scrubFrame(srcId, t) {
+    const rec = this.lib.get(srcId);
+    if (!rec || !rec.scrub || !rec.scrub.frames.length) return null;
+    const idx = Math.max(0, Math.min(rec.scrub.frames.length - 1, Math.round(t * rec.scrub.perSec)));
+    const key = srcId + ':' + idx;
+    let bmp = this.scrubBitmaps.get(key);
+    if (!bmp) {
+      const buf = rec.scrub.frames[idx];
+      if (!buf) return null;
+      bmp = await createImageBitmap(new Blob([buf], { type: 'image/jpeg' }));
+      this.scrubBitmaps.set(key, bmp);
+    }
+    return { canvas: bmp, h: { kind: 'proxy', usable: rec.letterbox.usable } };
+  }
+
   // ── Image fixe (défilement / pas à pas) : le dernier appel gagne ──
   seek(frame) {
+    const now = performance.now();
+    clearTimeout(this.refineTimer);
+    this.scrubbing = now - this.lastSeekAt < 260;   // appels rapprochés = on fait défiler
+    this.lastSeekAt = now;
     this.store.ui.playhead = Math.max(0, Math.round(frame));
     this.store.notify('playhead');
     if (this.playing) { this.pause(); this.play(); return; }
@@ -107,6 +129,19 @@ export class Player {
     try {
       while (this.pending !== null) {
         const f = this.pending; this.pending = null;
+        if (this.scrubbing) {
+          // défilement : image basse définition immédiate ; l'image exacte suit dès que le geste se calme
+          const clip = this.videoClipAt(f);
+          const ap = clip ? await this.scrubFrame(clip.srcId, clip.srcIn + (f - clip.start) / this.fps) : null;
+          if (ap) {
+            if (this.pending === null) {
+              this._draw(ap, clip, f); this.stats.approx = (this.stats.approx || 0) + 1;
+              clearTimeout(this.refineTimer);
+              this.refineTimer = setTimeout(() => { this.scrubbing = false; this.pending = this.store.ui.playhead; this._pump(); }, 90);
+            }
+            continue;
+          }
+        }
         await this.renderStill(f);
       }
     } finally { this.rendering = false; }

@@ -104,3 +104,19 @@ exact (ex: "iPhone 11, iOS 15.4, Safari").
 - [ ] Mode sombre du téléphone/navigateur : le site reste lisible (pas de
       design sombre prévu, donc doit rester sur fond clair)
 - [ ] Rotation d'écran (portrait/paysage) sur mobile ne casse rien
+
+## Montage vidéo (`montage/studio.html`) — priorité 1
+
+Sur chaque appareil (iPhone, iPad, Android, PC), idéalement avec 2-3 vrais trailers + une voix :
+
+- [ ] Le Studio s'ouvre ; sinon un message clair « navigateur non compatible » (et le reste d'INKU fonctionne)
+- [ ] Importer plusieurs vidéos + un audio d'un coup : barres de progression par source, l'interface reste fluide
+- [ ] Les plans détectés correspondent aux vraies coupes du trailer ; les bandes noires sont bien retirées (aperçu sans bande)
+- [ ] « + » ajoute un plan à la tête de lecture ; un plan déjà utilisé est marqué « utilisé » et alerté
+- [ ] Défilement (glisser sur la règle) : l'image suit immédiatement, puis devient nette
+- [ ] Lecture : fluide ? (noter le modèle de l'appareil) ; la voix en A1 reste synchrone avec l'image
+- [ ] **Mobile** : appui long sur un clip puis glisser = déplacer ; glisser vite = faire défiler ; pincer = zoom ; double-tap = couper
+- [ ] Ajuster un clip par ses poignées (zones larges au doigt) ; annuler / rétablir
+- [ ] Fermer l'onglet puis rouvrir : projet, sources et historique d'annulation sont intacts
+- [ ] Glisser sur l'aperçu pour déplacer le cadrage 9:16 ; l'alerte « plan immobile » apparaît sur un plan fixe
+- [ ] Noter : durée d'analyse d'un trailer de ~2 min, chauffe, batterie, éventuel plantage

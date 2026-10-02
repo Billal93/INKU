@@ -97,6 +97,7 @@ test.describe.serial('Studio — interactions (Chrome installé)', () => {
 
   test('suppression avec recalage (ripple) puis annulation', async () => {
     const before = await v1(page);
+    await page.waitForTimeout(400);               // > intervalle de double-tap, sinon deux clics = coupe
     await page.locator('#tRipple').click();
     await page.locator('.clip[data-id="' + before[0].id + '"]').click();
     await page.keyboard.press('Delete');
@@ -110,6 +111,7 @@ test.describe.serial('Studio — interactions (Chrome installé)', () => {
 
   test('linting : plan réutilisé signalé sur le clip, jamais bloquant', async () => {
     const [a] = await v1(page);
+    await page.waitForTimeout(400);
     await page.locator('.clip[data-id="' + a.id + '"]').click();
     await page.keyboard.press('Control+d');
     await expect(page.locator('.clip .badge').first()).toBeVisible();
@@ -133,6 +135,30 @@ test.describe.serial('Studio — interactions (Chrome installé)', () => {
     });
     console.log('scrub (ms):', JSON.stringify(t));
     expect(t.mean).toBeLessThan(160);
+  });
+
+  test('défilement rapide : images basse définition instantanées puis image exacte au repos', async () => {
+    const r = await page.evaluate(async () => {
+      const { player, store } = window.__studio;
+      const total = store.doc.clips.filter((c) => c.track === 'V1').reduce((m, c) => Math.max(m, c.start + c.dur), 0);
+      const cold = [];
+      for (let i = 0; i < 20; i++) {
+        const f = Math.floor((i * 6131 + 17) % total);
+        const clip = player.videoClipAt(f);
+        if (!clip) continue;
+        const t0 = performance.now();
+        const ap = await player.scrubFrame(clip.srcId, clip.srcIn + (f - clip.start) / 30);
+        cold.push(ap ? performance.now() - t0 : -1);
+      }
+      const before = player.stats.approx || 0;
+      for (let i = 0; i < 40; i++) { player.seek(Math.floor((i * 2713) % total)); await new Promise((r) => setTimeout(r, 18)); }
+      await new Promise((r) => setTimeout(r, 700));
+      return { coldMean: cold.reduce((a, b) => a + b, 0) / cold.length, missing: cold.filter((x) => x < 0).length, approxDraws: (player.stats.approx || 0) - before, last: store.ui.playhead, source: player.stats.lastSource };
+    });
+    console.log('scrub approx:', JSON.stringify(r));
+    expect(r.missing).toBe(0);
+    expect(r.coldMean).toBeLessThan(25);        // décodage d'une image basse définition (JPEG) : quelques ms
+    expect(r.approxDraws).toBeGreaterThan(20);  // pendant le geste on affiche l'approximation
   });
 
   test('lecture : la tête avance, des images sont dessinées, aucun plantage', async () => {
@@ -191,6 +217,7 @@ test.describe('Studio — tactile (appui long, défilement natif)', () => {
     // 1) glissement rapide immédiat : le navigateur défile, le clip ne bouge pas
     await touch('touchStart', x, y); for (let i = 1; i <= 6; i++) { await touch('touchMove', x - i * 14, y); await page.waitForTimeout(16); } await touch('touchEnd');
     expect((await v1(page))[1].start).toBe(cs[1].start);
+    await page.waitForTimeout(900);   // l'inertie du défilement doit se terminer (un toucher pendant l'inertie rend les touchmove non annulables)
 
     // 2) appui long puis glissement : le clip se déplace
     const b2 = await clipBox(page, cs[1].id);

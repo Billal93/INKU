@@ -56,3 +56,14 @@ ne protège que l'avenir, pas l'exposition passée.
 - L'utilisateur n'est pas développeur : ne poser que des questions de rendu
   visuel/comportement observable, jamais de questions techniques
   d'implémentation.
+
+## Montage vidéo (dossier `montage/`)
+
+Éditeur multipistes 9:16 100 % navigateur (WebCodecs + Mediabunny), page SÉPARÉE du site principal :
+`montage/studio.html`. Les règles de compatibilité ES2017/vieux iOS ci-dessus ne s'appliquent PAS à ce dossier
+(modules ES, détection de fonctionnalités, message « non compatible » sinon) ; elles continuent de s'appliquer
+à `index.html`. Ne jamais mettre de fichier de l'utilisateur (voix, trailers) ni de média protégé dans le dépôt.
+- Architecture et décisions : `docs/decisions.md`. Maquettes : `montage/mockup.html`, `docs/maquettes/`.
+- Modèle de données : `montage/studio/edl.js` (EDL v1 versionné, temps en images à 30 fps).
+- Tests : `node --test tests/montage-unit.mjs` (noyau pur) et `npx playwright test -c playwright.studio.config.js`
+  (Chrome/Edge installés, car ils décodent le H.264).

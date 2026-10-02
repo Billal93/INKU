@@ -73,8 +73,14 @@ const l1 = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += Math.a
 
 async function detectShots(vTrack, duration, usable, onp) {
   const W = 64, H = 36;
-  const sink = new CanvasSink(vTrack, { width: W, height: H, fit: 'fill', crop: { left: usable.x, top: usable.y, width: usable.w, height: usable.h } });
+  // Un seul passage de décodage : images de 480 px (zone utile) réduites à 64x36 pour l'histogramme,
+  // et conservées en JPEG pour le défilement instantané (cache d'images basse définition).
+  const SW = 480, SH = Math.max(2, Math.round((SW * usable.h) / usable.w));
+  const sink = new CanvasSink(vTrack, { width: SW, height: SH, fit: 'fill', crop: { left: usable.x, top: usable.y, width: usable.w, height: usable.h } });
   const ctx = new OffscreenCanvas(W, H).getContext('2d', { willReadFrequently: true });
+  const scrubPerSec = duration > 600 ? 2 : 4;
+  const everyN = 8 / scrubPerSec;
+  const scrubFrames = [];
   const SR = 8;
   const n = Math.max(1, Math.floor(duration * SR));
   const ts = Array.from({ length: n }, (_, i) => i / SR);
@@ -85,6 +91,10 @@ async function detectShots(vTrack, duration, usable, onp) {
       const cur = histOf(wc.canvas, ctx, W, H);
       samples.push({ t: ts[i], luma: cur.luma, d: prev ? l1(prev.hist, cur.hist) : 0 });
       prev = cur;
+      if (i % everyN === 0) {
+        const blob = await wc.canvas.convertToBlob({ type: 'image/jpeg', quality: 0.62 });
+        scrubFrames[i / everyN] = await blob.arrayBuffer();
+      }
     }
     i++;
     if (i % 8 === 0) onp(i / n);
@@ -121,7 +131,7 @@ async function detectShots(vTrack, duration, usable, onp) {
     const motion = inside.length > 1 ? inside.slice(1).reduce((a, x) => a + Math.min(x.d, TH), 0) / (inside.length - 1) : 0;
     shots.push({ start, end, luma, motion, black: luma < 0.06 });
   }
-  return shots;
+  return { shots, scrub: { perSec: scrubPerSec, width: SW, height: SH, frames: scrubFrames } };
 }
 
 async function makeThumbs(vTrack, shots, usable) {
@@ -186,11 +196,12 @@ async function ingest(m) {
     const times = [0.5, 0.3, 0.6, 0.4, 0.2].map((f) => f * Math.max(1, duration - 1));
     const lb = await detectLetterbox(vTrack, times);
     meta.letterbox = lb;
-    const shots = await detectShots(vTrack, duration, lb.usable, (p) => progress(id, 'shots', p));
+    const { shots, scrub } = await detectShots(vTrack, duration, lb.usable, (p) => progress(id, 'shots', p));
     progress(id, 'thumbs', 0);
     const thumbs = await makeThumbs(vTrack, shots, lb.usable);
-    result.shots = shots; result.thumbs = thumbs;
+    result.shots = shots; result.thumbs = thumbs; result.scrub = scrub;
     for (const t of thumbs) if (t) transfer.push(t);
+    for (const f of scrub.frames) if (f) transfer.push(f);
   } else {
     progress(id, 'wave', 0);
     const wf = await waveformOf(aTrack, duration, (p) => progress(id, 'wave', p));
