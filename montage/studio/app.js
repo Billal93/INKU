@@ -15,7 +15,7 @@ import { checkSupport } from './caps.js';
 const $ = (id) => document.getElementById(id);
 const fr = (n, d = 1) => Number(n).toFixed(d).replace('.', ',');
 
-let toastTimer = 0;
+let toastTimer = undefined;
 /** @param {string} msg */
 function toast(msg) {
   const t = $('toast'); t.textContent = msg; t.classList.add('show');

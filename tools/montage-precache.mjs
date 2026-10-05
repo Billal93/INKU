@@ -7,7 +7,7 @@ import { join, relative, sep } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const M = join(ROOT, 'montage');
-const SKIP = [/^dev\//, /^bench\/data\//, /\.d\.m?ts$/, /\.LICENSE\.txt$/, /^precache\.json$/, /^sw\.js$/, /^mockup\.html$/, /\.map$/];
+const SKIP = [/^dev\//, /^bench\//, /\.d\.m?ts$/, /\.LICENSE\.txt$/, /^precache\.json$/, /^sw\.js$/, /^mockup\.html$/, /\.map$/];
 
 /** @param {string} dir @returns {string[]} */
 function walk(dir) {

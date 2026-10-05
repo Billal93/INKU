@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Test du moteur de sous-titres | INKU Montage (dev)</title>
+<style>
+  @font-face { font-family: 'Plus Jakarta Sans'; font-weight: 800; src: url('../../assets/fonts/plus-jakarta-sans-800.woff2') format('woff2'); }
+  body { background: #222; color: #ddd; font: 13px system-ui; margin: 0; padding: 12px; }
+  canvas { width: 270px; height: 480px; background: #000; margin: 4px; }
+</style>
+</head>
+<body>
+<p>Page de test (développement) : rend des groupes de sous-titres avec le compositeur commun aperçu/export.
+Police de substitution libre (Plus Jakarta Sans 800) : la police de la marque est importée sur l'appareil.</p>
+<div id="out"></div>
+<script type="module">
+import { Compositor } from '../render/compositor.js';
+import { SubtitleLayer } from '../render/subtitle-layer.js';
+import { makeMeasure, checkFont } from '../render/text-raster.js';
+import { layoutGroup, baseFontSize } from '../subs/layout.js';
+import { tagWords, groupWords } from '../subs/groups.js';
+
+const FAMILY = 'Plus Jakarta Sans', WEIGHT = 800, FPS = 30;
+await document.fonts.load(`${WEIGHT} 64px "${FAMILY}"`);
+const measure = makeMeasure(FAMILY, WEIGHT);
+const text = 'Deux garçons de huit ans, inséparables, grandissent ensemble. Le film sort le 25 décembre en France. Œuvre très attendue à l’été !';
+const words = text.split(' ').map((w, i) => ({ w, t0: 0.5 + i * 0.32, t1: 0.5 + i * 0.32 + 0.28 }));
+const tagged = tagWords(words, [{ text: 'inséparables', kind: 'important' }, { text: '25 décembre', kind: 'impact' }]);
+const base = baseFontSize(['inséparables'], words.map((w) => w.w), measure);
+const groups = groupWords(tagged).map((idx, i, all) => {
+  const ws = idx.map((k) => tagged[k]);
+  const start = Math.round(ws[0].t0 * FPS);
+  const end = i + 1 < all.length ? Math.round(tagged[all[i + 1][0]].t0 * FPS) : Math.round((ws[ws.length - 1].t1 + 0.5) * FPS);
+  return { id: 'g' + i, index: i, start, end, layout: layoutGroup(ws, base, measure), text: ws.map((w) => w.w).join(' ') };
+});
+
+const comps = {};
+function comp(w, h) {
+  const k = w + 'x' + h;
+  if (!comps[k]) { const c = document.createElement('canvas'); document.getElementById('out').appendChild(c); comps[k] = new Compositor(c, w, h); }
+  return comps[k];
+}
+const layer = new SubtitleLayer({ family: FAMILY, weight: WEIGHT });
+layer.setGroups(groups);
+
+/** Rend l'image `frame` à la résolution demandée ; renvoie les pixels RGBA (origine haut-gauche). */
+window.renderFrame = (frame, w = 1080, h = 1920) => {
+  const c = comp(w, h);
+  c.begin();
+  layer.draw(c, frame, FPS);
+  const px = c.readPixels();
+  const out = new Uint8Array(px.length);
+  for (let y = 0; y < h; y++) out.set(px.subarray((h - 1 - y) * w * 4, (h - y) * w * 4), y * w * 4);
+  return out;
+};
+/** Boîte englobante et centre des pixels de couleur donnée (blanc, jaune, rouge) à une image. */
+window.measureFrame = (frame, w = 1080, h = 1920) => {
+  const px = window.renderFrame(frame, w, h);
+  const box = { white: [1e9, 1e9, -1, -1, 0], yellow: [1e9, 1e9, -1, -1, 0], red: [1e9, 1e9, -1, -1, 0] };
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4, r = px[i], g = px[i + 1], b = px[i + 2];
+    const k = r > 235 && g > 235 && b > 235 ? 'white' : r > 235 && g > 215 && b < 40 ? 'yellow' : r > 235 && g < 60 && b < 60 ? 'red' : null;
+    if (!k) continue;
+    const bx = box[k]; bx[0] = Math.min(bx[0], x); bx[1] = Math.min(bx[1], y); bx[2] = Math.max(bx[2], x); bx[3] = Math.max(bx[3], y); bx[4]++;
+  }
+  return box;
+};
+window.subsTest = { groups: groups.map((g) => ({ id: g.id, start: g.start, end: g.end, text: g.text, lines: g.layout.lines, overflow: g.layout.overflow })), base, font: checkFont(FAMILY, WEIGHT), missingFont: checkFont('Clash Display') };
+window.subsReady = true;
+</script>
+</body>
+</html>

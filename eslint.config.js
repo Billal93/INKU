@@ -5,7 +5,7 @@ import globals from 'globals';
 export default [
   { ignores: ['montage/vendor/**', 'node_modules/**', 'index.html', 'assets/**'] },
   {
-    files: ['montage/**/*.js', 'tests/montage-*.mjs', 'tools/**/*.mjs'],
+    files: ['montage/**/*.js', 'tests/unit/**/*.mjs', 'tools/**/*.mjs'],
     languageOptions: {
       ecmaVersion: 2024, sourceType: 'module',
       globals: { ...globals.browser, ...globals.worker, ...globals.node },

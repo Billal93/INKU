@@ -1,8 +1,8 @@
-// Tests unitaires du cœur pur du Montage (sans navigateur) : node --test tests/montage-unit.mjs
+// Tests unitaires du cœur pur du Montage (sans navigateur) : node --test tests/unit/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { newProject, makeClip, clipEnd, nearestFreeStart, freeSlots, pushRight, validate, intervalUsage, totalFrames, fmtTime } from '../montage/studio/edl.js';
-import { createStore } from '../montage/studio/store.js';
+import { newProject, makeClip, clipEnd, nearestFreeStart, freeSlots, pushRight, validate, intervalUsage, totalFrames, fmtTime } from '../../montage/studio/edl.js';
+import { createStore } from '../../montage/studio/store.js';
 
 test('EDL : nouveau projet valide, pistes fixes et nommées', () => {
   const d = newProject();
@@ -88,7 +88,7 @@ test('Store : annuler un geste interrompu restaure l\'état', () => {
 
 test('clipEnd', () => { assert.equal(clipEnd(makeClip({ start: 10, dur: 5 })), 15); });
 
-import { cropWindow } from '../montage/studio/edl.js';
+import { cropWindow } from '../../montage/studio/edl.js';
 test('Cadrage 9:16 : fixe, centré, borné à la zone utile', () => {
   const usable = { x: 0, y: 23, w: 1920, h: 1034 };
   const c = makeClip({ crop: { mode: 'fixed', x: 0.5, travel: null } });
@@ -110,8 +110,8 @@ test('Travelling : position décimale (sous-pixel), ease-in-out, extrémités ex
   assert.ok(Math.abs(a - 0.4 * free) < 1e-6 && Math.abs(z - 0.5 * free) < 1e-6);
 });
 
-import { addToV1, splitAt, deleteClips, duplicateClips, applyMove, applyTrim, applySlip } from '../montage/studio/ops.js';
-import { lintDoc } from '../montage/studio/lint.js';
+import { addToV1, splitAt, deleteClips, duplicateClips, applyMove, applyTrim, applySlip } from '../../montage/studio/ops.js';
+import { lintDoc } from '../../montage/studio/lint.js';
 const fakeLib = (recs) => ({ get: (id) => recs[id] || null });
 const rec = (over = {}) => ({ id: 's', name: 'trailer.mp4', kind: 'video', duration: 20, fps: 24, width: 1920, height: 1080, fingerprint: 'x', hasAudio: true, letterbox: { top: 23, bottom: 24, left: 0, right: 0, usable: { x: 0, y: 23, w: 1920, h: 1034 } }, shots: [{ start: 0, end: 3, luma: .5, motion: .05 }, { start: 3, end: 5.5, luma: .5, motion: .05 }, { start: 5.5, end: 6.2, luma: .5, motion: .05 }], ...over });
 const mk = () => { const store = createStore(newProject()); const lib = fakeLib({ s: rec() }); return { store, lib }; };
