@@ -38,6 +38,7 @@
   <symbol id="i-wand" viewBox="0 0 24 24"><path d="M5 19L17 7M14 4l1 2 2 1-2 1-1 2-1-2-2-1 2-1zM19 12l.7 1.3L21 14l-1.3.7L19 16l-.7-1.3L17 14l1.3-.7z"/></symbol>
   <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3l10 18H2zM12 10v5M12 18h0"/></symbol>
   <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h12l-2 4 2 4H5"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></symbol>
 </defs></svg>
 <div id="boot" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--muted);font-weight:700;z-index:200">Chargement du Studio…</div>
 <div id="compat" hidden></div>
@@ -88,16 +89,22 @@
   <nav class="dock" aria-label="Actions rapides">
     <button data-sheet="sheetSources"><svg class="i"><use href="#i-lib"/></svg>Sources</button>
     <button id="dCut"><svg class="i"><use href="#i-cut"/></svg>Couper</button>
-    <button id="dDup" style="font-size:.62rem"><span style="font-size:1.2rem;line-height:20px">⧉</span>Dupliquer</button>
+    <button data-sheet="sheetVoice"><svg class="i"><use href="#i-mic"/></svg>Voix</button>
     <button id="dDel"><svg class="i"><use href="#i-trash"/></svg>Supprimer</button>
     <button data-sheet="sheetProps"><svg class="i"><use href="#i-sliders"/></svg>Réglages</button>
   </nav>
 
-  <aside class="sheet" id="sheetSources" aria-label="Sources">
+  <aside class="sheet left active" id="sheetSources" aria-label="Sources">
     <div class="grab"></div>
-    <div class="panel-h">Sources<span class="sp"></span><button class="ibtn primary" data-import style="min-height:34px">Importer</button><button class="ibtn close-sheet" data-close aria-label="Fermer">✕</button></div>
+    <div class="panel-h"><span class="tabs"><button class="on" data-tab="sheetSources">Sources</button><button data-tab="sheetVoice">Voix</button></span><span class="sp"></span><button class="ibtn primary" data-import style="min-height:34px">Importer</button><button class="ibtn close-sheet" data-close aria-label="Fermer">✕</button></div>
     <div class="panel-b" id="binBody"></div>
     <div class="panel-h" style="font-size:.62rem;text-transform:none;letter-spacing:0"><span id="storage"></span></div>
+  </aside>
+
+  <aside class="sheet left" id="sheetVoice" aria-label="Voix">
+    <div class="grab"></div>
+    <div class="panel-h"><span class="tabs"><button data-tab="sheetSources">Sources</button><button class="on" data-tab="sheetVoice">Voix</button></span><span class="sp"></span><button class="ibtn close-sheet" data-close aria-label="Fermer">✕</button></div>
+    <div class="panel-b" id="voiceBody"></div>
   </aside>
 
   <aside class="sheet" id="sheetProps" aria-label="Propriétés">

@@ -1,11 +1,11 @@
 // Lecture / écriture WAV PCM (16 bits, 24 bits, 32 bits flottant). Fonctions pures.
 
 /**
- * @param {ArrayBuffer} buf
+ * @param {ArrayBuffer | ArrayBufferView} buf
  * @returns {{ sampleRate: number, channels: Float32Array[] }}
  */
 export function decodeWav(buf) {
-  const dv = new DataView(buf);
+  const dv = ArrayBuffer.isView(buf) ? new DataView(buf.buffer, buf.byteOffset, buf.byteLength) : new DataView(buf);
   const tag = (o) => String.fromCharCode(dv.getUint8(o), dv.getUint8(o + 1), dv.getUint8(o + 2), dv.getUint8(o + 3));
   if (tag(0) !== 'RIFF' || tag(8) !== 'WAVE') throw new Error('WAV invalide');
   let o = 12, fmt = null, data = null;

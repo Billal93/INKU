@@ -22,6 +22,35 @@ export function normalizeWords(s) {
     .split(/\s+/).filter(Boolean);
 }
 
+const UNITS = ['zéro', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize'];
+const TENS = ['', 'dix', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante', 'soixante', 'quatre-vingt', 'quatre-vingt'];
+/** Nombre entier (0 à 999 999) écrit en lettres, à la française (« soixante-et-onze », « quatre-vingt-dix »). @param {number} n */
+export function numberToWordsFr(n) {
+  if (n < 17) return UNITS[n];
+  if (n < 100) {
+    const t = Math.floor(n / 10), u = n % 10;
+    if (t === 7 || t === 9) return TENS[t] + (u === 1 && t === 7 ? '-et-' : '-') + (u < 7 ? UNITS[10 + u] : 'dix-' + UNITS[u]);
+    if (u === 0) return TENS[t] + (t === 8 ? 's' : '');
+    return TENS[t] + (u === 1 && t < 8 ? '-et-' : '-') + UNITS[u];
+  }
+  if (n < 1000) {
+    const c = Math.floor(n / 100), r = n % 100;
+    return (c > 1 ? UNITS[c] + '-' : '') + 'cent' + (r ? '-' + numberToWordsFr(r) : c > 1 ? 's' : '');
+  }
+  const m = Math.floor(n / 1000), r = n % 1000;
+  return (m > 1 ? numberToWordsFr(m) + '-' : '') + 'mille' + (r ? '-' + numberToWordsFr(r) : '');
+}
+
+/**
+ * Comme normalizeWords, mais les nombres en chiffres sont écrits en lettres (« 10 » → « dix ») : comparaison
+ * équitable entre un modèle qui écrit les chiffres et un autre qui les épelle.
+ * @param {string} s
+ */
+export function normalizeWordsSpelled(s) {
+  const UNIT = { km: ['kilomètres'], '%': ['pour', 'cent'], '€': ['euros'], '$': ['dollars'] };
+  return normalizeWords(s).flatMap((w) => (/^\d+$/.test(w) && Number(w) < 1e6 ? numberToWordsFr(Number(w)).split('-') : UNIT[w] || w.split('-')));
+}
+
 /**
  * Alignement de Levenshtein entre deux suites de mots (coûts unitaires), avec la liste des opérations.
  * @param {string[]} ref @param {string[]} hyp
@@ -53,12 +82,13 @@ export function alignWords(ref, hyp) {
 
 /**
  * Taux d'erreur de mots (Word Error Rate) cumulé sur plusieurs paires.
- * @param {{ ref: string, hyp: string }[]} pairs
+ * @param {{ ref: string, hyp: string }[]} pairs @param {{ spelled?: boolean }} [opt] spelled : nombres comparés en lettres
  */
-export function wer(pairs) {
+export function wer(pairs, opt = {}) {
   let errors = 0, words = 0, sub = 0, del = 0, ins = 0;
+  const norm = opt.spelled ? normalizeWordsSpelled : normalizeWords;
   for (const p of pairs) {
-    const r = normalizeWords(p.ref), h = normalizeWords(p.hyp);
+    const r = norm(p.ref), h = norm(p.hyp);
     const a = alignWords(r, h);
     errors += a.dist; words += r.length; sub += a.sub; del += a.del; ins += a.ins;
   }

@@ -88,6 +88,32 @@ export function onsetStrength(x, fs) {
 }
 
 /**
+ * Clics de bouche : transitoires très courts (< 15 ms) dont l'énergie des hautes fréquences (dérivée du signal)
+ * dépasse de 18 dB la médiane locale. @param {Float32Array} x mono @param {number} fs
+ * @returns {number[]} instants (s)
+ */
+export function detectClicks(x, fs) {
+  const w = Math.round(0.005 * fs), n = Math.floor(x.length / w);
+  const e = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    let s = 0;
+    for (let k = 1; k < w; k++) { const d = x[i * w + k] - x[i * w + k - 1]; s += d * d; }
+    e[i] = 10 * Math.log10(s / w + 1e-14);
+  }
+  const out = [];
+  const win = 40;   // 200 ms de contexte
+  for (let i = 1; i < n - 1; i++) {
+    if (e[i] < e[i - 1] || e[i] < e[i + 1]) continue;
+    const a = Math.max(0, i - win), b = Math.min(n, i + win);
+    const ctx = Array.from(e.subarray(a, b)).sort((p, q) => p - q);
+    const med = ctx[ctx.length >> 1];
+    // court : la trame suivante (+10 ms) est déjà retombée
+    if (e[i] > med + 18 && (i + 2 >= n || e[i + 2] < e[i] - 12)) out.push((i + 0.5) * w / fs);
+  }
+  return out;
+}
+
+/**
  * Plus faible énergie (dBFS) dans une fenêtre [t0, t1] en secondes, et l'instant où elle est atteinte.
  * @param {Float32Array} db énergie par trame de 10 ms @param {number} t0 @param {number} t1
  */

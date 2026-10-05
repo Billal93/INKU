@@ -68,11 +68,3 @@ test('true peak ×4 : pics inter-échantillons retrouvés (tolérance EBU 3341 :
   near(r.dBTP, 0, 0.1, 'true peak');
 });
 
-test('performance : 60 s stéréo 48 kHz mesurées en < 1,5 s', () => {
-  const st = tones([[-20, 60]], 440);
-  const t0 = performance.now();
-  measureLoudness(st, FS); truePeak(st[0], FS); truePeak(st[1], FS);
-  const ms = performance.now() - t0;
-  console.log(`sonie + true peak 60 s stéréo : ${ms.toFixed(0)} ms`);
-  assert.ok(ms < 1500);
-});

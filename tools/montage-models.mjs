@@ -9,7 +9,7 @@ const TJS = ['config.json', 'generation_config.json', 'preprocessor_config.json'
 
 /**
  * Modèles candidats (voir docs/decisions.md D18). `dtype` = précision par sous-modèle pour transformers.js.
- * @type {{id:string,label:string,repo:string,task:string,kind:string,license:string,dtype?:Record<string,string>,files:string[],lang?:string,wordTimestamps?:boolean}[]}
+ * @type {{id:string,label:string,repo:string,task:string,kind:string,license:string,dtype?:Record<string,string>,device?:Record<string,string>,files:string[],lang?:string,wordTimestamps?:boolean}[]}
  */
 const SPEC = [
   {
@@ -17,6 +17,12 @@ const SPEC = [
     task: 'asr', kind: 'whisper', license: 'MIT (OpenAI Whisper)', wordTimestamps: true,
     dtype: { encoder_model: 'q4f16', decoder_model_merged: 'q4f16' },
     files: [...TJS, 'onnx/encoder_model_q4f16.onnx', 'onnx/decoder_model_merged_q4f16.onnx'],
+  },
+  {
+    id: 'whisper-turbo-f16', label: 'Whisper large-v3-turbo (encodeur q4f16, décodeur fp16)', repo: 'onnx-community/whisper-large-v3-turbo_timestamped',
+    task: 'asr', kind: 'whisper', license: 'MIT (OpenAI Whisper)', wordTimestamps: true,
+    dtype: { encoder_model: 'q4f16', decoder_model_merged: 'fp16' },
+    files: [...TJS, 'onnx/encoder_model_q4f16.onnx', 'onnx/decoder_model_merged_fp16.onnx'],
   },
   {
     id: 'whisper-medium', label: 'Whisper medium (q4f16)', repo: 'onnx-community/whisper-medium_timestamped',
@@ -43,6 +49,12 @@ const SPEC = [
     files: [...TJS, 'onnx/encoder_model_q4f16.onnx', 'onnx/encoder_model_q4f16.onnx_data', 'onnx/decoder_model_merged_q4f16.onnx', 'onnx/decoder_model_merged_q4f16.onnx_data'],
   },
   {
+    // FastConformer hybride (NVIDIA NeMo, CC-BY-4.0, export ONNX d'OpenVoiceOS) : CTC, un seul passage, horodaté.
+    id: 'fastconformer-fr', label: 'NVIDIA FastConformer français (CTC)', repo: 'OpenVoiceOS/stt_fr_fastconformer_hybrid_large_pc_onnx',
+    task: 'asr', kind: 'nemo-ctc', license: 'CC-BY-4.0 (NVIDIA ; export ONNX OpenVoiceOS)', lang: 'fr', wordTimestamps: true,
+    files: ['config.json', 'vocab.txt', 'model.onnx'],
+  },
+  {
     id: 'silero-vad', label: 'Silero VAD v5 (fp32)', repo: 'onnx-community/silero-vad',
     task: 'vad', kind: 'silero', license: 'MIT', files: ['onnx/model.onnx'],
   },
@@ -63,7 +75,7 @@ for (const m of SPEC) {
   const files = [];
   for (const path of m.files) {
     const s = sib.get(path);
-    if (!s) { if (TJS.includes(path)) continue; throw new Error(`${m.repo}: ${path} absent`); }
+    if (!s) { if (TJS.includes(path) && m.kind !== 'nemo-ctc') continue; throw new Error(`${m.repo}: ${path} absent`); }
     let sha256 = s.lfs && s.lfs.sha256, size = s.size;
     if (!sha256) {
       const buf = Buffer.from(await (await fetch(`https://huggingface.co/${m.repo}/resolve/${revision}/${path}`)).arrayBuffer());

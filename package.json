@@ -6,10 +6,11 @@
   "scripts": {
     "test": "playwright test",
     "montage:types": "tsc -p tsconfig.montage.json && tsc -p tsconfig.montage.worker.json",
-    "montage:lint": "eslint montage tests/unit tools",
+    "montage:lint": "eslint montage tests/unit tests/perf tools",
     "montage:unit": "node --test --test-concurrency=1 tests/unit/*.test.mjs",
     "montage:e2e": "playwright test -c playwright.studio.config.js",
-    "montage:check": "npm run montage:types && npm run montage:lint && node tools/montage-precache.mjs --check && npm run montage:unit"
+    "montage:check": "npm run montage:types && npm run montage:lint && node tools/montage-precache.mjs --check && npm run montage:unit",
+    "montage:perf": "node --test --test-concurrency=1 tests/perf/*.test.mjs"
   },
   "type": "module",
   "repository": {

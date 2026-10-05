@@ -30,13 +30,3 @@ test('CTC : impossible si trop peu de trames (jetons identiques séparés par un
   assert.ok(ctcForcedAlign(emissions([1, 0, 1], 3), 3, 3, [1, 1], 0));
 });
 
-test('CTC : 60 s d\'audio à 50 trames/s, 900 caractères en < 300 ms', () => {
-  const T = 3000, V = 40, toks = Array.from({ length: 900 }, (_, i) => 1 + (i * 7) % 39);
-  const x = new Float32Array(T * V).map(() => Math.random());
-  logSoftmaxRows(x, T, V);
-  const t0 = performance.now();
-  const r = ctcForcedAlign(x, T, V, toks, 0);
-  const ms = performance.now() - t0;
-  console.log(`CTC 3000×900 : ${ms.toFixed(0)} ms`);
-  assert.ok(r && ms < 300);
-});

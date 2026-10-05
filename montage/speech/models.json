@@ -55,6 +55,59 @@
    "cardLicense": null
   },
   {
+   "id": "whisper-turbo-f16",
+   "label": "Whisper large-v3-turbo (encodeur q4f16, décodeur fp16)",
+   "repo": "onnx-community/whisper-large-v3-turbo_timestamped",
+   "task": "asr",
+   "kind": "whisper",
+   "license": "MIT (OpenAI Whisper)",
+   "wordTimestamps": true,
+   "dtype": {
+    "encoder_model": "q4f16",
+    "decoder_model_merged": "fp16"
+   },
+   "files": [
+    {
+     "path": "config.json",
+     "size": 1330,
+     "sha256": "32c02d1dfb9a93ff236cdcf0f741f8f3a4cedb437c407a361a022451ac009131"
+    },
+    {
+     "path": "generation_config.json",
+     "size": 3797,
+     "sha256": "8568ddf83476167b4607014956b87142763fa6923e71259a606734beb39bdfc8"
+    },
+    {
+     "path": "preprocessor_config.json",
+     "size": 340,
+     "sha256": "7ccc62c6f2765af1f3b46c00c9b5894426835a05021c8b9c01eecb6dfb542711"
+    },
+    {
+     "path": "tokenizer.json",
+     "size": 2480645,
+     "sha256": "b3c8202bbf06d8ee4232c5984baa563784ac4737e2e7fdc42fa180200d3cfcdb"
+    },
+    {
+     "path": "tokenizer_config.json",
+     "size": 282843,
+     "sha256": "844b642c73a91359722f47b35705f7174686df33d252695d8572cf9ac03a6389"
+    },
+    {
+     "path": "onnx/encoder_model_q4f16.onnx",
+     "size": 370035242,
+     "sha256": "65261f977474ce30e46ed2c2b885e8ef68ef917941f78af48b098b86fad1adaa"
+    },
+    {
+     "path": "onnx/decoder_model_merged_fp16.onnx",
+     "size": 344288457,
+     "sha256": "4ed6335ca4c12afe33390a228615c7ca50449f953dddb2d41eb12e875504c621"
+    }
+   ],
+   "revision": "b3f77bf9a8c4d5ea3415827033d1ffea7955fd9a",
+   "totalMB": 684,
+   "cardLicense": null
+  },
+  {
    "id": "whisper-medium",
    "label": "Whisper medium (q4f16)",
    "repo": "onnx-community/whisper-medium_timestamped",
@@ -274,6 +327,36 @@
    "revision": "31b1c6211c9000d76b077ddd23b74c9090badeba",
    "totalMB": 1465,
    "cardLicense": "apache-2.0"
+  },
+  {
+   "id": "fastconformer-fr",
+   "label": "NVIDIA FastConformer français (CTC)",
+   "repo": "OpenVoiceOS/stt_fr_fastconformer_hybrid_large_pc_onnx",
+   "task": "asr",
+   "kind": "nemo-ctc",
+   "license": "CC-BY-4.0 (NVIDIA ; export ONNX OpenVoiceOS)",
+   "lang": "fr",
+   "wordTimestamps": true,
+   "files": [
+    {
+     "path": "config.json",
+     "size": 96,
+     "sha256": "e807f8692efbb65fec1e6356c55e58e9ce023d67f49b0dc36608b1d9d4b59480"
+    },
+    {
+     "path": "vocab.txt",
+     "size": 10943,
+     "sha256": "1b0a63466e3847115896e795fd64160e689c68efb63c0b648f7a85d33a9a0c1e"
+    },
+    {
+     "path": "model.onnx",
+     "size": 458160971,
+     "sha256": "b121f29541f92f09a3e7b907597ed48a79ac75dabcd15f01f2a56ba353db7594"
+    }
+   ],
+   "revision": "b05291a0bea9b2ce4c0793117773911f46188918",
+   "totalMB": 437,
+   "cardLicense": "cc-by-4.0"
   },
   {
    "id": "silero-vad",

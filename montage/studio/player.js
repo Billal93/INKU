@@ -2,7 +2,10 @@
 // Horloge maître = l'horloge audio quand une voix joue, sinon l'horloge système. Si le décodage décroche,
 // on affiche la dernière image disponible (images sautées) sans jamais décaler l'audio.
 import { Input, ALL_FORMATS, BlobSource, CanvasSink } from '../vendor/mediabunny.min.mjs';
-import { createCompositor } from '../lib/compositor.js';
+import { Compositor } from '../render/compositor.js';
+import { SubtitleLayer } from '../render/subtitle-layer.js';
+import { makeMeasure } from '../render/text-raster.js';
+import { layoutGroup, baseFontSize } from '../subs/layout.js';
 import { decodeAudio } from '../lib/audio.js';
 import { cropWindow, totalFrames } from './edl.js';
 
@@ -19,9 +22,22 @@ export class Player {
   constructor({ store, library, mount, onFrame }) {
     this.store = store; this.lib = library; this.onFrame = onFrame || (() => {});
     this.H = library.proxyHeight; this.W = Math.round((this.H * 9) / 16);
-    this.comp = createCompositor(this.W, this.H);
-    this.comp.canvas.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;display:block;';
-    mount.appendChild(this.comp.canvas);
+    // Compositeur commun aperçu / export ; la résolution suit la taille affichée × densité de l'écran (≤ 1080×1920).
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;display:block;';
+    mount.appendChild(canvas);
+    const size = () => {
+      const h = Math.max(480, Math.min(1920, Math.round((mount.clientHeight || 640) * (window.devicePixelRatio || 1))));
+      return /** @type {[number, number]} */ ([Math.round((h * 9) / 16), h]);
+    };
+    this.comp = new Compositor(canvas, ...size());
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(() => { const [w, h] = size(); if (Math.abs(h - this.comp.height) > 40) { this.comp.resize(w, h); this.redraw(); } }).observe(mount);
+    }
+    this.mount = mount;
+    this.subs = null;               // calque des sous-titres (créé quand la police est connue)
+    this.subsKey = '';
+    this.font = { family: 'Plus Jakarta Sans', weight: 800, brand: false };
     this.handles = new Map();         // `${srcId}:${kind}` -> { input, sink, kind, usable, track }
     this.cache = new LRU(10);
     this.scrubBitmaps = new LRU(48);   // images basse définition décodées (ImageBitmap) pour le défilement instantané
@@ -82,6 +98,44 @@ export class Player {
     return doc.clips.find((c) => c.track === 'V1' && frame >= c.start && frame < c.start + c.dur) || null;
   }
 
+  /** Police des sous-titres : celle de la marque si chargée, sinon police de remplacement SIGNALÉE (export bloqué). */
+  async setSubtitleFont(font) {
+    try { await document.fonts.load(`${font.weight} 64px "${font.family}"`, 'ÉÀÇŒ'); } catch { }
+    this.font = font; this.subsKey = ''; this.subs = null;
+    let w = this.mount.querySelector('.fontwarn');
+    if (!font.brand) {
+      if (!w) { w = document.createElement('div'); w.className = 'fontwarn'; this.mount.appendChild(w); }
+      w.textContent = 'Police de la marque absente : aperçu en police de remplacement (export bloqué)';
+    } else if (w) w.remove();
+    this.redraw();
+  }
+
+  /** Groupes de sous-titres (mise en page) à partir des clips T1, recalculés seulement si T1 a changé. */
+  _subtitleLayer() {
+    const doc = this.store.doc;
+    const t1 = doc.tracks.find((t) => t.id === 'T1');
+    if (t1 && t1.muted) return null;
+    const clips = doc.clips.filter((c) => c.track === 'T1' && c.sub).sort((a, b) => a.start - b.start);
+    const key = this.font.family + '|' + JSON.stringify(clips.map((c) => [c.id, c.start, c.dur, c.sub.words]));
+    if (key !== this.subsKey) {
+      this.subsKey = key;
+      if (!clips.length) { this.subs = null; return null; }
+      const measure = makeMeasure(this.font.family, this.font.weight);
+      const all = clips.flatMap((c) => c.sub.words);
+      const base = baseFontSize(all.filter((w) => w.kind === 'important').map((w) => w.w), all.map((w) => w.w), measure);
+      this.subs = new SubtitleLayer({ family: this.font.family, weight: this.font.weight, preset: (doc.subtitles && doc.subtitles.preset) || 'pop rapide' });
+      this.subs.setGroups(clips.map((c, i) => ({ id: c.id + ':' + i, index: c.sub.index ?? i, start: c.start, end: c.start + c.dur, layout: layoutGroup(c.sub.words, base, measure) })));
+      this.subsBase = base;
+    }
+    return this.subs;
+  }
+
+  /** Calques au-dessus du fond (sous-titres ; overlays et logo en priorité 3). Même code pour l'export. */
+  _drawLayers(frame) {
+    const subs = this._subtitleLayer();
+    if (subs) subs.draw(this.comp, frame, this.fps);
+  }
+
   _draw(frameObj, clip, frame) {
     this.comp.begin();
     if (frameObj) {
@@ -91,6 +145,7 @@ export class Player {
       this.stats.drawn++;
       this.stats.lastSource = frameObj.h.kind;
     }
+    this._drawLayers(frame);
     this.onFrame(frame, clip);
   }
 
@@ -154,7 +209,7 @@ export class Player {
   async renderStill(frame) {
     const seq = this.seq;
     const clip = this.videoClipAt(frame);
-    if (!clip) { this.comp.begin(); this.onFrame(frame, null); return; }
+    if (!clip) { this.comp.begin(); this._drawLayers(frame); this.onFrame(frame, null); return; }
     const t = clip.srcIn + (frame - clip.start) / this.fps;
     const fo = await this.frameAt(clip.srcId, t);
     if (this.pending !== null || seq !== this.seq) return; // un nouveau déplacement est arrivé : inutile de dessiner
@@ -196,11 +251,17 @@ export class Player {
       if (!buf) continue;
       const node = this.actx.createBufferSource();
       node.buffer = buf;
-      const g = this.actx.createGain(); g.gain.value = Math.pow(10, (clip.gainDb || 0) / 20);
+      const g = this.actx.createGain();
+      const level = Math.pow(10, (clip.gainDb || 0) / 20);
       node.connect(g).connect(this.actx.destination);
       const offF = Math.max(0, startFrame - clip.start);
       const when = base + Math.max(0, clip.start - startFrame) / this.fps;
       const dur = (clip.dur - offF) / this.fps;
+      // Micro-fondus aux raccords (voix nettoyée) : mêmes valeurs que le rendu final.
+      const fi = offF === 0 ? (clip.fadeIn || 0) : 0, fo = Math.min(clip.fadeOut || 0, dur);
+      g.gain.setValueAtTime(fi ? 0 : level, when);
+      if (fi) g.gain.linearRampToValueAtTime(level, when + fi);
+      if (fo) { g.gain.setValueAtTime(level, when + dur - fo); g.gain.linearRampToValueAtTime(0, when + dur); }
       node.start(when, clip.srcIn + offF / this.fps, dur);
       this.audioNodes.push(node);
     }
@@ -294,7 +355,7 @@ export class Player {
 
   _playbackFrame(frame) {
     const clip = this.videoClipAt(frame);
-    if (!clip) { if (this.lastDrawn !== 'black') { this.comp.begin(); this.lastDrawn = 'black'; this.onFrame(frame, null); } return; }
+    if (!clip) { this.comp.begin(); this._drawLayers(frame); this.lastDrawn = 'black'; this.onFrame(frame, null); return; }
     if (!this.pump || this.pump.clipId !== clip.id) {
       if (this.pump) this.pump.stop = true;
       if (this.nextPump && this.nextPump.clipId === clip.id) { this.pump = this.nextPump; this.nextPump = null; }
@@ -312,8 +373,10 @@ export class Player {
       while (p.queue.length > 1 && p.queue[1].timestamp <= ts + 1e-4) { p.queue.shift(); this.stats.dropped++; }
       if (p.queue.length && p.queue[0].timestamp <= ts + 0.25) cur = p.queue[0];
     }
-    if (!cur) return; // pas encore d'image : on garde l'affichage précédent
-    if (this.lastDrawn === cur && this._lastClip === clip.id && this._lastCrop === JSON.stringify(clip.crop)) { this.onFrame(frame, clip); return; }
+    if (!cur) { if (this.lastFrameObj && this.lastFrameObj.clipId === clip.id) cur = this.lastFrameObj.cur; else return; } // image pas encore prête : la précédente
+    // Sans calque animé, inutile de redessiner une image identique.
+    if (!this.subs && this.lastDrawn === cur && this._lastClip === clip.id && this._lastCrop === JSON.stringify(clip.crop)) { this.onFrame(frame, clip); return; }
+    this.lastFrameObj = { clipId: clip.id, cur };
     this.lastDrawn = cur; this._lastClip = clip.id; this._lastCrop = JSON.stringify(clip.crop);
     this._draw({ canvas: cur.canvas, h: p.h }, clip, frame);
   }

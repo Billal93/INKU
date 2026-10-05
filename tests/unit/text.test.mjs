@@ -24,3 +24,14 @@ test('WER cumulé', () => {
   assert.equal(r.errors, 2);
   assert.ok(Math.abs(r.wer - 2 / 6) < 1e-12);
 });
+
+test('nombres en lettres pour une comparaison équitable', async () => {
+  const { numberToWordsFr, normalizeWordsSpelled } = await import('../../montage/speech/text.js');
+  assert.equal(numberToWordsFr(71), 'soixante-et-onze');
+  assert.equal(numberToWordsFr(80), 'quatre-vingts');
+  assert.equal(numberToWordsFr(92), 'quatre-vingt-douze');
+  assert.equal(numberToWordsFr(1999), 'mille-neuf-cent-quatre-vingt-dix-neuf');
+  assert.equal(numberToWordsFr(200), 'deux-cents');
+  assert.deepEqual(normalizeWordsSpelled('parfois 10 km'), ['parfois', 'dix', 'kilomètres']);
+  assert.equal(wer([{ ref: 'parfois 10 km de large', hyp: 'parfois dix kilomètres de large' }], { spelled: true }).errors, 0);
+});

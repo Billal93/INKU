@@ -11,7 +11,7 @@ const netFetch = globalThis.fetch.bind(globalThis);
 
 /** @typedef {{ path: string, size: number, sha256: string }} ModelFile */
 /** @typedef {{ id: string, label: string, repo: string, revision: string, task: string, kind: string, license: string,
- *   dtype?: Record<string, string>, files: ModelFile[], totalMB: number, lang?: string, wordTimestamps?: boolean }} ModelSpec */
+ *   dtype?: Record<string, string>, device?: Record<string, string>, files: ModelFile[], totalMB: number, lang?: string, wordTimestamps?: boolean }} ModelSpec */
 
 let registry = /** @type {Promise<{ models: ModelSpec[] }> | null} */ (null);
 /** @returns {Promise<ModelSpec[]>} */

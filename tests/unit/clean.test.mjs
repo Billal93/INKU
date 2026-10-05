@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { splitSentences, wordIssues, groupTakes, takeScore, keptSegments, similarity, DEFAULTS } from '../../montage/speech/clean.js';
+import { splitSentences, wordIssues, groupTakes, takeScore, keptSegments, similarity, restarts, DEFAULTS } from '../../montage/speech/clean.js';
 
 /** Mots réguliers à partir d'un texte : 0,3 s par mot, 0,05 s entre mots, pauses explicites « | » (0,8 s). */
 function W(text, t = 0) {
@@ -71,4 +71,19 @@ test('passages gardés : marges 0,08 s, blancs > 0,25 s supprimés, jamais sur u
   assert.ok(segs[0].t1 <= w[3].t0, 'la marge s\'arrête avant le « euh » coupé');
   assert.ok(segs[1].t0 >= w[3].t1 - 1e-9);
   assert.deepEqual(segs.flatMap((s) => s.words), [0, 1, 2, 4, 5]);
+});
+
+test('reprises : faux départ avec mot coupé, prise recommencée dans la même phrase, pas de faux positif', () => {
+  const a = restarts(W('La prononci | La prononciation est facile'));
+  assert.equal(a.length, 1);
+  assert.deepEqual(a[0].words, [0, 1]);
+  const b = restarts(W('souvent le fait est d’avoir subi des cours | souvent le fait est d’avoir subi des cours à l’étranger'));
+  assert.deepEqual(b[0].words, [0, 1, 2, 3, 4, 5, 6, 7]);
+  assert.equal(restarts(W('il a fait de la plus belle façon de la plus haute importance')).length, 0, 'expression banale répétée');
+  assert.equal(restarts(W('le chat dort et le chien joue')).length, 0);
+});
+
+test('phrases : majuscule après une pause sans ponctuation', () => {
+  const w = [{ w: 'il', t0: 0, t1: 0.2 }, { w: 'part', t0: 0.25, t1: 0.5 }, { w: 'Ensuite', t0: 0.9, t1: 1.2 }, { w: 'il', t0: 1.25, t1: 1.4 }];
+  assert.deepEqual(splitSentences(w).map((s) => [s.a, s.b]), [[0, 1], [2, 3]]);
 });

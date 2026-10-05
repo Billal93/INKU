@@ -111,8 +111,16 @@ export function createTimeline({ store, lib, player, scrollEl, contentEl, toast,
     }
     if (aud && rec) { const cv = document.createElement('canvas'); cv.className = 'wave'; el.appendChild(cv); requestAnimationFrame(() => drawWave(cv, rec, c)); el.classList.add('a1'); }
     const nm = document.createElement('span'); nm.className = 'nm';
-    nm.textContent = tr.id === 'V1' ? (doc().clips.filter((x) => x.track === 'V1').sort((a, b) => a.start - b.start).findIndex((x) => x.id === c.id) + 1) + ' · ' + (c.dur / fps()).toFixed(1).replace('.', ',') + ' s' : (rec ? rec.name : '');
-    if (c.dur * P > 36) el.appendChild(nm);
+    if (tr.id === 'T1' && c.sub) {
+      // Texte du groupe : mots importants en jaune, texte impact en rouge.
+      for (const w of c.sub.words) {
+        const sp = document.createElement(w.kind === 'important' ? 'b' : w.kind === 'impact' ? 'i' : 'span');
+        sp.textContent = w.w + ' ';
+        nm.appendChild(sp);
+      }
+      if (c.dur * P > 18) el.appendChild(nm);
+    } else nm.textContent = tr.id === 'V1' ? (doc().clips.filter((x) => x.track === 'V1').sort((a, b) => a.start - b.start).findIndex((x) => x.id === c.id) + 1) + ' · ' + (c.dur / fps()).toFixed(1).replace('.', ',') + ' s' : (rec ? rec.name : '');
+    if (tr.id !== 'T1' && c.dur * P > 36) el.appendChild(nm);
     if (issues && issues.length) { const b = document.createElement('span'); b.className = 'badge' + (issues.some((i) => i.level === 'err') ? ' err' : ''); b.textContent = issues.length > 1 ? issues.length : '!'; el.appendChild(b); }
     if (!tr.locked) {
       for (const side of ['l', 'r']) { const h = document.createElement('div'); h.className = 'h ' + side; h.dataset.side = side.toUpperCase(); el.appendChild(h); }

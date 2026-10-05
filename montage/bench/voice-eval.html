@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><title>Évaluation du nettoyage de voix | INKU Montage (dev)</title></head>
+<body style="font:13px system-ui;background:#111;color:#ddd">
+<p>Page de mesure (développement) lancée par <code>tools/bench-voice.mjs</code>. Corpus servi depuis le disque, hors dépôt.</p>
+<pre id="log"></pre>
+<script src="../coi-register.js"></script>
+<script type="module">
+import { SpeechClient } from '../speech/client.js';
+import { decodeWav } from '../audio/wav.js';
+const q = new URLSearchParams(location.search);
+const log = (s) => { document.getElementById('log').textContent += s + '\n'; console.log(s); };
+const out = { done: false, results: [] };
+window.__eval = out;
+(async () => {
+  const list = await (await fetch('/bench-data/voice-list.json')).json();
+  const sc = new SpeechClient();
+  for (const it of list.items) {
+    const wav = decodeWav(await (await fetch(it.url)).arrayBuffer());
+    let last = '';
+    const r = await sc.call('analyze', { pcm: wav.channels[0], sampleRate: wav.sampleRate, model: q.get('model') || 'whisper-turbo', device: q.get('device') || 'auto', glossary: [] },
+      (p) => { const s = p.stage + (p.total > 1 ? ` ${p.done}/${p.total}` : ''); if (s !== last) { last = s; } });
+    delete r.envelope;
+    out.results.push({ name: it.name, ...r });
+    log(`${it.name} : ${r.words.length} mots, ${r.issues.length} défauts, ${r.takes.filter((g) => g.members.length > 1).length} groupes de prises, ${(r.wallMs / 1000).toFixed(1)} s`);
+  }
+  sc.terminate();
+  out.done = true;
+})().catch((e) => { out.error = String(e.message || e); out.done = true; log('ERREUR ' + out.error); });
+</script>
+</body>
+</html>

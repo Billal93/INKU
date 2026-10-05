@@ -19,6 +19,8 @@ writeFileSync(join(OUT, 'transformers.js.gz'), gz(src));
 const wasm = readFileSync(join(NM, 'onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.wasm'));
 writeFileSync(join(OUT, 'ort-wasm-simd-threaded.asyncify.wasm.gz'), gz(wasm));
 copyFileSync(join(NM, 'onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.mjs'), join(OUT, 'ort-wasm-simd-threaded.asyncify.mjs'));
+// ONNX Runtime seul (sans transformers.js) pour les petits modèles exécutés directement (VAD Silero).
+copyFileSync(join(NM, 'onnxruntime-web/dist/ort.webgpu.min.mjs'), join(OUT, 'ort.webgpu.min.mjs'));
 copyFileSync(join(NM, '@huggingface/transformers/LICENSE'), join(OUT, 'transformers.LICENSE.txt'));
 writeFileSync(join(OUT, 'VERSIONS.txt'), `transformers.js ${tjs} (Apache-2.0) : transformers.js.gz = dist/transformers.js compressé\nonnxruntime-web ${ort} (MIT) : ort-wasm-simd-threaded.asyncify.wasm.gz = moteur WebAssembly compressé\n`);
 console.log(`transformers.js ${tjs} et onnxruntime-web ${ort} copiés (compressés).`);

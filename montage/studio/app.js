@@ -6,6 +6,8 @@ import { Player } from './player.js';
 import { createTimeline } from './timeline.js';
 import { createBin } from './bin.js';
 import { createProps } from './props.js';
+import { createVoice } from './voice.js';
+import { createVoicePanel } from './voice-panel.js';
 import { splitAt, deleteClips, duplicateClips, addMarker } from './ops.js';
 import { loadSaved, startAutosave } from './persist.js';
 import { requestPersistence, usage, opfsAvailable } from './storage.js';
@@ -85,6 +87,9 @@ async function boot() {
   });
   props = createProps({ el: $('propsBody'), titleEl: $('propsTitle'), store, lib, player, timeline, toast });
   createBin({ el: $('binBody'), store, lib, player, toast, timeline });
+  const voice = createVoice({ store, lib, player });
+  createVoicePanel({ el: $('voiceBody'), store, lib, voice, toast, onFont: (f) => player.setSubtitleFont(f) });
+  window.__studio.voice = voice;
 
   // ── Barre supérieure ──
   const durEl = $('dur');
@@ -154,11 +159,19 @@ async function boot() {
   window.addEventListener('drop', (e) => { $('dropHint').classList.remove('show'); if (e.dataTransfer && e.dataTransfer.files.length) { e.preventDefault(); doImport(e.dataTransfer.files); } });
 
   // ── Feuilles (mobile) ──
-  const sheets = ['sheetSources', 'sheetProps'];
+  const sheets = ['sheetSources', 'sheetVoice', 'sheetProps'];
   const toggleSheet = (id) => { sheets.forEach((s) => $(s).classList.toggle('open', s === id && !$(s).classList.contains('open'))); };
-  document.querySelectorAll(/** @type {'button'} */ ('[data-sheet]')).forEach((b) => b.addEventListener('click', () => toggleSheet(b.dataset.sheet)));
+  // Onglets du panneau gauche (Sources / Voix) : sur ordinateur ils partagent la même colonne.
+  const setActive = (id) => { for (const s of ['sheetSources', 'sheetVoice']) $(s).classList.toggle('active', s === id); };
+  const showTab = (id) => {
+    setActive(id);
+    // Sur téléphone, un onglet touché dans une feuille ouverte ouvre l'autre feuille.
+    if (!$(id).classList.contains('open') && sheets.some((s) => $(s).classList.contains('open'))) toggleSheet(id);
+  };
+  document.querySelectorAll(/** @type {'button'} */ ('[data-tab]')).forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  document.querySelectorAll(/** @type {'button'} */ ('[data-sheet]')).forEach((b) => b.addEventListener('click', () => { if (b.dataset.sheet !== 'sheetProps') setActive(b.dataset.sheet); toggleSheet(b.dataset.sheet); }));
   document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => b.closest('.sheet').classList.remove('open')));
-  $('dCut').onclick = cut; $('dDel').onclick = del; $('dDup').onclick = dup;
+  $('dCut').onclick = cut; $('dDel').onclick = del;
 
   // ── Cadrage en glissant sur l'aperçu ──
   let cg = null;
