@@ -128,3 +128,22 @@ Dernière mise à jour : 2026-10-02 (Phase 0).
 ## D17. Qualité : types, lint, contrôles
 - `npm run montage:check` = `tsc --checkJs` (deux configurations : page et workers/SW, `montage/types.d.ts` pour les API récentes), ESLint (`eslint.config.js`, uniquement `montage/`), vérification du pré-cache, tests unitaires. Le contrôle de types a trouvé deux paramètres morts (`getLint`, `importBtn`) et des imports inutilisés, supprimés.
 - Test intermittent corrigé : pendant un défilement rapide, l'image basse définition attendait la fin d'un décodage exact en cours (jusqu'à ~300 ms). Elle est maintenant dessinée indépendamment (numéro de séquence : le dernier geste gagne). Mesuré : 39 aperçus pour 40 déplacements, trois exécutions complètes sans échec.
+
+## D18. Transcription : modèle choisi par mesure (2026-10-05, PC i5-1245U / Iris Xe, Chrome)
+FLEURS fr, 60 phrases, même jeu (WER* = nombres comparés en lettres) :
+
+| Modèle | WER* | s de calcul / min d'audio (avec mots) | Note |
+|---|---|---|---|
+| Whisper large-v3-turbo q4f16 (WebGPU) | 7,0 % | 96 | décodeur ≈ 180-220 ms/jeton sur ce GPU |
+| NVIDIA FastConformer FR (CTC, WebGPU) | 9,4 % | 11 | un seul passage, pas d'hallucination |
+| Whisper medium / small | 13,5 % / 15,8 % | 188 / 99 | écartés |
+| Moonshine tiny fr | 59-71 % (WASM), vide en WebGPU fp16 | — | écarté |
+| Hybride encodeur GPU + décodeur CPU | — | ×3 plus lent | écarté |
+
+Choix actuel : **FastConformer par défaut** (10× plus rapide, horodatage par mot), Whisper turbo gardé en option « précision ».
+Prétraitement NeMo réimplémenté en JS, vérifié contre onnx-asr (écart max 2,4·10⁻⁵). transformers.js et le moteur
+WASM sont stockés compressés (.gz) : 27 → 7 Mo, et cela évite un faux positif « clé Mistral » de la protection anti-secrets GitHub.
+
+**Nettoyage, corpus de 8 voix à défauts injectés (hors dépôt)** : WER 38 % → 14,7 % après nettoyage ; défauts trouvés 55,8 %
+(faux départs 9/12, prises ratées 7/8, « euh » 6/10, répétitions 3/9, bégaiements 4/13) ; mots propres perdus 31/911 ;
+9 coupes encore au milieu d'un mot (objectif 0). **Non testé sur iPhone.**
