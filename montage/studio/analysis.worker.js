@@ -92,7 +92,7 @@ async function detectShots(vTrack, duration, usable, onp) {
       samples.push({ t: ts[i], luma: cur.luma, d: prev ? l1(prev.hist, cur.hist) : 0 });
       prev = cur;
       if (i % everyN === 0) {
-        const blob = await wc.canvas.convertToBlob({ type: 'image/jpeg', quality: 0.62 });
+        const blob = await /** @type {OffscreenCanvas} */ (wc.canvas).convertToBlob({ type: 'image/jpeg', quality: 0.62 });
         scrubFrames[i / everyN] = await blob.arrayBuffer();
       }
     }
@@ -100,7 +100,7 @@ async function detectShots(vTrack, duration, usable, onp) {
     if (i % 8 === 0) onp(i / n);
   }
   const TH = 0.4;
-  let cands = samples.map((s, k) => ({ k, ...s })).filter((s) => s.k > 0 && s.d > TH);
+  const cands = samples.map((s, k) => ({ k, ...s })).filter((s) => s.k > 0 && s.d > TH);
 
   // Affinage à l'image près : on décode toutes les images de l'intervalle précédent le saut.
   const cuts = [];
@@ -141,7 +141,7 @@ async function makeThumbs(vTrack, shots, usable) {
     const t = Math.min(s.end - 0.05, s.start + (s.end - s.start) * 0.4);
     const wc = await sink.getCanvas(Math.max(0, t));
     if (!wc) { out.push(null); continue; }
-    const blob = await wc.canvas.convertToBlob({ type: 'image/jpeg', quality: 0.72 });
+    const blob = await /** @type {OffscreenCanvas} */ (wc.canvas).convertToBlob({ type: 'image/jpeg', quality: 0.72 });
     out.push(await blob.arrayBuffer());
   }
   return out;

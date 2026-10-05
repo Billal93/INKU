@@ -1,10 +1,15 @@
 {
   "name": "inku-github",
   "version": "1.0.0",
-  "description": "",
+  "description": "INKU Studio (site statique) + outil Montage vidéo",
   "main": "index.js",
   "scripts": {
-    "test": "playwright test"
+    "test": "playwright test",
+    "montage:types": "tsc -p tsconfig.montage.json && tsc -p tsconfig.montage.worker.json",
+    "montage:lint": "eslint montage tests/montage-*.mjs tools",
+    "montage:unit": "node --test tests/montage-unit.mjs",
+    "montage:e2e": "playwright test -c playwright.studio.config.js",
+    "montage:check": "npm run montage:types && npm run montage:lint && node tools/montage-precache.mjs --check && npm run montage:unit"
   },
   "type": "module",
   "repository": {
@@ -19,6 +24,14 @@
   },
   "homepage": "https://github.com/Billal93/INKU#readme",
   "devDependencies": {
-    "@playwright/test": "^1.63.0"
+    "@eslint/js": "^10.0.1",
+    "@huggingface/transformers": "^4.3.0",
+    "@mediabunny/aac-encoder": "^1.61.0",
+    "@playwright/test": "^1.63.0",
+    "@webgpu/types": "^0.1.74",
+    "eslint": "^10.12.0",
+    "globals": "^17.13.0",
+    "mediabunny": "^1.61.0",
+    "typescript": "^7.0.2"
   }
 }

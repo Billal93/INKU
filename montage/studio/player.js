@@ -111,16 +111,33 @@ export class Player {
   }
 
   // ── Image fixe (défilement / pas à pas) : le dernier appel gagne ──
+  // Pendant un défilement, l'image basse définition est dessinée tout de suite, sans attendre un décodage
+  // exact en cours (qui peut prendre 100-300 ms) ; l'image exacte est demandée 90 ms après le dernier mouvement.
   seek(frame) {
     const now = performance.now();
     clearTimeout(this.refineTimer);
     this.scrubbing = now - this.lastSeekAt < 260;   // appels rapprochés = on fait défiler
     this.lastSeekAt = now;
+    this.seq = (this.seq || 0) + 1;
     this.store.ui.playhead = Math.max(0, Math.round(frame));
     this.store.notify('playhead');
     if (this.playing) { this.pause(); this.play(); return; }
+    if (this.scrubbing) {
+      this._approx(this.store.ui.playhead, this.seq);
+      this.refineTimer = setTimeout(() => { this.scrubbing = false; this.pending = this.store.ui.playhead; this._pump(); }, 90);
+      return;
+    }
     this.pending = this.store.ui.playhead;
     this._pump();
+  }
+
+  async _approx(f, seq) {
+    const clip = this.videoClipAt(f);
+    const ap = clip ? await this.scrubFrame(clip.srcId, clip.srcIn + (f - clip.start) / this.fps) : null;
+    if (seq !== this.seq) return;                       // un mouvement plus récent est arrivé
+    if (!ap) { this.pending = f; this._pump(); return; } // pas d'image basse définition : image exacte
+    this._draw(ap, clip, f);
+    this.stats.approx = (this.stats.approx || 0) + 1;
   }
 
   async _pump() {
@@ -129,30 +146,18 @@ export class Player {
     try {
       while (this.pending !== null) {
         const f = this.pending; this.pending = null;
-        if (this.scrubbing) {
-          // défilement : image basse définition immédiate ; l'image exacte suit dès que le geste se calme
-          const clip = this.videoClipAt(f);
-          const ap = clip ? await this.scrubFrame(clip.srcId, clip.srcIn + (f - clip.start) / this.fps) : null;
-          if (ap) {
-            if (this.pending === null) {
-              this._draw(ap, clip, f); this.stats.approx = (this.stats.approx || 0) + 1;
-              clearTimeout(this.refineTimer);
-              this.refineTimer = setTimeout(() => { this.scrubbing = false; this.pending = this.store.ui.playhead; this._pump(); }, 90);
-            }
-            continue;
-          }
-        }
         await this.renderStill(f);
       }
     } finally { this.rendering = false; }
   }
 
   async renderStill(frame) {
+    const seq = this.seq;
     const clip = this.videoClipAt(frame);
     if (!clip) { this.comp.begin(); this.onFrame(frame, null); return; }
     const t = clip.srcIn + (frame - clip.start) / this.fps;
     const fo = await this.frameAt(clip.srcId, t);
-    if (this.pending !== null) return; // un nouveau déplacement est arrivé : inutile de dessiner
+    if (this.pending !== null || seq !== this.seq) return; // un nouveau déplacement est arrivé : inutile de dessiner
     this._draw(fo, clip, frame);
   }
 

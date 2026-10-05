@@ -1,6 +1,6 @@
 // Panneau Propriétés contextuel + liste des alertes (linting).
 import { findClip, clipEnd, fmtTime, totalFrames } from './edl.js';
-import { applyTrim, applySlip, setCropX, pasteAttrs, deleteClips, duplicateClips, splitAt, applyFix } from './ops.js';
+import { applyTrim, applySlip, pasteAttrs, deleteClips, duplicateClips, splitAt, applyFix } from './ops.js';
 import { lintDoc } from './lint.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

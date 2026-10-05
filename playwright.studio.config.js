@@ -3,7 +3,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
-  testMatch: /studio\.spec\.js/,
+  testMatch: /(studio|montage-[\w-]+)\.spec\.js/,
   timeout: 180000,
   workers: 1,
   reporter: [['list']],

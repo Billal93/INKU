@@ -91,3 +91,40 @@ Dernière mise à jour : 2026-10-02 (Phase 0).
 - Aucun test sur Safari, Firefox, iPhone, iPad, Android réels (non disponibles ici) ; le WebKit de Playwright n'expose pas WebCodecs.
 - Voix : pas encore de transcription ni de nettoyage (priorité 2). Rendu MP4 : pas encore (priorité 5) ; le bouton Exporter télécharge l'EDL.
 - Les sources déjà analysées avant l'ajout du cache de défilement n'ont pas d'instantanés (re-importez-les).
+
+---
+
+# Mise à jour majeure (2026-10-05) : nouvelle cible, qualité mesurée
+
+## D15. Nouvelle cible du Montage (remplace la section 6 du brief pour `montage/` uniquement)
+**Cible** : iPhone 17+ (iOS 26+, Safari 26+) et ordinateurs récents (Chrome/Edge à jour, Safari 26+ sur Mac, Firefox 130+ en best-effort). En dessous : message clair et bouton « Exporter le projet sauvegardé (EDL) » (`montage/studio/caps.js`, `checkSupport()`), rien d'autre. Le site principal (`index.html`) garde sa compatibilité large et n'est pas touché.
+
+**Vérifié dans la documentation le 2026-10-05** (non testé sur iPhone réel) :
+| Fonction | Safari 26 / iOS 26 | Source |
+|---|---|---|
+| WebGPU | Oui (macOS, iOS, iPadOS, visionOS), « préféré pour les nouvelles applications » | [WebKit, Safari 26.0](https://webkit.org/blog/17333/webkit-features-in-safari-26-0/) |
+| WebCodecs vidéo | Oui (depuis 16.4 ; H.264/HEVC) | idem |
+| WebCodecs audio (`AudioEncoder`/`AudioDecoder`) | **Nouveau en 26.0** ; AAC (`mp4a.40.2`) annoncé pris en charge partout où `AudioEncoder` existe | WebKit 26.0 ; [MDN Codec selection](https://developer.mozilla.org/en-US/docs/Web/API/WebCodecs_API/Codec_selection) ; [webcodecsfundamentals.org (télémétrie 2026)](https://webcodecsfundamentals.org/datasets/codec-analysis-2026/) |
+| AAC natif sur Firefox | **Non** (aucune plateforme) → l'encodeur AAC WASM reste pour Firefox uniquement, chargé à la demande | idem |
+| OPFS + `createSyncAccessHandle` (worker) | Oui depuis 15.2 ; option `mode` non prise en charge (accès exclusif seulement) | [caniuse](https://caniuse.com/mdn-api_filesystemfilehandle_createsyncaccesshandle) |
+| Wake Lock (écran) | Oui depuis 16.4 ; cassé en PWA installée jusqu'à iOS 18.4 (corrigé) | [whatpwacando.today](https://whatpwacando.today/wake-lock) |
+| Web Share avec fichiers | Oui (vidéo, image, audio, pdf, texte) ; vérifier `canShare({files})` | [web.dev Web Share](https://web.dev/articles/web-share) |
+| Ajout à l'écran d'accueil | iOS 26 ouvre par défaut tout site ajouté comme application web | WebKit 26.0 |
+| Mémoire | **Aucune limite fixe ni API pour l'augmenter** : l'onglet est rechargé (jetsam) au-delà d'un budget qui dépend de l'appareil et de la charge ; WebGPU : `maxBufferSize`/`maxStorageBufferBindingSize` souvent 256 Mo sur téléphone | [Nehanth/pooled#207](https://github.com/Nehanth/pooled/issues/207), [webgpufundamentals](https://webgpufundamentals.org/webgpu/lessons/webgpu-limits-and-features.html) |
+| transformers.js | 4.3.0 (16/09/2026) « Enable WebGPU for Safari 26 and above » | [releases](https://github.com/huggingface/transformers.js/releases) |
+| Firefox WebGPU | Windows depuis 141, macOS ARM (Tahoe) depuis 145 | [linuxiac](https://linuxiac.com/webgpu-lands-in-firefox-141-on-windows-eyes-linux-and-macos-next/), [Mozilla intent](https://groups.google.com/a/mozilla.org/g/dev-platform/c/4m_SnGAGkEU/m/PdrQftcCBAAJ) |
+
+**Conséquences** :
+- Supprimé : page de faisabilité `phase0.*`, détection des niveaux C/D (`lib/caps.js`), `lib/subtitles.js` (remplacé par le moteur de sous-titres de la priorité 2), fichiers de démo. Plus de MediaRecorder ni de ffmpeg.wasm. L'historique Git les conserve.
+- Conservé : encodeur AAC WASM (3 Mo), **uniquement si** `AudioEncoder` AAC est absent (Firefox), chargé à la demande.
+- Mémoire : tout modèle d'IA est choisi par un mini-benchmark sur l'appareil, avec repli automatique sur un modèle plus petit si le chargement échoue ou si la page a été rechargée pendant un chargement (indice d'un jetsam).
+
+## D16. Service worker limité à `/montage/`, PWA hors ligne
+- `montage/coi-register.js` enregistre `sw.js` avec la portée `./` = `/INKU/montage/`. **Testé** (`tests/montage-sw.spec.js`, Chromium) : avec le SW installé, `index.html` n'est ni contrôlé ni isolé, aucun en-tête COEP, aucune requête en échec ni erreur JS, exactement comme sans SW.
+- PWA : `manifest.webmanifest` (icônes 192/512 tirées du logo), cache des fichiers de l'application listés dans `montage/precache.json`. `tools/montage-precache.mjs` recalcule la liste et une **version = empreinte SHA-256 des fichiers** écrite dans `sw.js` ; `npm run montage:check` échoue si on oublie de la régénérer. **Testé** : Studio rechargé hors ligne → démarre, toujours isolé.
+- En local (`localhost`), pas de cache (sinon fichiers modifiés servis périmés), sauf `?offline-test`.
+- Les modèles d'IA ne passent pas par ce cache : ils sont téléchargés depuis Hugging Face à une révision figée, vérifiés (SHA-256) et stockés dans l'OPFS (voir D18).
+
+## D17. Qualité : types, lint, contrôles
+- `npm run montage:check` = `tsc --checkJs` (deux configurations : page et workers/SW, `montage/types.d.ts` pour les API récentes), ESLint (`eslint.config.js`, uniquement `montage/`), vérification du pré-cache, tests unitaires. Le contrôle de types a trouvé deux paramètres morts (`getLint`, `importBtn`) et des imports inutilisés, supprimés.
+- Test intermittent corrigé : pendant un défilement rapide, l'image basse définition attendait la fin d'un décodage exact en cours (jusqu'à ~300 ms). Elle est maintenant dessinée indépendamment (numéro de séquence : le dernier geste gagne). Mesuré : 39 aperçus pour 40 déplacements, trois exécutions complètes sans échec.

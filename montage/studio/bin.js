@@ -7,7 +7,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const STAGES = { queued: 'En attente', copy: 'Copie locale…', probe: 'Lecture…', letterbox: 'Bandes noires…', shots: 'Détection des plans…', thumbs: 'Vignettes…', wave: 'Forme d\'onde…', done: 'Prêt' };
 const fmtDur = (s) => { const m = Math.floor(s / 60); return m + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
 
-export function createBin({ el, store, lib, player, toast, timeline, importBtn }) {
+export function createBin({ el, store, lib, player, toast, timeline }) {
   const filters = { q: '', unused: false, min1: false, hideBlack: true };
   let openViewer = null; // { srcId, idx, in, out, t }
 

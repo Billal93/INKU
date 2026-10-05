@@ -1,14 +1,14 @@
 // Timeline multipistes : rendu DOM + gestes (souris, tactile, pincement, appui long) + magnétisme.
 // Le DOM n'est reconstruit qu'au changement de document ; pendant un geste on ne bouge que des styles,
 // puis UN SEUL commit à la fin (un pas d'annulation).
-import { clipEnd, findClip, totalFrames, fmtTime } from './edl.js';
+import { clipEnd, findClip, totalFrames } from './edl.js';
 import { applyMove, applyTrim, applySlip, splitAt, setTrackFlag } from './ops.js';
 import { lintDoc } from './lint.js';
 
 const MIN_PX = 6, MAX_PX = 700;
 const LONGPRESS_MS = 280;
 
-export function createTimeline({ store, lib, player, scrollEl, contentEl, toast, onSelect, getLint }) {
+export function createTimeline({ store, lib, player, scrollEl, contentEl, toast, onSelect }) {
   const ui = store.ui;
   let g = null;                      // geste en cours
   const pointers = new Map();        // pointerId -> {x, y, type}
@@ -16,14 +16,12 @@ export function createTimeline({ store, lib, player, scrollEl, contentEl, toast,
   let lastTap = { t: 0, x: 0, y: 0, id: null };
   const snapLine = document.createElement('div'); snapLine.className = 'snapline';
   const playhead = document.createElement('div'); playhead.className = 'playhead';
-  let ranges = null;
 
   const doc = () => store.doc;
   const fps = () => store.doc.project.fps;
   const ppf = () => ui.pxPerSec / fps();
   const hdW = () => { const h = contentEl.querySelector('.hd'); return h ? h.offsetWidth : 44; };
   const frameFromX = (cx) => Math.max(0, Math.round((cx - contentEl.getBoundingClientRect().left - hdW()) / ppf()));
-  const isCoarse = () => matchMedia('(pointer: coarse)').matches;
 
   // ── Rendu ──
   function lanePx() {
@@ -170,9 +168,9 @@ export function createTimeline({ store, lib, player, scrollEl, contentEl, toast,
     const r = anchor.getBoundingClientRect();
     m.style.left = Math.min(r.right + 6, innerWidth - 190) + 'px';
     m.style.top = Math.max(8, Math.min(r.top, innerHeight - 190)) + 'px';
-    m.addEventListener('click', (ev) => { const b = ev.target.closest('button[data-flag]'); if (b) { setTrackFlag(store, trackId, b.dataset.flag); closeTrackMenu(); } });
+    m.addEventListener('click', (ev) => { const b = /** @type {HTMLElement} */ (ev.target).closest('button[data-flag]'); if (b instanceof HTMLElement) { setTrackFlag(store, trackId, b.dataset.flag); closeTrackMenu(); } });
     document.body.appendChild(m); trackMenu = m;
-    setTimeout(() => document.addEventListener('pointerdown', (ev) => { if (trackMenu && !trackMenu.contains(ev.target)) closeTrackMenu(); }, { once: true, capture: true }), 0);
+    setTimeout(() => document.addEventListener('pointerdown', (ev) => { if (trackMenu && !trackMenu.contains(/** @type {Node} */ (ev.target))) closeTrackMenu(); }, { once: true, capture: true }), 0);
   }
 
   // ── Zoom ──

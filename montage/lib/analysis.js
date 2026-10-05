@@ -1,10 +1,10 @@
 // Analyses de sources : bandes noires, couverture d'une transition, cartons de texte.
 import { CanvasSink } from '../vendor/mediabunny.min.mjs';
 
-// Fonctionne sur le thread principal ET dans un worker (OffscreenCanvas).
+// Fonctionne sur le thread principal ET dans un worker (OffscreenCanvas, toujours présent sur les navigateurs ciblés).
+/** @returns {OffscreenCanvasRenderingContext2D} */
 function smallCtx(w, h) {
-  const c = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h });
-  return c.getContext('2d', { willReadFrequently: true });
+  return new OffscreenCanvas(w, h).getContext('2d', { willReadFrequently: true });
 }
 
 // Bandes noires (letterbox) : lignes/colonnes continues quasi noires aux bords, valable sur

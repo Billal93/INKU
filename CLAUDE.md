@@ -65,5 +65,9 @@ ne protège que l'avenir, pas l'exposition passée.
 à `index.html`. Ne jamais mettre de fichier de l'utilisateur (voix, trailers) ni de média protégé dans le dépôt.
 - Architecture et décisions : `docs/decisions.md`. Maquettes : `montage/mockup.html`, `docs/maquettes/`.
 - Modèle de données : `montage/studio/edl.js` (EDL v1 versionné, temps en images à 30 fps).
-- Tests : `node --test tests/montage-unit.mjs` (noyau pur) et `npx playwright test -c playwright.studio.config.js`
-  (Chrome/Edge installés, car ils décodent le H.264).
+- Cible (D15) : iPhone 17+/iOS 26+ (Safari 26), Chrome/Edge à jour, Safari 26 Mac, Firefox 130+ best-effort.
+  JS moderne autorisé, WebGPU/WebCodecs/OPFS/workers. En dessous : message + export EDL.
+- Avant chaque commit : `npm run montage:check` (tsc --checkJs, ESLint, pré-cache à jour, tests unitaires).
+  Après modification d'un fichier de `montage/` : `node tools/montage-precache.mjs`.
+- Tests navigateur : `npm run montage:e2e` (Chromium/Chrome ; inclut l'isolation du service worker).
+- Le service worker est limité à `/montage/` : ne jamais l'enregistrer depuis `index.html`.

@@ -1,5 +1,5 @@
 // Studio : assemblage de l'écran unique (aperçu, sources, timeline, propriétés), raccourcis, import, autosave.
-import { newProject, fmtTime, totalFrames, findClip, clipEnd, cropWindow } from './edl.js';
+import { newProject, fmtTime, totalFrames, findClip } from './edl.js';
 import { createStore } from './store.js';
 import { Library } from './library.js';
 import { Player } from './player.js';
@@ -9,35 +9,52 @@ import { createProps } from './props.js';
 import { splitAt, deleteClips, duplicateClips, addMarker } from './ops.js';
 import { loadSaved, startAutosave } from './persist.js';
 import { requestPersistence, usage, opfsAvailable } from './storage.js';
+import { checkSupport } from './caps.js';
 
+/** @type {(id: string) => any} */
 const $ = (id) => document.getElementById(id);
 const fr = (n, d = 1) => Number(n).toFixed(d).replace('.', ',');
 
+let toastTimer = 0;
+/** @param {string} msg */
 function toast(msg) {
   const t = $('toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
-function unsupported() {
-  const missing = [];
-  if (typeof VideoDecoder === 'undefined' || typeof VideoEncoder === 'undefined') missing.push('WebCodecs');
-  if (typeof Worker === 'undefined') missing.push('Web Workers');
-  if (typeof OffscreenCanvas === 'undefined') missing.push('OffscreenCanvas');
-  if (!HTMLScriptElement.supports || !HTMLScriptElement.supports('importmap')) missing.push('import maps');
-  return missing;
+/** Appareil trop ancien : message clair et, si un projet est sauvegardé, export de son EDL. */
+async function showUnsupported(missing) {
+  const box = $('compat');
+  box.hidden = false;
+  box.innerHTML = '<b>Ce navigateur ne peut pas faire tourner le Montage</b> (manque : ' + missing.join(', ') + ').<br>'
+    + 'Appareils pris en charge : iPhone avec iOS 26 ou plus récent (Safari 26), ordinateur avec Chrome ou Edge à jour, Safari 26 sur Mac, Firefox 130+ (sans garantie). '
+    + 'Le reste d\'INKU Studio fonctionne normalement.';
+  $('studio').style.display = 'none';
+  try {
+    const saved = await loadSaved();
+    if (saved) {
+      const b = document.createElement('button');
+      b.className = 'ibtn primary'; b.textContent = 'Exporter le projet sauvegardé (EDL)';
+      b.style.marginTop = '12px';
+      b.onclick = () => downloadEdl(JSON.parse(saved.doc));
+      box.append(document.createElement('br'), b);
+    }
+  } catch { }
+}
+
+function downloadEdl(doc) {
+  const blob = new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (doc.project.name || 'montage') + '.edl.json';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 
 async function boot() {
   const theme = new URLSearchParams(location.search).get('theme') || localStorage.getItem('inku-montage-theme');
   if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
 
-  const missing = unsupported();
-  if (missing.length) {
-    $('compat').hidden = false;
-    $('compat').innerHTML = '<b>Ce navigateur n\'est pas compatible avec le Montage</b> (manque : ' + missing.join(', ') + ').<br>Utilisez une version récente de Chrome, Edge, Firefox (130+) ou Safari (26+). Le reste d\'INKU Studio fonctionne normalement.';
-    $('studio').style.display = 'none';
-    return;
-  }
+  const support = checkSupport();
+  if (!support.ok) { await showUnsupported(support.missing); return; }
+  for (const w of support.warnings) console.info('[montage]', w);
 
   const lib = new Library();
   await lib.init();
@@ -67,7 +84,7 @@ async function boot() {
     onSelect: () => { if (props) props.render(); syncTools(); },
   });
   props = createProps({ el: $('propsBody'), titleEl: $('propsTitle'), store, lib, player, timeline, toast });
-  const bin = createBin({ el: $('binBody'), store, lib, player, toast, timeline });
+  createBin({ el: $('binBody'), store, lib, player, toast, timeline });
 
   // ── Barre supérieure ──
   const durEl = $('dur');
@@ -78,7 +95,7 @@ async function boot() {
     durEl.className = 'dur ' + (tf >= t.min && tf <= t.max ? 'ok' : 'warn');
     $('projName').textContent = d.project.name + ' · preset « INKU actu anime »';
     $('btnUndo').disabled = !store.canUndo; $('btnRedo').disabled = !store.canRedo;
-    $('btnUndo').style.opacity = store.canUndo ? 1 : .35; $('btnRedo').style.opacity = store.canRedo ? 1 : .35;
+    $('btnUndo').style.opacity = store.canUndo ? '1' : '.35'; $('btnRedo').style.opacity = store.canRedo ? '1' : '.35';
   };
   const updateTc = () => { $('tc').textContent = fmtTime(store.ui.playhead, store.doc.project.fps); };
   function syncTools() {
@@ -93,18 +110,16 @@ async function boot() {
   $('btnUndo').onclick = () => { store.undo(); player.invalidate(); player.refresh(); };
   $('btnRedo').onclick = () => { store.redo(); player.invalidate(); player.refresh(); };
   $('btnExport').onclick = () => {
-    const blob = new Blob([JSON.stringify(store.doc, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (store.doc.project.name || 'montage') + '.edl.json';
-    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    downloadEdl(store.doc);
     toast('EDL exporté (le rendu MP4 arrive en priorité 5)');
   };
-  document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll(/** @type {'button'} */ ('.seg button')).forEach((b) => b.addEventListener('click', () => {
     const pro = b.dataset.mode === 'pro';
     store.doc.settings.mode = pro ? 'pro' : 'simple';
-    document.querySelectorAll('.seg button').forEach((x) => x.classList.toggle('on', x === b));
+    document.querySelectorAll(/** @type {'button'} */ ('.seg button')).forEach((x) => x.classList.toggle('on', x === b));
     studio.classList.toggle('pro', pro); store.notify('doc');
   }));
-  document.querySelectorAll('.seg button').forEach((x) => x.classList.toggle('on', x.dataset.mode === store.doc.settings.mode));
+  document.querySelectorAll(/** @type {'button'} */ ('.seg button')).forEach((x) => x.classList.toggle('on', x.dataset.mode === store.doc.settings.mode));
 
   // ── Transport ──
   $('btnPlay').onclick = () => player.toggle();
@@ -141,7 +156,7 @@ async function boot() {
   // ── Feuilles (mobile) ──
   const sheets = ['sheetSources', 'sheetProps'];
   const toggleSheet = (id) => { sheets.forEach((s) => $(s).classList.toggle('open', s === id && !$(s).classList.contains('open'))); };
-  document.querySelectorAll('[data-sheet]').forEach((b) => b.addEventListener('click', () => toggleSheet(b.dataset.sheet)));
+  document.querySelectorAll(/** @type {'button'} */ ('[data-sheet]')).forEach((b) => b.addEventListener('click', () => toggleSheet(b.dataset.sheet)));
   document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => b.closest('.sheet').classList.remove('open')));
   $('dCut').onclick = cut; $('dDel').onclick = del; $('dDup').onclick = dup;
 
@@ -171,7 +186,7 @@ async function boot() {
 
   // ── Clavier (desktop) ──
   window.addEventListener('keydown', (e) => {
-    if (e.target.matches('input, textarea, select')) return;
+    if (/** @type {Element} */ (e.target).matches('input, textarea, select')) return;
     const k = e.key.toLowerCase(); const mod = e.ctrlKey || e.metaKey;
     const step = e.shiftKey ? store.doc.project.fps : 1;
     if (k === ' ') { e.preventDefault(); player.toggle(); }
