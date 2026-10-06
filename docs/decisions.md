@@ -235,3 +235,33 @@ minute (PC). Mixage de 10 s de projet avec décodage des sons : 2,6 s la premiè
 exact de chaque image, une seule conversion ; HDR converti en SDR par le navigateur). **Pas de détection de visages** :
 aucune API gratuite commune Safari/Chrome/Firefox (FaceDetector n'existe que derrière un drapeau de Chrome) → point
 d'intérêt par contraste local (`studio/framing.js`) pour le cadrage par défaut.
+
+## D21. Fin de vidéo, remplissage, linting (priorité 4, 2026-10-06, testé sur Chrome PC ; non testé sur iPhone)
+
+**Durées** (`studio/ending.js`) : la cible s'obtient en ADDITIONNANT voix + climax + miniature. Climax = cible − voix −
+miniature ; s'il sort de 6–10 s, la miniature absorbe d'abord (1,5 à 2 s), puis le climax est borné et l'écart est dit
+avec une proposition chiffrée. Durée et alertes affichées en continu (panneau Fin, barre du haut).
+
+**Climax proposé, l'utilisateur décide** : fenêtres de la seconde moitié du trailer (bonus dernier tiers), score =
+0,35 énergie sonore + 0,2 montée + 0,2 rythme des coupes + 0,25 mouvement − 0,8 cartons − 0,3 images sombres − 0,2 passage
+calme ; 3 propositions sans chevauchement de plus de la moitié. Testé sur données synthétiques (le passage fort, rapide et
+animé gagne, un passage fort mais en carton perd) et sur le trailer de test (e2e). Pondérations à valider sur de vrais
+trailers : non mesurées sur cas réels (aucun trailer réel dans le dépôt, par principe).
+
+**Cartons de texte** : détectés à l'analyse (8 échantillons/s) — fond clair dominant avec peu d'encre, ou fond noir avec un
+peu de blanc sans couleur ni demi-teinte (crédits). Dans le climax, l'IMAGE d'un carton est remplacée par un passage du
+même trailer sans carton, d'abord juste avant le climax puis juste après, jamais déjà utilisé ; le SON du trailer reste
+continu (piste A5) avec un fondu de sortie pendant la miniature. Crédits en fin de fenêtre → alerte « départ plus tôt ».
+Composition : paysage net pleine largeur au centre, même image floutée (σ 40) et assombrie (−15 %) en fond.
+
+**Remplir la timeline** (`studio/fill.js`, proposition annulable en un pas) : trous de V1 jusqu'à la fin de la voix ; coupe
+~2 images avant un mot (la voix est le métronome), 1–3 s (cible 2,5 s), jamais de reste < 1 s, aucun intervalle de source
+réutilisé, plans noirs / cartons / immobiles > 1,5 s écartés, ordre du trailer conservé, cadrage 9:16 centré sur le point
+d'intérêt. Mesuré (e2e, trailer de test 6 plans, voix 8 s) : V1 couvert à l'image près, toutes les coupes internes sur un
+mot sauf au plus une, aucune réutilisation. Ce n'est PAS un choix « intelligent » des plans (pas d'IA, cf. brief) : c'est
+un premier jet que l'utilisateur remplace plan par plan (« Autre plan » en un geste).
+
+**Linting** (`studio/lint.js`) : règles du brief en alertes jamais bloquantes, avec correction en un geste quand elle
+existe : durée hors cible (ajuster la fin), climax hors 6–10 s, transitions (recaler / coupe franche), « abonne » jamais
+dit, mots importants à moins de 0,4 s, groupes de plus de 4 mots, carton de texte dans un clip (autre plan), sources HDR
+ou VFR, images manquantes sous la voix (remplir), plus les règles de clip existantes.
