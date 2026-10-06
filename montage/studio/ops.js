@@ -1,5 +1,9 @@
 // Opérations de montage (pures vis-à-vis de l'interface) : toutes passent par store.commit pour l'historique.
 import { makeClip, clipEnd, findClip, nearestFreeStart, pushRight, uid } from './edl.js';
+import { realignTransition } from './overlays.js';
+import { buildEnd, applyEnd } from './ending.js';
+import { fillPlan } from './fill.js';
+import { cropXForFocus } from './framing.js';
 
 const R = (v) => Math.round(v);
 
@@ -11,10 +15,12 @@ export function addToV1(store, lib, srcId, { shotIdx = 0, range = null, atFrame 
   if (!rec || !rec.shots || !rec.shots.length) return null;
   const fps = doc.project.fps, rules = doc.project.rules;
   const sfps = rec.fps || 24;
-  let srcIn, srcOut;
+  let srcIn, srcOut, cropX = 0.5;
   if (range) { srcIn = range.start; srcOut = range.end; }
   else {
     const shot = rec.shots[shotIdx];
+    // cadrage par défaut centré sur le point d'intérêt du plan (contraste local), modifiable ensuite
+    if (shot.focusX !== undefined && rec.letterbox) cropX = +cropXForFocus(shot.focusX, rec.letterbox.usable).toFixed(3);
     // décalage de 2-3 images À L'INTÉRIEUR du plan : jamais pile sur la coupe, jamais les 1res/dernières images
     const m = rules.trimInShot / sfps;
     srcIn = shot.start + m;
@@ -30,7 +36,7 @@ export function addToV1(store, lib, srcId, { shotIdx = 0, range = null, atFrame 
   store.commit('Ajouter un plan', (d) => {
     const hit = d.clips.some((c) => c.track === 'V1' && c.start < start + durF && clipEnd(c) > start);
     if (hit) pushRight(d, 'V1', start, durF); // insertion : les clips suivants se décalent
-    const clip = makeClip({ track: 'V1', start, dur: durF, srcId, srcIn });
+    const clip = makeClip({ track: 'V1', start, dur: durF, srcId, srcIn, crop: { mode: 'fixed', x: cropX, travel: null } });
     d.clips.push(clip); id = clip.id;
     if (!d.sources[srcId]) d.sources[srcId] = sourceRef(rec);
   });
@@ -245,7 +251,19 @@ export function pasteAttrs(store, ids, attrs) {
 
 // Corrections en un geste proposées par le linting.
 export function applyFix(store, lib, issue) {
-  const doc = store.doc; const c = findClip(doc, issue.clipId); if (!c) return false;
+  const doc = store.doc;
+  if (issue.fix === 'fill') return fillTimeline(store, lib).clips > 0;
+  if (issue.fix === 'fit-end') {
+    if (!doc.end || !doc.end.climax) return false;
+    const rec = lib.get(doc.end.climax.srcId); if (!rec) return false;
+    const thumbRec = doc.end.thumbnail ? lib.get(doc.end.thumbnail.srcId) : null;
+    const built = buildEnd(doc, { rec, startSec: doc.end.climax.start, thumbRec, thumbSec: doc.end.thumbnail ? doc.end.thumbnail.sec : undefined });
+    store.commit('Ajuster la fin', (d) => applyEnd(d, built, d.end)); return true;
+  }
+  const c = findClip(doc, issue.clipId); if (!c) return false;
+  if (issue.fix === 'realign-transition') { store.commit('Recaler la transition', (d) => realignTransition(d, findClip(d, c.id))); return true; }
+  if (issue.fix === 'remove-overlay') { store.commit('Coupe franche', (d) => { d.clips = d.clips.filter((x) => x.id !== c.id); }); return true; }
+  if (issue.fix === 'other-shot') return replaceShot(store, lib, c.id);
   const fps = doc.project.fps, rules = doc.project.rules;
   const rec = lib.get(c.srcId);
   if (issue.fix === 'trim-max') { store.commit('Raccourcir', (d) => { findClip(d, c.id).dur = R(rules.clipMax * fps); }); return true; }
@@ -273,4 +291,30 @@ export function applyFix(store, lib, issue) {
     store.commit('Rester dans le plan', (d) => { findClip(d, c.id).dur = Math.min(findClip(d, c.id).dur, newDur); }); return true;
   }
   return false;
+}
+
+/**
+ * Remplace le plan d'un clip V1 par le prochain plan libre (même place, mêmes règles que « Remplir »), en un geste.
+ */
+export function replaceShot(store, lib, clipId) {
+  const doc = store.doc, c = findClip(doc, clipId);
+  if (!c) return false;
+  const probe = JSON.parse(JSON.stringify(doc));
+  // l'intervalle remplacé reste « utilisé » pour ne pas revenir, mais hors de la plage à remplir
+  for (const x of probe.clips) if (x.id === clipId) x.start = -100000;
+  const { clips } = fillPlan(probe, lib.list, { from: c.start, to: c.start + c.dur });
+  if (!clips.length) return false;
+  store.commit('Remplacer le plan', (d) => {
+    d.clips = d.clips.filter((x) => x.id !== clipId);
+    for (const k of clips) { delete k.auto; d.clips.push(k); }
+  });
+  store.ui.selection = clips.map((k) => k.id);
+  return true;
+}
+
+/** Remplit les trous de V1 jusqu'à la fin de la voix (proposition annulable en un pas). */
+export function fillTimeline(store, lib) {
+  const plan = fillPlan(store.doc, lib.list);
+  if (plan.clips.length) store.commit('Remplir la timeline', (d) => { d.clips.push(...plan.clips); for (const k of plan.clips) if (!d.sources[k.srcId]) d.sources[k.srcId] = sourceRef(lib.get(k.srcId)); });
+  return { clips: plan.clips.length, warnings: plan.warnings };
 }

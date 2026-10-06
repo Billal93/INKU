@@ -9,9 +9,10 @@ import { createProps } from './props.js';
 import { createVoice } from './voice.js';
 import { createVoicePanel } from './voice-panel.js';
 import { createDressPanel } from './dress-panel.js';
+import { createEndPanel } from './end-panel.js';
 import { BrandAssets } from './assets.js';
 import { boundLoops, contentEnd } from './overlays.js';
-import { splitAt, deleteClips, duplicateClips, addMarker } from './ops.js';
+import { splitAt, deleteClips, duplicateClips, addMarker, fillTimeline } from './ops.js';
 import { loadSaved, startAutosave } from './persist.js';
 import { requestPersistence, usage, opfsAvailable } from './storage.js';
 import { checkSupport } from './caps.js';
@@ -96,6 +97,7 @@ async function boot() {
   createVoicePanel({ el: $('voiceBody'), store, lib, voice, toast, onFont: (f) => player.setSubtitleFont(f) });
   window.__studio.voice = voice;
   createDressPanel({ el: $('dressBody'), store, lib, player, assets, toast });
+  createEndPanel({ el: $('endBody'), store, lib, player, toast });
   // Logo et musique bouclés : toujours bornés à la durée exacte de la vidéo (donnée dérivée, hors historique).
   let mixTimer = undefined;
   store.subscribe((k) => {
@@ -156,6 +158,12 @@ async function boot() {
   $('tRoll').onclick = () => { store.ui.roll = !store.ui.roll; syncTools(); toast('Roll ' + (store.ui.roll ? 'activé : ajuste le point de coupe entre deux clips' : 'désactivé')); };
   $('tMulti').onclick = () => { store.ui.multi = !store.ui.multi; syncTools(); toast('Sélection multiple ' + (store.ui.multi ? 'activée' : 'désactivée')); };
   $('tMark').onclick = () => { addMarker(store, store.ui.playhead); };
+  $('tFill').onclick = () => {
+    const r = fillTimeline(store, lib);
+    toast(r.clips ? `${r.clips} plan(s) proposé(s) jusqu'à la fin de la voix — Annuler pour revenir` : (r.warnings[0] || 'Rien à remplir'));
+    if (r.clips && r.warnings.length) setTimeout(() => toast(r.warnings[0]), 2700);
+    player.refresh();
+  };
   $('tZin').onclick = () => timeline.zoomIn(); $('tZout').onclick = () => timeline.zoomOut(); $('tFit').onclick = () => timeline.fit();
 
   // ── Import ──

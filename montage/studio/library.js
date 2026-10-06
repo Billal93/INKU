@@ -29,6 +29,8 @@ export class Library extends EventTarget {
       this.sources.set(rec.id, rec);
     }
     this.emit(null);
+    // Trailers analysés par une version précédente (sans descripteurs de plans) : ré-analyse en arrière-plan.
+    for (const rec of this.list) if (rec.kind === 'video' && rec.status === 'ready' && (!rec.feat || !(rec.shots[0] && rec.shots[0].hist))) this.reanalyze(rec.id);
   }
 
   _hydrate(r) {

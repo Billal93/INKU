@@ -1,5 +1,5 @@
 {
- "version": "a374ee2a44ad",
+ "version": "9a441b2546bd",
  "files": [
   "audio/features.js",
   "audio/loudness.js",
@@ -51,6 +51,9 @@
   "studio/caps.js",
   "studio/dress-panel.js",
   "studio/edl.js",
+  "studio/end-panel.js",
+  "studio/ending.js",
+  "studio/fill.js",
   "studio/framing.js",
   "studio/library.js",
   "studio/lint.js",

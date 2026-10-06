@@ -172,15 +172,18 @@ test.describe.serial('Studio — interactions (Chrome installé)', () => {
 
   test('cadrage glissé sur l\'aperçu : un seul pas d\'historique', async () => {
     const cs = await v1(page);
+    // cadrage par défaut = point d'intérêt du plan ; on part du centre pour pouvoir glisser dans les deux sens
+    await page.evaluate((id) => { window.__studio.store.doc.clips.find((c) => c.id === id).crop.x = 0.5; }, cs[0].id);
+    const x0 = 0.5;
     await page.evaluate((f) => window.__studio.player.seek(f), cs[0].start + 5);
     await page.waitForTimeout(400);
     const fb = await page.locator('#frame').boundingBox();
     await page.mouse.move(fb.x + fb.width / 2, fb.y + fb.height / 2);
     await page.mouse.down(); await page.mouse.move(fb.x + fb.width / 2 + 30, fb.y + fb.height / 2, { steps: 5 }); await page.mouse.up();
     const c1 = (await v1(page))[0];
-    expect(c1.crop.x).toBeLessThan(0.5);                            // l'image suit le doigt : la fenêtre part à gauche
+    expect(c1.crop.x).toBeLessThan(x0);                             // l'image suit le doigt : la fenêtre part à gauche
     await page.keyboard.press('Control+z');
-    expect((await v1(page))[0].crop.x).toBe(0.5);
+    expect((await v1(page))[0].crop.x).toBe(x0);
   });
 
   test('rechargement : projet, historique et sources conservés', async () => {
