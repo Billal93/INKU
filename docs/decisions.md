@@ -265,3 +265,34 @@ un premier jet que l'utilisateur remplace plan par plan (« Autre plan » en un 
 existe : durée hors cible (ajuster la fin), climax hors 6–10 s, transitions (recaler / coupe franche), « abonne » jamais
 dit, mots importants à moins de 0,4 s, groupes de plus de 4 mots, carton de texte dans un clip (autre plan), sources HDR
 ou VFR, images manquantes sous la voix (remplir), plus les règles de clip existantes.
+
+## D22. Rendu final, contrôles, EDL, historique (priorité 5, 2026-10-06, testé sur Chrome PC ; non testé sur iPhone)
+
+**Rendu** (`render/export.js`) : la MÊME scène que l'aperçu (`render/scene.js`), alimentée par les fichiers ORIGINAUX
+décodés séquentiellement (un lecteur par fichier ouvert, repositionnement seulement si le temps recule ou saute de plus
+de 2 s). 30 i/s constants, timestamps exacts k/30, H.264 (profil High) une image clé par seconde, 16 Mb/s en 1080×1920,
+AAC 48 kHz au débit le plus élevé accepté (192 kb/s sur Chrome Windows ; encodeur AAC embarqué si l'appareil n'en a pas).
+Un seul encodage avec perte. Le son est le mixage du worker (identique à l'écoute), ajouté par tranches d'une seconde au
+fil des images. Le fichier s'écrit en flux dans le stockage privé (OPFS) ; repli en mémoire si `createWritable` manque.
+Garde-fous : police de la marque obligatoire (bouton désactivé + message), résolution la plus haute encodable
+(1080 → 720 → 540, toujours annoncée), Wake Lock (repris au retour au premier plan), arrêt à 3× la durée estimée après
+2 s rendues, annulation, nettoyage du fichier partiel. Le projet est copié au lancement : l'édition peut continuer.
+
+**Reprise** : pas de reprise au milieu d'un rendu (un MP4 classique s'écrit d'un seul tenant ; le découper en morceaux
+puis les recoller demanderait un second multiplexage). Un rendu interrompu est supprimé proprement et se relance ;
+mesuré ≈ 1,2× le temps réel en 1080p sur le PC de référence (≈ 75 s pour une vidéo de 61 s).
+
+**Contrôles après rendu** (`render/verify.js`) : le MP4 est RELU : résolution, nombre d'images = durée attendue,
+timestamps réguliers (0 doublon, 0 écart), toutes les images décodées, durée audio = vidéo (±1 image), crête du son
+DÉCODÉ ≤ −1 dBTP ; et par calcul : durée = voix + fin, aucun trou, aucun plan immobile > 1,5 s, taille de base des
+sous-titres unique. Mesuré (e2e, 5 s) : 540×960 en 6,2 s, 1080×1920 en 6,2 s ; relecture 1,3 s ; tous ✓.
+L'encodage AAC dépassait de 0,27 dB la crête du mixage (−1,03 dBTP mesuré pour −1,3 visé) → plafond du limiteur à
+−1,5 dBTP pour garantir −1 dBTP dans le fichier.
+Déterminisme : mêmes images composées pour un même EDL (vérifié par empreinte) ; le flux H.264 lui-même peut varier
+d'un encodeur matériel à l'autre.
+
+**Partage et historique** : « Partager / galerie » via Web Share (fichiers) quand il existe, sinon téléchargement.
+Historique des 20 derniers rendus (date, résolution, taille, contrôles) avec lecture, téléchargement, partage, suppression.
+
+**EDL** : export d'un JSON sans aucun fichier de l'utilisateur ; les sources sont décrites (nom, empreinte, durée) et
+ré-associées à l'import par empreinte puis par nom ; sources absentes listées. Nouveau projet possible.

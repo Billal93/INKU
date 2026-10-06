@@ -121,23 +121,61 @@ Sur chaque appareil (iPhone, iPad, Android, PC), idéalement avec 2-3 vrais trai
 - [ ] Glisser sur l'aperçu pour déplacer le cadrage 9:16 ; l'alerte « plan immobile » apparaît sur un plan fixe
 - [ ] Noter : durée d'analyse d'un trailer de ~2 min, chauffe, batterie, éventuel plantage
 
-## Montage vidéo — sur iPhone (priorité 2)
+## Montage vidéo — à tester sur votre iPhone (iOS 26+, Safari)
 
-Adresse : `https://billal93.github.io/INKU/montage/studio.html` (une fois la branche publiée) ; en attendant, la
-pull request contient tout le code.
+Adresse : `https://billal93.github.io/INKU/montage/studio.html`. Si la pull request n'est pas encore fusionnée,
+elle n'est pas en ligne : le code complet est dans la pull request. Rien n'a encore été testé sur iPhone : tout ce qui
+suit a été mesuré sur un PC (Chrome) et doit être confirmé sur l'appareil.
 
-1. **Autotest** : Studio → panneau « Projet » (bouton Réglages) → « Autotest de cet appareil ». Cochez
-   « Inclure la transcription » (télécharge 458 Mo une seule fois, en Wi-Fi), touchez « Lancer l'autotest »,
-   puis « Copier le rapport » et collez-le dans la conversation. Il mesure : compatibilité, rendu 5 s en
-   1080×1920 avec sous-titres, encodage H.264 + AAC et relecture du MP4, vitesse et précision de la transcription.
-2. **Voix** : importez un enregistrement brut (onglet Sources → Importer), touchez « Voix » dans la barre du bas,
-   « Analyser comme voix ». Vérifiez : les prises regroupées (★ = gardée), les mots barrés (coupés), les
-   passages soulignés en orange (à écouter : appui long sur un mot pour l'écouter). Puis « Appliquer à la
-   timeline » : la piste A1 et les sous-titres T1 apparaissent ; la vérification automatique s'affiche ensuite.
-3. **Sous-titres** : sans votre police (pack de marque), un bandeau orange le signale. Importez votre pack
-   (ZIP ou fichier de police) depuis le panneau Voix → « Pack de marque ».
-4. **Installer** : Safari → Partager → « Sur l'écran d'accueil ». Ouvrez l'icône, coupez le réseau : le Studio
-   doit démarrer hors ligne (la transcription aussi, si le modèle a déjà été téléchargé).
+### 1. Autotest (5 minutes) — à faire en premier
+Studio → bouton « Réglages » → « Autotest de cet appareil ». Cochez « Inclure la transcription » (458 Mo
+téléchargés une seule fois, en Wi-Fi), touchez « Lancer l'autotest », puis « Copier le rapport » et collez-le dans la
+conversation. Étapes et résultats sur le PC de référence :
+
+| Étape | Ce qui est mesuré | PC (Chrome) |
+|---|---|---|
+| Compatibilité | WebCodecs, H.264/AAC (débit max), WebGPU, mémoire, stockage, partage | AAC 192 kb/s max |
+| Rendu | 150 images 1080×1920 avec sous-titres, même moteur que l'export, déterminisme | 0,7 ms/image, identique |
+| Encodage | 5 s H.264 + AAC puis relecture (images, timestamps, durées) | 4,2 s, 150 images, 0 écart |
+| Overlay | transition synthétique : couverture totale, image de coupe, retrait de fond | 10–16, coupe 13, exact |
+| Mixage | 60 s de voix + musique + 20 SFX : temps, crête, plafond SFX | 1,7 s, −1,3 dBTP, −14 dB |
+| Transcription | vitesse et précision sur un extrait de référence | 16 s / min d'audio |
+
+### 2. Parcours complet avec vos fichiers (20 à 30 minutes)
+Cochez au fur et à mesure et notez le modèle d'iPhone.
+- [ ] **Sources** : importez 1 à 3 trailers, votre voix brute et votre miniature (image). L'analyse avance sans
+      bloquer l'écran ; les plans correspondent aux coupes ; les bandes noires sont retirées.
+- [ ] **Voix** (barre du bas) : « Analyser comme voix », vérifiez les prises (★), les mots coupés, « Appliquer à la
+      timeline » ; la vérification automatique s'affiche (✓ attendu).
+- [ ] **Pack de marque** (onglet Habillage → « Ajouter au pack ») : police, transitions, ouverture, abonne-toi, logo,
+      sons click/pop, musique — ou votre ZIP de pack. Chaque élément affiche ses images, son fond (noir / vert /
+      alpha) et sa couverture totale. Si un retrait de fond est mauvais, changez-le dans la liste.
+- [ ] **Plans** : touchez l'outil baguette de la timeline (« Remplir ») pour un premier jet calé sur les mots, puis
+      remplacez les plans qui ne vont pas (alerte « Autre plan » en un geste) ; cadrage 9:16 en glissant sur l'aperçu.
+- [ ] **Habillage** : « Poser à 0 » (ouverture), une transition sur un emplacement proposé (« Voir » : à l'image de
+      coupe, l'écran doit être entièrement couvert), « Poser sur abonne », logo, copyright, « Poser les click / pop »,
+      « Musique de fond », puis « Mesurer le mixage » (crêtes par rapport à la voix).
+- [ ] **Fin** : « Proposer 3 climax », choisissez-en un (ou tapez le départ, ex. 0:35), « Poser la fin ». Vérifiez le
+      fond flou, que le son du trailer ne coupe pas, la miniature, et la durée totale dans la cible.
+- [ ] **Alertes** (Réglages) : lisez-les, essayez une correction en un geste.
+- [ ] **Lecture** : fluide ? son synchronisé ? (le son joué est exactement celui de l'export).
+- [ ] **Rendu** (bouton Exporter) : d'abord « Aperçu rapide 540×960 », puis « Final 1080×1920 ». Notez la durée,
+      la chauffe et la batterie. L'écran doit rester allumé. À la fin, toutes les lignes des contrôles doivent être ✓ ;
+      « Partager / galerie » doit proposer « Enregistrer la vidéo ». Ouvrez la vidéo dans Photos.
+- [ ] **Robustesse** : pendant un rendu, passez dans une autre appli 10 s puis revenez (le rendu peut être suspendu :
+      noter ce qui se passe) ; fermez l'onglet puis rouvrez (le projet doit être intact) ; « Exporter le projet (EDL) »
+      puis « Importer un projet » : les sources sont reconnues.
+- [ ] **Hors ligne** : Safari → Partager → « Sur l'écran d'accueil », ouvrez l'icône, mode Avion : le Studio démarre.
+
+### 3. Ce qui est fait, mesuré, ou non testé
+- **Mesuré sur PC (Chrome)** : nettoyage de la voix (D18-D19), sous-titres (D19), habillage et mixage (D20), fin de
+  vidéo, remplissage, linting (D21), rendu et contrôles (D22) — voir `docs/decisions.md`.
+- **Vérifié dans la documentation seulement** : WebCodecs, OPFS, Wake Lock et Web Share dans Safari 26 (D15).
+- **Non testé sur iPhone** : tout ; en particulier la vitesse de rendu 1080p, la mémoire avec de longs trailers,
+  l'écriture du MP4 dans le stockage privé (si Safari ne le permet pas, le rendu se fait en mémoire), la suspension du
+  rendu en arrière-plan, le partage vers Photos.
+- **Non testé avec vos vrais fichiers** : retrait de fond de vos overlays, proposition de climax sur de vrais trailers
+  (les pondérations sont réglées sur des données synthétiques).
 
 ### Voir les erreurs d'un iPhone depuis un Mac (Safari Web Inspector)
 1. iPhone : Réglages → Apps → Safari → Avancé → activer « Inspecteur web ».
