@@ -12,7 +12,8 @@ export const STYLE = {
   shadow: { dx: 3, dy: 3, blur: 4, color: 'rgba(0,0,0,0.45)' },
 };
 
-/** @typedef {(text: string, sizePx: number) => { width: number, capHeight: number }} Measure */
+/** @typedef {(text: string, sizePx: number) => { width: number, capHeight: number, left?: number, right?: number }} Measure
+ *   left/right : étendue de l'encre de part et d'autre de l'origine (actualBoundingBoxLeft/Right) */
 /** @typedef {{ text: string, kind: string, size: number, x: number, y: number, w: number }} PlacedWord
  *   x, y = CENTRE du mot (px, image 1080×1920) ; y = centre des majuscules */
 
@@ -20,15 +21,18 @@ export const STYLE = {
  * Taille de base : le plus long mot important du projet, à ×1,25, tient dans maxImportantWidth (≈ 900 px), et aucun mot
  * normal ne dépasse la largeur utile. Calculée UNE fois pour toute la vidéo (taille constante).
  * @param {string[]} importantWords @param {string[]} allWords @param {Measure} measure
- * @param {{ maxImportantWidth?: number, maxSize?: number }} [opt]
+ * Les mots sont mesurés TELS QU'AFFICHÉS (typographie, ponctuation) et le texte impact à ×1,4 tient aussi.
+ * @param {{ maxImportantWidth?: number, maxSize?: number, impactWords?: string[] }} [opt]
  */
 export function baseFontSize(importantWords, allWords, measure, opt = {}) {
   const usable = STYLE.width - 2 * STYLE.sideMargin;
   const target = opt.maxImportantWidth ?? 900, maxSize = opt.maxSize ?? 110;
   let size = maxSize;
   const ref = 100;
-  for (const w of importantWords) size = Math.min(size, (target / (measure(upperFr(w), ref).width * STYLE.importantScale)) * ref);
-  for (const w of allWords) size = Math.min(size, (usable / measure(upperFr(w), ref).width) * ref);
+  const wd = (w) => measure(upperFr(typoFr(w.trim())), ref).width;
+  for (const w of importantWords) size = Math.min(size, (target / (wd(w) * STYLE.importantScale)) * ref);
+  for (const w of opt.impactWords || []) size = Math.min(size, (usable / (wd(w) * STYLE.impactScale)) * ref);
+  for (const w of allWords) size = Math.min(size, (usable / wd(w)) * ref);
   return Math.floor(size * 10) / 10;
 }
 
@@ -45,7 +49,7 @@ export function layoutGroup(words, base, measure) {
     const size = base * (kind === 'important' ? STYLE.importantScale : kind === 'impact' ? STYLE.impactScale : 1);
     const text = upperFr(typoFr(w.w.trim()));
     const m = measure(text, size);
-    return { text, kind, size, w: m.width, cap: m.capHeight, space: measure(' ', size).width };
+    return { text, kind, size, w: m.width, cap: m.capHeight, inkL: m.left ?? 0, inkR: m.right ?? m.width, space: measure(' ', size).width };
   });
   const lineWidth = (/** @type {typeof items} */ l) => l.reduce((a, it, i) => a + it.w + (i ? Math.max(l[i - 1].space, it.space) : 0), 0);
   // 1) mot(s) important(s) / impact : sur leur propre ligne dans le même bloc (si le groupe mélange les styles).
@@ -85,7 +89,9 @@ export function layoutGroup(words, base, measure) {
     const lw = lineWidth(l);
     width = Math.max(width, lw);
     if (lw > usable + 0.5) overflow = true;
-    let x = STYLE.width / 2 - lw / 2;
+    // Centrage sur l'ENCRE visible (et non sur la chasse) : une ligne qui finit par « ! » reste au centre exact.
+    const inkStart = -l[0].inkL, inkEnd = lw - l[l.length - 1].w + l[l.length - 1].inkR;
+    let x = STYLE.width / 2 - (inkStart + inkEnd) / 2;
     l.forEach((it, i) => {
       if (i) x += Math.max(l[i - 1].space, it.space);
       placed.push({ text: it.text, kind: it.kind, size: it.size, x: x + it.w / 2, y: centers[li] + shiftY, w: it.w });

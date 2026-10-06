@@ -232,11 +232,11 @@ export function acousticIssues(words, ac) {
  * @param {Word[]} words
  * @param {{ db: Float32Array, mel: { data: Float32Array, frames: number, nMels: number } }} ac
  * @param {{ cutSim?: number, listenSim?: number }} [opt]
- *   seuils réglés sur le corpus (docs/decisions.md D19) : ≥ 0,97 coupé, ≥ 0,85 « à écouter »
+ *   seuils réglés sur le corpus et une voix propre (docs/decisions.md D19) : ≥ 0,975 coupé, ≥ 0,95 « à écouter »
  * @returns {{ issues: Issue[], words: Word[] }} mots dont le début est déplacé après la syllabe redite (si coupée)
  */
 export function stutterDoublets(words, ac, opt = {}) {
-  const cutSim = opt.cutSim ?? 0.97, listenSim = opt.listenSim ?? 0.85;
+  const cutSim = opt.cutSim ?? 0.975, listenSim = opt.listenSim ?? 0.95;
   const H = 0.01, nM = ac.mel.nMels, T = ac.mel.frames;
   const fi = (t) => Math.max(0, Math.min(ac.db.length - 1, Math.round(t / H - 1)));
   const out = words.map((w) => ({ ...w })), issues = [];

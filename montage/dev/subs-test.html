@@ -23,11 +23,11 @@ import { tagWords, groupWords } from '../subs/groups.js';
 const FAMILY = 'Plus Jakarta Sans', WEIGHT = 800, FPS = 30;
 await document.fonts.load(`${WEIGHT} 64px "${FAMILY}"`);
 const measure = makeMeasure(FAMILY, WEIGHT);
-const text = 'Deux garçons de huit ans, inséparables, grandissent ensemble. Le film sort le 25 décembre en France. Œuvre très attendue à l’été !';
+const text = 'Deux garçons de huit ans, inséparables, grandissent ensemble. Le film sort le 25 décembre en France. Un film attendu sort en mars dans toute la France avec un style unique. Œuvre très attendue à l’été !';
 const words = text.split(' ').map((w, i) => ({ w, t0: 0.5 + i * 0.32, t1: 0.5 + i * 0.32 + 0.28 }));
 const tagged = tagWords(words, [{ text: 'inséparables', kind: 'important' }, { text: '25 décembre', kind: 'impact' }]);
-const base = baseFontSize(['inséparables'], words.map((w) => w.w), measure);
-const groups = groupWords(tagged).map((idx, i, all) => {
+const base = baseFontSize(tagged.filter((w) => w.kind === 'important').map((w) => w.w), words.map((w) => w.w), measure, { impactWords: tagged.filter((w) => w.kind === 'impact').map((w) => w.w) });
+const groups = groupWords(tagged, { fits: (ws) => !layoutGroup(ws, base, measure).overflow }).map((idx, i, all) => {
   const ws = idx.map((k) => tagged[k]);
   const start = Math.round(ws[0].t0 * FPS);
   const end = i + 1 < all.length ? Math.round(tagged[all[i + 1][0]].t0 * FPS) : Math.round((ws[ws.length - 1].t1 + 0.5) * FPS);

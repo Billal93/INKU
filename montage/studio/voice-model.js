@@ -99,7 +99,7 @@ const STRIP = /[,.;:…]+$/;   // ponctuation retirée à l'affichage (style Tik
 /**
  * Sous-titres : mots gardés recalés exactement sur la timeline, marqués (importants / impact), groupés.
  * @param {ReturnType<typeof voiceState>} st @param {import('../speech/edits.js').Piece[]} pieces
- * @param {{ fps: number, glossary?: { text: string, kind: 'important'|'impact', variants?: string[] }[], punctuation?: 'retirée'|'gardée', hold?: number, maxWords?: number }} o
+ * @param {{ fps: number, glossary?: { text: string, kind: 'important'|'impact', variants?: string[] }[], punctuation?: 'retirée'|'gardée', hold?: number, maxWords?: number, fits?: (ws: any[]) => boolean }} o
  */
 export function subtitleClips(st, pieces, o) {
   const fps = o.fps;
@@ -114,7 +114,7 @@ export function subtitleClips(st, pieces, o) {
     const sid = sentenceIndex(st, mapped[a].src);
     while (b + 1 < tagged.length && sentenceIndex(st, mapped[b + 1].src) === sid) b++;
     const sent = tagged.slice(a, b + 1);
-    for (const g of groupWords(sent, { maxWords: o.maxWords ?? 3 })) {
+    for (const g of groupWords(sent, { maxWords: o.maxWords ?? 3, fits: o.fits })) {
       const ws = g.map((k) => sent[k]);
       clips.push({ ws, start: Math.round(ws[0].t0 * fps) });
     }

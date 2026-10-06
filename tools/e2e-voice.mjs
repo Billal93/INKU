@@ -37,6 +37,10 @@ const analyzeSec = (Date.now() - t0) / 1000;
 await page.screenshot({ path: join(out, `voix-analyse${mobile ? '-mobile' : ''}.png`) });
 await page.click('[data-do="apply"]');
 await page.waitForFunction(() => window.__studio.store.doc.clips.some((c) => c.track === 'T1'), null, { timeout: 30000 });
+const tv = Date.now();
+await page.waitForFunction(() => window.__studio.voice.verification && !window.__studio.voice.verification.running, null, { timeout: 10 * 60e3 });
+const verification = await page.evaluate(() => window.__studio.voice.verification);
+const verifySec = (Date.now() - tv) / 1000;
 const info = await page.evaluate(() => {
   const d = window.__studio.store.doc;
   return { a1: d.clips.filter((c) => c.track === 'A1').length, t1: d.clips.filter((c) => c.track === 'T1').length, subs: d.clips.filter((c) => c.track === 'T1').slice(0, 6).map((c) => c.sub.words.map((w) => w.w).join(' ')) };
@@ -51,5 +55,5 @@ const dump = await page.evaluate(async () => {
   return { an: { ...s.an, envelope: undefined }, cut: [...s.st.cut], kept: s.st.kept, keptSec: s.st.keptSec, report: await window.__studio.voice.report() };
 });
 (await import('node:fs')).writeFileSync(join(out, 'analyse.json'), JSON.stringify(dump, null, 1));
-console.log(JSON.stringify({ analyzeSec, ...info, errors, timing: dump.an.timing, recovered: dump.an.recovered, retries: dump.an.retries }, null, 1));
+console.log(JSON.stringify({ analyzeSec, verifySec, verification: { ok: verification.ok, agreement: verification.agreement, remaining: verification.remaining, missing: verification.missing }, ...info, errors, timing: dump.an.timing, recovered: dump.an.recovered, retries: dump.an.retries }, null, 1));
 await context.close();

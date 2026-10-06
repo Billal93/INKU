@@ -7,5 +7,6 @@ export default defineConfig({
   timeout: 180000,
   workers: 1,
   reporter: [['list']],
+  use: { baseURL: 'http://localhost:8731', channel: 'chrome' },
   webServer: { command: 'python -m http.server 8731', url: 'http://localhost:8731/montage/studio.html', reuseExistingServer: true, timeout: 20000 },
 });

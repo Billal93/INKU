@@ -147,3 +147,45 @@ WASM sont stockés compressés (.gz) : 27 → 7 Mo, et cela évite un faux posit
 **Nettoyage, corpus de 8 voix à défauts injectés (hors dépôt)** : WER 38 % → 14,7 % après nettoyage ; défauts trouvés 55,8 %
 (faux départs 9/12, prises ratées 7/8, « euh » 6/10, répétitions 3/9, bégaiements 4/13) ; mots propres perdus 31/911 ;
 9 coupes encore au milieu d'un mot (objectif 0). **Non testé sur iPhone.**
+
+## D19. Nettoyage de la voix : méthode et mesures (2026-10-06, corpus de 8 voix à défauts injectés, 6,7 min, 46 défauts)
+**Corpus** (hors dépôt, `tools/bench/build-corpus.mjs`) : phrases FLEURS fr (CC-BY-4.0) assemblées en voix off, avec faux
+départs, prises ratées, mots répétés, syllabes bégayées, « euh » (voyelle tenue de la même voix), respirations, blancs.
+Vérité terrain exacte (positions des mots et des défauts). Mesures (`tools/bench-voice.mjs`, diagnostic `tools/bench/diag-voice.mjs`).
+
+| | FastConformer (défaut) | Whisper turbo |
+|---|---|---|
+| WER avant → après nettoyage | 38 % → 14,6 % | 31 % → 8,7 % |
+| Défauts coupés (vérité terrain) | 48 % | 25 % |
+| Défauts au moins signalés (coupés ou « à écouter ») | 65 % | 56 % |
+| Mots propres coupés à tort | 4 / 911 | 3 / 911 |
+| Coupes au milieu d'un mot | 5 | 6 |
+| Calcul par minute de voix (PC, WebGPU) | 15-18 s | 118 s |
+
+Whisper a un meilleur texte… parce qu'il **efface les bégaiements du texte** sans les retirer du son (ce que le brief
+redoutait) : il ne retrouve que 25 % des défauts. FastConformer (CTC, acoustique) les transcrit tels quels : **choisi par
+défaut** ; Whisper turbo reste proposé (« texte le plus précis »).
+Détail par type (FastConformer) : prises ratées 8/8, faux départs 8/12, « euh » 3/10 coupés (+ signalés), mots répétés 3/9,
+syllabes bégayées 3/13. Les deux derniers restent difficiles : le modèle les fusionne dans le mot suivant ; une comparaison
+spectrale (« syllabe redite ») ne coupe qu'au-delà de 97,5 % de ressemblance et signale « à écouter » entre 95 et 97,5 %
+(seuils réglés sur le corpus ET sur une voix propre : 3 signalements par minute au lieu de 13).
+
+**Choix de la meilleure prise** : le score ne pénalise que ce qui RESTE audible après nettoyage (un défaut coupé proprement
+coûte 3 points, un passage incertain 5) ; indices peu fiables (bruits de bouche) plafonnés ; quasi-égalité (< 10 points) → la
+dernière prise. Une prise reconnue « recommencée » n'est jamais retenue ; un choix manuel (★) prime sur tout.
+
+**Horodatage des mots** : le modèle CTC « devance » souvent le son (parfois tout un mot court annoncé dans le silence).
+Recalage de gauche à droite : mot annoncé dans le silence → prochain front d'énergie ; ordre garanti ; fins sur la chute
+d'énergie jusqu'au bruit de fond. Mesuré sur 62 attaques exactes (mots après un silence) : **79 % à moins d'une image
+(33 ms), médiane 0 ms, p90 150 ms** (31 % / 117 ms avant correction).
+
+**Vérification après coupe** (leçon n°6) : la voix nettoyée rendue (mêmes morceaux, mêmes fondus) est retranscrite ; échec
+si un doublon / bafouillage reste ou si plus de 2 mots attendus manquent. Voix de 66 s : analyse 33 s, vérification 6 s (PC).
+
+**Sous-titres** : groupes refusés s'ils ne tiennent pas à la taille de base (jamais de réduction), taille de base calculée
+sur les mots tels qu'affichés (ponctuation, impact ×1,4), lignes centrées sur l'encre visible. Tests d'image
+(`tests/montage-subs.spec.js`) : hauteur des majuscules constante (±1,5 px), bloc centré (±8 px avec le mouvement circulaire),
+déplacement ≤ 2 px par image, rendu déterministe, empreinte de référence sur cette machine.
+
+**AAC** : Chrome/Windows refuse 256 et 320 kb/s (plafond 192 kb/s, dans la fourchette du brief) : on prend le débit le plus
+élevé accepté par l'appareil. Autotest (PC) : 5 s encodées 1080×1920 H.264 + AAC en 5,3 s, écart audio/vidéo 13 ms.

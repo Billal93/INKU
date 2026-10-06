@@ -5,8 +5,17 @@ import { makeSnapper, renderPieces } from '../speech/edits.js';
 import { kvGet, kvSet } from './storage.js';
 import { voiceState, voicePieces, voiceClips, subtitleClips, replaceVoiceAndSubs, cleaningReport, levelMatch } from './voice-model.js';
 import { sourceRef } from './ops.js';
+import { makeMeasure } from '../render/text-raster.js';
+import { layoutGroup, baseFontSize } from '../subs/layout.js';
+import { tagWords } from '../subs/groups.js';
 
-export const DEFAULT_MODEL = 'whisper-turbo';   // choisi par mesure : docs/decisions.md D18
+// Choisi par mesure (docs/decisions.md D18-D19) : FastConformer retrouve 2× plus de défauts dans le SON que Whisper
+// (qui les efface du texte) et calcule 7× plus vite ; Whisper turbo reste proposé pour un texte plus précis.
+export const DEFAULT_MODEL = 'fastconformer-fr';
+export const MODELS = [
+  { id: 'fastconformer-fr', label: 'Rapide, nettoyage le plus fiable (recommandé)', sizeMB: 458 },
+  { id: 'whisper-turbo', label: 'Texte le plus précis, nettoyage moins complet, 7× plus lent', sizeMB: 540 },
+];
 
 /**
  * @param {{ store: any, lib: any, player: any }} o
@@ -77,7 +86,13 @@ export function createVoice({ store, lib, player }) {
       const buf = await player._audioFor(s.an.srcId);
       const snap = buf ? makeSnapper(buf.getChannelData(0), buf.sampleRate) : undefined;
       const pieces = voicePieces(s.st, { fps, snap });
-      const subs = subtitleClips(s.st, pieces, { fps, glossary: (store.doc.subtitles && store.doc.subtitles.glossary) || [], punctuation: (store.doc.subtitles && store.doc.subtitles.punctuation) || 'retirée' });
+      const glossary = (store.doc.subtitles && store.doc.subtitles.glossary) || [];
+      // Taille de base calculée sur tous les mots gardés, puis groupes refusés s'ils ne tiennent pas à cette taille.
+      const measure = makeMeasure(player.font.family, player.font.weight);
+      const keptWords = tagWords(s.st.words.filter((_, i) => !s.st.cut.has(i)).map((w) => ({ ...w })), glossary);
+      const base = baseFontSize(keptWords.filter((w) => w.kind === 'important').map((w) => w.w), keptWords.map((w) => w.w), measure, { impactWords: keptWords.filter((w) => w.kind === 'impact').map((w) => w.w) });
+      const fits = (ws) => !layoutGroup(ws, base, measure).overflow;
+      const subs = subtitleClips(s.st, pieces, { fps, glossary, punctuation: (store.doc.subtitles && store.doc.subtitles.punctuation) || 'retirée', fits });
       store.commit('Appliquer la voix nettoyée', (d) => {
         replaceVoiceAndSubs(d, s.an.srcId, voiceClips(pieces, s.an.srcId, levelMatch(pieces, s.an.envelope)), subs.clips);
         d.voice.applied = true;

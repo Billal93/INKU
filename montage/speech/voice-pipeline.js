@@ -153,7 +153,9 @@ export async function verifyCleanVoice(o) {
   const missing = al.ops.filter((x) => x.op === 'del').map((x) => exp[x.r]);
   const extra = al.ops.filter((x) => x.op === 'ins').map((x) => ({ w: got[x.h], t: words.find((w) => normalizeWords(w.w).includes(got[x.h]))?.t0 ?? null }));
   return {
-    ok: !remaining.length && al.dist / Math.max(1, exp.length) < 0.12,
+    // Réussite : aucun doublon / bafouillage restant et au plus 2 mots attendus non entendus (les variantes
+    // d'orthographe d'une transcription à l'autre — « Akland » / « Auckland » — ne comptent pas comme des défauts).
+    ok: !remaining.length && missing.length <= 2,
     agreement: +(100 * (1 - al.dist / Math.max(1, exp.length))).toFixed(1),
     remaining: remaining.map((x) => ({ type: x.type, t0: x.t0, t1: x.t1, reason: x.reason })),
     missing, extra: extra.slice(0, 20), words, ms: Math.round(performance.now() - t0),

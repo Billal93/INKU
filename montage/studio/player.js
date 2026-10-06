@@ -122,7 +122,7 @@ export class Player {
       if (!clips.length) { this.subs = null; return null; }
       const measure = makeMeasure(this.font.family, this.font.weight);
       const all = clips.flatMap((c) => c.sub.words);
-      const base = baseFontSize(all.filter((w) => w.kind === 'important').map((w) => w.w), all.map((w) => w.w), measure);
+      const base = baseFontSize(all.filter((w) => w.kind === 'important').map((w) => w.w), all.map((w) => w.w), measure, { impactWords: all.filter((w) => w.kind === 'impact').map((w) => w.w) });
       this.subs = new SubtitleLayer({ family: this.font.family, weight: this.font.weight, preset: (doc.subtitles && doc.subtitles.preset) || 'pop rapide' });
       this.subs.setGroups(clips.map((c, i) => ({ id: c.id + ':' + i, index: c.sub.index ?? i, start: c.start, end: c.start + c.dur, layout: layoutGroup(c.sub.words, base, measure) })));
       this.subsBase = base;

@@ -78,7 +78,8 @@ const WEAK = new Set(['le', 'la', 'les', 'l', 'de', 'des', 'du', 'd', 'un', 'une
  * Découpage en groupes (programmation dynamique) : 2-3 mots idéalement, coupures de préférence aux virgules et aux
  * pauses, jamais sur un mot outil en fin de groupe si on peut l'éviter, expression gardée entière si possible.
  * @param {SubWord[]} words mots (déjà marqués) d'UNE phrase
- * @param {{ maxWords?: number }} [opt]
+ * @param {{ maxWords?: number, fits?: (ws: SubWord[]) => boolean }} [opt] fits : le groupe tient-il à l'écran SANS
+ *   réduire la taille ? (sinon il est refusé et découpé autrement)
  * @returns {number[][]} groupes d'indices
  */
 export function groupWords(words, opt = {}) {
@@ -92,6 +93,7 @@ export function groupWords(words, opt = {}) {
       const g = words.slice(i, i + len);
       const exprInside = g[0].expr !== undefined && g.every((w) => w.expr === g[0].expr);
       if (len > maxW && !(len === 4 && exprInside)) continue;
+      if (opt.fits && len > 1 && !opt.fits(g)) continue;
       let c = 0;
       if (len === 1) c += n === 1 ? 0 : (g[0].kind !== 'normal' ? 1.5 : 4);
       if (len === maxW + 1) c += 0.5;

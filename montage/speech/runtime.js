@@ -31,6 +31,7 @@ export function ort() {
     m.env.wasm.wasmPaths = { mjs: ORT_GLUE };
     m.env.wasm.wasmBinary = await ortWasmBinary();
     m.env.wasm.numThreads = wasmThreads();
+    m.env.logLevel = 'error';   // pas d'avertissements techniques bénins dans la console
     return m;
   })();
   return ortMod;

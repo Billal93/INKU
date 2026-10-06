@@ -5,6 +5,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const fr = (n, d = 1) => Number(n).toFixed(d).replace('.', ',');
 
 import { importBrandFiles, exportBrandZip, loadBrandFont, loadManifest } from '../brand/brand.js';
+import { MODELS, DEFAULT_MODEL } from './voice.js';
 
 /** @param {{ el: HTMLElement, store: any, lib: any, voice: ReturnType<typeof import('./voice.js').createVoice>, toast: (m: string) => void, onFont: (f: any) => void }} o */
 export function createVoicePanel({ el, store, lib, voice, toast, onFont }) {
@@ -15,6 +16,8 @@ export function createVoicePanel({ el, store, lib, voice, toast, onFont }) {
     render();
   }
   let progress = null, error = null, showReport = false;
+  let model = DEFAULT_MODEL;
+  try { const m = localStorage.getItem('inku-montage-asr'); if (MODELS.some((x) => x.id === m)) model = m; } catch { }
 
   async function render() {
     const d = store.doc;
@@ -78,7 +81,8 @@ export function createVoicePanel({ el, store, lib, voice, toast, onFont }) {
 
   function pickHtml() {
     const audios = lib.list.filter((r) => r.status === 'ready' && (r.kind === 'audio' || r.hasAudio));
-    let html = `<div class="vsum"><b>Voix</b><div class="muted">Choisissez votre enregistrement brut : il est transcrit et nettoyé sur l'appareil (rien n'est envoyé). Le modèle de transcription (≈ 0,7 Go) est téléchargé une seule fois depuis Hugging Face puis vérifié.</div></div>`;
+    let html = `<div class="vsum"><b>Voix</b><div class="muted">Choisissez votre enregistrement brut : il est transcrit et nettoyé sur l'appareil (rien n'est envoyé). Le modèle de transcription est téléchargé une seule fois depuis Hugging Face puis vérifié.</div>
+      <div class="field" style="margin-top:8px"><label for="vModel">Modèle</label><select id="vModel">${MODELS.map((m) => `<option value="${m.id}" ${m.id === model ? 'selected' : ''}>${esc(m.label)} · ${m.sizeMB} Mo</option>`).join('')}</select></div></div>`;
     if (!audios.length) html += '<div class="empty" style="padding:12px">Importez d\'abord votre voix (onglet Sources).</div>';
     for (const r of audios) html += `<div class="vsrc"><span class="sp">${esc(r.name)} <span class="muted">${fr(r.duration || 0)} s</span></span><button class="bigbtn" data-analyze="${r.id}">Analyser comme voix</button></div>`;
     if (error) html += `<div class="lint err">${esc(error)}</div>`;
@@ -154,7 +158,7 @@ export function createVoicePanel({ el, store, lib, voice, toast, onFont }) {
     }
     const b = /** @type {HTMLElement} */ (t.closest('button'));
     if (!b) return;
-    if (b.dataset.analyze) return analyze(b.dataset.analyze);
+    if (b.dataset.analyze) return analyze(b.dataset.analyze, model);
     if (b.dataset.best) { const [g, m] = b.dataset.best.split(':').map(Number); voice.edit('Choisir une prise', (ed) => { ed.best ||= {}; ed.best[g] = m; }); return; }
     if (b.dataset.range) { const k = Number(b.dataset.range); const s = await voice.state(); const r = s.st.ranges.find((x) => x.k === k); voice.edit('Fragment', (ed) => { ed.ranges ||= {}; ed.ranges[k] = !r.cut; }); return; }
     if (b.dataset.play) { const [a, z] = b.dataset.play.split(':').map(Number); voice.listen(store.doc.voice.srcId, a - 0.1, z + 0.2); return; }
@@ -167,22 +171,23 @@ export function createVoicePanel({ el, store, lib, voice, toast, onFont }) {
       return;
     }
     if (b.dataset.do === 'report') { showReport = !showReport; render(); return; }
-    if (b.dataset.do === 'reanalyze') { analyze(store.doc.voice.srcId); return; }
+    if (b.dataset.do === 'reanalyze') { analyze(store.doc.voice.srcId, store.doc.voice.model); return; }
     if (b.dataset.do === 'brandImport') { brandImport(); return; }
     if (b.dataset.do === 'brandExport') { brandExport(); }
   });
 
   el.addEventListener('change', (e) => {
     const t = /** @type {HTMLTextAreaElement} */ (e.target);
+    if (t.id === 'vModel') { model = t.value; try { localStorage.setItem('inku-montage-asr', model); } catch { } return; }
     if (t.id !== 'vGloss') return;
     const list = t.value.split('\n').map((l) => l.trim()).filter(Boolean).map((l) => (l.startsWith('!') ? { text: l.slice(1).trim(), kind: 'impact' } : { text: l, kind: 'important' }));
     store.commit('Glossaire', (d) => { d.subtitles ||= {}; d.subtitles.glossary = list; if (d.voice) d.voice.applied = false; });
   });
 
-  async function analyze(srcId) {
+  async function analyze(srcId, m = DEFAULT_MODEL) {
     error = null; progress = { stage: 'Démarrage', done: 0, total: 1 }; render();
     try {
-      await voice.analyze(srcId, (p) => { progress = p; render(); });
+      await voice.analyze(srcId, (p) => { progress = p; render(); }, m);
       toast('Voix analysée : vérifiez les coupes proposées puis « Appliquer »');
     } catch (err) { error = 'Analyse impossible : ' + (err.message || err); toast(error); }
     progress = null; render();

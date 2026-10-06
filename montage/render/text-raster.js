@@ -18,7 +18,7 @@ export function makeMeasure(family, weight = 700) {
       ctx.font = `${weight} ${size}px "${family}"`;
       const m = ctx.measureText(text);
       const cap = ctx.measureText('H');
-      r = { width: m.width, capHeight: cap.actualBoundingBoxAscent };
+      r = { width: m.width, capHeight: cap.actualBoundingBoxAscent, left: m.actualBoundingBoxLeft, right: m.actualBoundingBoxRight };
       cache.set(k, r);
     }
     return r;
