@@ -205,3 +205,15 @@ svg.i { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2;
 .mixset input { width:64px; min-height:32px; background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:0 6px; }
 .mixtab { width:100%; border-collapse:collapse; font-size:.72rem; margin:8px 0; }
 .mixtab th, .mixtab td { text-align:left; padding:3px 4px; border-bottom:1px solid var(--line); }
+
+/* Rendu : panneau superposé sur toutes les tailles d'écran */
+#sheetRender { position:fixed; z-index:60; }
+@media (min-width: 900px) {
+  #sheetRender { position:fixed; left:auto; right:16px; top:64px; bottom:16px; width:440px; height:auto; border:1px solid var(--line); border-radius:16px; transform:translateX(120%); transition:transform .2s ease; box-shadow:0 10px 50px rgba(0,0,0,.5); }
+  #sheetRender.open { transform:none; }
+}
+.bar { height:8px; background:var(--panel2); border-radius:99px; overflow:hidden; margin:8px 0; }
+.bar i { display:block; height:100%; background:var(--brand); }
+.checks { list-style:none; padding:0; margin:8px 0; font-size:.72rem; }
+.checks li { padding:2px 0; } .checks li.ok { color:var(--ok, #33d17a); } .checks li.ko { color:var(--danger, #ff5a5a); }
+.vsum.bad { border-color:var(--danger, #ff5a5a); }

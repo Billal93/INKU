@@ -1,5 +1,5 @@
 {
- "version": "9a441b2546bd",
+ "version": "9f5b9e82bfd1",
  "files": [
   "audio/features.js",
   "audio/loudness.js",
@@ -20,11 +20,13 @@
   "lib/audio.js",
   "manifest.webmanifest",
   "render/compositor.js",
+  "render/export.js",
   "render/frames.js",
   "render/keying.js",
   "render/scene.js",
   "render/subtitle-layer.js",
   "render/text-raster.js",
+  "render/verify.js",
   "speech/asr-post.js",
   "speech/asr.js",
   "speech/clean.js",
@@ -64,6 +66,7 @@
   "studio/persist.js",
   "studio/player.js",
   "studio/props.js",
+  "studio/render-panel.js",
   "studio/storage.js",
   "studio/store.js",
   "studio/timeline.js",

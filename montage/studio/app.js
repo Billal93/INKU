@@ -10,6 +10,7 @@ import { createVoice } from './voice.js';
 import { createVoicePanel } from './voice-panel.js';
 import { createDressPanel } from './dress-panel.js';
 import { createEndPanel } from './end-panel.js';
+import { createRenderPanel } from './render-panel.js';
 import { BrandAssets } from './assets.js';
 import { boundLoops, contentEnd } from './overlays.js';
 import { splitAt, deleteClips, duplicateClips, addMarker, fillTimeline } from './ops.js';
@@ -98,6 +99,8 @@ async function boot() {
   window.__studio.voice = voice;
   createDressPanel({ el: $('dressBody'), store, lib, player, assets, toast });
   createEndPanel({ el: $('endBody'), store, lib, player, toast });
+  const renderPanel = createRenderPanel({ el: $('renderBody'), sheet: $('sheetRender'), store, lib, assets, player, toast });
+  window.__studio.renderPanel = renderPanel;
   // Logo et musique bouclés : toujours bornés à la durée exacte de la vidéo (donnée dérivée, hors historique).
   let mixTimer = undefined;
   store.subscribe((k) => {
@@ -130,10 +133,7 @@ async function boot() {
 
   $('btnUndo').onclick = () => { store.undo(); player.invalidate(); player.refresh(); };
   $('btnRedo').onclick = () => { store.redo(); player.invalidate(); player.refresh(); };
-  $('btnExport').onclick = () => {
-    downloadEdl(store.doc);
-    toast('EDL exporté (le rendu MP4 arrive en priorité 5)');
-  };
+  $('btnExport').onclick = () => renderPanel.open();
   document.querySelectorAll(/** @type {'button'} */ ('.seg button')).forEach((b) => b.addEventListener('click', () => {
     const pro = b.dataset.mode === 'pro';
     store.doc.settings.mode = pro ? 'pro' : 'simple';
