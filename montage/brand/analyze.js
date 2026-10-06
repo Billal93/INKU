@@ -12,7 +12,7 @@ export const ANALYSIS_VERSION = 1;
 const AW = 54, AH = 96;   // taille d'analyse (9:16)
 
 /** @param {Blob} blob @param {string} name */
-async function analyzeVideo(blob, name) {
+export async function analyzeVideo(blob, name) {
   const input = new Input({ source: new BlobSource(blob), formats: ALL_FORMATS });
   const track = await input.getPrimaryVideoTrack();
   const atrack = await input.getPrimaryAudioTrack();

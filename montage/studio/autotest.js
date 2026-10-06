@@ -12,6 +12,9 @@ import { SpeechClient } from '../speech/client.js';
 import { decodeWav } from '../audio/wav.js';
 import { wer } from '../speech/text.js';
 import { sha256Hex } from '../speech/sha256.js';
+import { synthOverlay, SYNTH } from '../autotest/synth.js';
+import { analyzeVideo } from '../brand/analyze.js';
+import { mixdown } from '../audio/mix.js';
 
 const $ = (id) => /** @type {any} */ (document.getElementById(id));
 const FPS = 30;
@@ -119,6 +122,32 @@ async function testAsr(s) {
   } finally { sc.terminate(); }
 }
 
+/** Overlay synthétique (vérité connue) : analyse de couverture et retrait de fond sur CET appareil. */
+async function testOverlay(s) {
+  const t0 = performance.now();
+  const f = await synthOverlay('transition');
+  const a = await analyzeVideo(f, f.name);
+  const exp = SYNTH.transition;
+  const ok = a.frames === 30 && a.keying.method === 'luma' && a.analysis.fullStart === exp.fullStart && a.analysis.fullEnd === exp.fullEnd && a.analysis.cutFrame === exp.cut;
+  const r = { ms: Math.round(performance.now() - t0), frames: a.frames, fps: a.fps, keying: a.keying.method, fullStart: a.analysis.fullStart, fullEnd: a.analysis.fullEnd, cutFrame: a.analysis.cutFrame, ok };
+  s.set(`Transition synthétique : couverture totale ${r.fullStart}–${r.fullEnd} (attendu ${exp.fullStart}–${exp.fullEnd}), coupe ${r.cutFrame}, fond ${r.keying}, ${r.ms} ms.`, ok ? 'ok' : 'err');
+  return r;
+}
+
+/** Mixage de 60 s (voix, musique bouclée, 20 SFX) : temps de calcul et plafonds respectés. */
+function testMix(s) {
+  const FS = 48000, D = 60;
+  const sig = (sec, a, f, gate) => { const x = new Float32Array(Math.round(sec * FS)); for (let i = 0; i < x.length; i++) x[i] = a * Math.sin(2 * Math.PI * f * i / FS) * (!gate || Math.sin(i / FS * 3) > -0.3 ? 1 : 0); return x; };
+  const items = [{ id: 'v', kind: 'voice', channels: [sig(D, 0.4, 180, true)], at: 0, dur: D }, { id: 'm', kind: 'music', channels: [sig(20, 0.3, 440)], at: 0, dur: D, loop: true }];
+  for (let k = 0; k < 20; k++) items.push({ id: 's' + k, kind: 'sfx', channels: [sig(0.1, 0.9, 2000)], at: k * 2.5 + 0.3, dur: 0.1 });
+  const t0 = performance.now();
+  const r = mixdown(/** @type {any} */ (items), D);
+  const out = { ms: Math.round(performance.now() - t0), truePeakDb: r.report.truePeakDb, sfxRelVoiceDb: r.report.peaksRelVoice.sfx, lufs: r.report.lufs };
+  const ok = out.truePeakDb <= -1 + 1e-3 && out.sfxRelVoiceDb <= -14 + 0.01;
+  s.set(`Mixage de 60 s : ${out.ms} ms, crête ${out.truePeakDb} dBTP, SFX ${out.sfxRelVoiceDb} dB sous la voix, ${out.lufs} LUFS.`, ok ? 'ok' : 'err');
+  return out;
+}
+
 async function memory() {
   try { if (performance.measureUserAgentSpecificMemory) { const m = await performance.measureUserAgentSpecificMemory(); return Math.round(m.bytes / 1048576); } } catch { }
   return performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : null;
@@ -144,14 +173,18 @@ async function run() {
       try { report.steps.encode = await testEncode(s3, render); } catch (e) { s3.set('Échec : ' + e.message, 'err'); report.steps.encode = { error: String(e.message || e) }; }
       render.comp.destroy(); render.canvas.remove();
     }
+    const s5 = step('Overlay (analyse et retrait de fond)');
+    try { report.steps.overlay = await testOverlay(s5); } catch (e) { s5.set('Échec : ' + e.message, 'err'); report.steps.overlay = { error: String(e.message || e) }; }
+    const s6 = step('Mixage audio (60 s)');
+    try { report.steps.mix = testMix(s6); } catch (e) { s6.set('Échec : ' + e.message, 'err'); report.steps.mix = { error: String(e.message || e) }; }
     if ($('withAsr').checked) {
       const s4 = step('Transcription (FastConformer, sur l\'appareil)');
       try { report.steps.asr = await testAsr(s4); } catch (e) { s4.set('Échec : ' + e.message, 'err'); report.steps.asr = { error: String(e.message || e) }; }
     }
   }
   report.steps.memoryMB = await memory();
-  const s5 = step('Rapport');
-  s5.set('Terminé. Copiez le rapport ci-dessous.', 'ok');
+  const sEnd = step('Rapport');
+  sEnd.set('Terminé. Copiez le rapport ci-dessous.', 'ok');
   $('report').value = JSON.stringify(report, null, 1);
   $('copy').disabled = false; $('run').disabled = false;
   /** @type {any} */ (window).__autotest = report;

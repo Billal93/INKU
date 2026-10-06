@@ -8,7 +8,7 @@ import { measureLoudness, truePeak } from './loudness.js';
 export const MIX_DEFAULTS = {
   rate: 48000,
   voiceGainDb: 4.6,
-  ceilingDbtp: -1,
+  ceilingDbtp: -1.5,        // −1 dBTP exigé ; 0,5 dB de marge car l'encodage AAC dépasse de quelques centièmes (mesuré −1,03 au lieu de −1,3)
   musicRelDb: -16,          // sonie de la musique par rapport à celle de la voix
   duckDb: -6,               // atténuation supplémentaire pendant la voix et le climax
   duckAttack: 0.12, duckRelease: 0.45,
