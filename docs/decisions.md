@@ -189,3 +189,49 @@ déplacement ≤ 2 px par image, rendu déterministe, empreinte de référence s
 
 **AAC** : Chrome/Windows refuse 256 et 320 kb/s (plafond 192 kb/s, dans la fourchette du brief) : on prend le débit le plus
 élevé accepté par l'appareil. Autotest (PC) : 5 s encodées 1080×1920 H.264 + AAC en 5,3 s, écart audio/vidéo 13 ms.
+
+## D20. Habillage et mixage (priorité 3, 2026-10-06, testé sur Chrome PC ; non testé sur iPhone)
+
+**Une seule scène pour l'aperçu et l'export** (`render/scene.js`) : `needs(doc, image)` dit quoi décoder, `draw(...)` compose
+de façon synchrone dans l'ordre des calques du brief (fond → transition → ouverture → logo → abonne-toi → copyright →
+sous-titres). Le lecteur et le futur rendu final appellent les mêmes fonctions.
+
+**Éléments de marque analysés une fois** (`brand/analyze.js`, mémorisé dans `brand.json` sur l'appareil) : nombre d'images
+exact (paquets), fps, retrait de fond deviné sur les bords (noir → luminosité décontaminée ; vert/bleu → chroma key
+YCbCr à seuils serrés + suppression du débordement ; alpha réel), couverture image par image à 54×96. Réglage manuel
+possible par élément (mémorisé). Mesuré sur des overlays synthétiques à vérité connue : couverture totale 10–16, image de
+coupe 13, première image visible 4 → **exacts** ; 7 éléments analysés en 4,5 à 7 s.
+
+**Synchronisation à l'image près** (`studio/overlays.js`, fonctions pures, 12 tests) : coupe des clips = image du MILIEU de
+la couverture totale ; début = coupe − position de la couverture ; pendant la couverture le calque est rendu OPAQUE
+(le dessous est réellement masqué : vérifié sur le GPU, 100 % des points de contrôle sont l'overlay à l'image de coupe).
+Jamais de changement de vitesse : 60 i/s → une image sur deux, autre fps → image la plus proche (jamais de mélange).
+Contrôles : clips visibles ≥ 1 s de part et d'autre, pas sur l'ouverture, transitions à moins de 8 s, plans avant/après
+voisins (< 10 s du même trailer) ou trop semblables (distance d'histogramme < 0,35 et luminosité < 12 %), coupe décalée
+(bouton « Recaler »). Emplacements proposés : début de chaque phrase, 2 images avant le mot.
+Ouverture : première image = couverture totale, sous-titres affichés seulement quand la couverture passe sous 60 %.
+Abonne-toi : première image VISIBLE calée sur le début du mot « abonne » (variantes abonne-toi / abonnez-vous), première
+occurrence ; absence signalée. Logo : borné à la durée exacte de la vidéo (boucle bornée, jamais infinie), PNG en haut à
+droite dans la marge TikTok. Copyright : 24 px, blanc 80 %, ombre discrète, bas à 14 px.
+
+**Sans halo** (mesuré sur le GPU) : disque blanc antialiasé sur fond noir composé sur un gris 128 → aucun pixel plus sombre
+que le fond (min 128) ; sur fond vert → 0 pixel à dominante verte. La réplique CPU du shader (`render/keying.js`) sert à
+l'analyse et aux tests unitaires.
+
+**Fond flou** (fin de vidéo) : flou gaussien séparable σ = 40 px (à 1080 de large) sur une image réduite au quart,
+assombri de 15 %, avant-plan net pleine largeur. Mesuré : détails fins effacés (écart-type 0,5), avant-plan net (119).
+
+**Mixage = fonction pure** (`audio/mix.js`, 6 tests) exécutée dans un worker ; l'écoute dans le Studio joue le même
+mixage que l'export. Voix +4,6 dB puis limiteur ; plafonds sous la crête de la voix (SFX −14, transition/ouverture −10,
+abonne-toi −14, son du climax −12 dB ; on baisse seulement) ; musique à −16 LU de la voix, ducking −6 dB (attaque 120 ms,
+anticipée ; relâchement 450 ms), « drops » détectés par tranches de 0,5 s par rapport au niveau MÉDIAN de la musique et
+atténués par rampe ; fondu de sortie 1,5 s ; limiteur final à anticipation vérifié en true peak ×4 (−1 dBTP).
+Mesuré (e2e) : SFX −14,0, transitions −10,0, abonne-toi −14,0 dB, true peak −1,16 dBTP, drop signalé.
+Performance : un filtre de sonie mal conditionné faisait 26 s de calcul (nombres dénormaux dans les silences) → état
+remis à zéro sous 1e-150 et sonie calculée par tranches de 100 ms sans stocker le signal filtré : ~70 ms par voie et par
+minute (PC). Mixage de 10 s de projet avec décodage des sons : 2,6 s la première fois, puis seulement le calcul.
+
+**Sources** : images fixes (miniature) acceptées ; VFR et HDR détectés à l'import (signalés : le rendu échantillonne au temps
+exact de chaque image, une seule conversion ; HDR converti en SDR par le navigateur). **Pas de détection de visages** :
+aucune API gratuite commune Safari/Chrome/Firefox (FaceDetector n'existe que derrière un drapeau de Chrome) → point
+d'intérêt par contraste local (`studio/framing.js`) pour le cadrage par défaut.
