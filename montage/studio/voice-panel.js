@@ -29,7 +29,8 @@ export function createVoicePanel({ el, store, lib, voice, toast, onFont }) {
     let html = `<div class="vsum"><b>${fr(an.duration)} s</b> brut → <b>${fr(st.keptSec)} s</b> nettoyé <span class="muted">(−${fr(Math.max(0, removed))} s)</span>
       <div class="muted">${an.words.length} mots · ${an.takes.filter((g) => g.members.length > 1).length} phrase(s) à prises multiples · ${an.issues.filter((x) => x.action === 'cut').length} défaut(s) coupé(s) · ${an.issues.filter((x) => x.action === 'listen').length} à écouter</div>
       <div class="vbtns"><button class="bigbtn" data-do="apply">${v.applied ? 'Réappliquer' : 'Appliquer à la timeline'}</button><button class="bigbtn sec" data-do="report">${showReport ? 'Transcription' : 'Rapport'}</button></div>
-      ${v.applied ? '<div class="muted ok">✓ Voix nettoyée et sous-titres posés sur la timeline.</div>' : '<div class="muted warn">Modifications pas encore appliquées à la timeline.</div>'}</div>`;
+      ${v.applied ? '<div class="muted ok">✓ Voix nettoyée et sous-titres posés sur la timeline.</div>' : '<div class="muted warn">Modifications pas encore appliquées à la timeline.</div>'}
+      ${v.applied ? verifyHtml() : ''}</div>`;
     if (showReport) {
       html += `<pre class="report">${esc(await voice.report())}</pre>`;
     } else {
@@ -61,6 +62,18 @@ export function createVoicePanel({ el, store, lib, voice, toast, onFont }) {
     html += glossaryHtml();
     html += `<p class="hint">Modèle : ${esc(an.model)} · analyse en ${fr((an.wallMs || 0) / 1000)} s (${fr(((an.wallMs || 0) / 1000) / Math.max(1, an.duration / 60))} s par minute d'audio). <button class="linkbtn" data-do="reanalyze">Réanalyser</button></p>`;
     el.innerHTML = html;
+  }
+
+  function verifyHtml() {
+    const r = voice.verification;
+    if (!r) return '<div class="muted">Vérification de la voix nettoyée en attente.</div>';
+    if (r.running) return '<div class="muted">Vérification : retranscription de la voix nettoyée…</div>';
+    if (r.error) return `<div class="muted warn">Vérification impossible : ${esc(r.error)}</div>`;
+    const fmt = (t) => fr(t, 2) + ' s';
+    let h = `<div class="muted ${r.ok ? 'ok' : 'warn'}">${r.ok ? '✓' : '⚠'} Vérification : texte retrouvé à ${fr(r.agreement)} %, ${r.remaining.length} doublon(s) ou bafouillage(s) restant(s).</div>`;
+    for (const x of r.remaining) h += `<div class="muted warn">• ${esc(x.type)} à ${fmt(x.t0)} (timeline) : ${esc(x.reason)}</div>`;
+    if (r.missing.length) h += `<div class="muted">Mots attendus non entendus : ${esc(r.missing.slice(0, 12).join(', '))}${r.missing.length > 12 ? '…' : ''}</div>`;
+    return h;
   }
 
   function pickHtml() {
@@ -146,7 +159,11 @@ export function createVoicePanel({ el, store, lib, voice, toast, onFont }) {
     if (b.dataset.range) { const k = Number(b.dataset.range); const s = await voice.state(); const r = s.st.ranges.find((x) => x.k === k); voice.edit('Fragment', (ed) => { ed.ranges ||= {}; ed.ranges[k] = !r.cut; }); return; }
     if (b.dataset.play) { const [a, z] = b.dataset.play.split(':').map(Number); voice.listen(store.doc.voice.srcId, a - 0.1, z + 0.2); return; }
     if (b.dataset.do === 'apply') {
-      try { const r = await voice.apply(); toast(`Voix posée : ${r.pieces} morceaux, ${fr(r.seconds)} s ; ${r.subs} sous-titres`); } catch (err) { toast(String(err.message || err)); }
+      try {
+        const r = await voice.apply();
+        toast(`Voix posée : ${r.pieces} morceaux, ${fr(r.seconds)} s ; ${r.subs} sous-titres`);
+        voice.verify(() => render());    // vérification automatique en arrière-plan
+      } catch (err) { toast(String(err.message || err)); }
       return;
     }
     if (b.dataset.do === 'report') { showReport = !showReport; render(); return; }

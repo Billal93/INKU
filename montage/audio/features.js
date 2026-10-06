@@ -2,6 +2,8 @@
 // flux spectral (attaques), hauteur (YIN) et voisement. Fonctions pures, testées dans tests/unit/features.test.mjs.
 // Ils complètent le texte : un modèle de transcription « gomme » souvent les bégaiements, l'audio ne ment pas.
 
+import { melFilterbank, powerSpectrum } from '../speech/nemo.js';
+
 export const HOP = 0.01;   // 10 ms
 
 /**
@@ -137,4 +139,32 @@ export function nearestZeroCrossing(x, fs, t, maxMs = 5) {
     }
   }
   return c;
+}
+
+/**
+ * Spectre mel logarithmique par trame de 10 ms (fenêtre 25 ms), nMels bandes : signature des sons pour comparer
+ * deux syllabes (bégaiement « p- pour », mot répété « le le »).
+ * @param {Float32Array} x mono 16 kHz @param {number} [nMels]
+ * @returns {{ data: Float32Array, frames: number, nMels: number }} data[t * nMels + m]
+ */
+export function logMelFrames(x, nMels = 24) {
+  const N = 512, WIN = 400, HOPN = 160;
+  const fb = melFilterbank(nMels, 16000, N, 60, 7600);
+  const frames = Math.max(0, Math.floor((x.length - WIN) / HOPN) + 1);
+  const win = new Float64Array(N);
+  for (let i = 0; i < WIN; i++) win[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (WIN - 1));
+  const re = new Float64Array(N), im = new Float64Array(N), pw = new Float64Array(N / 2 + 1);
+  const data = new Float32Array(frames * nMels);
+  for (let t = 0; t < frames; t++) {
+    const o = t * HOPN;
+    for (let k = 0; k < N; k++) { re[k] = k < WIN ? x[o + k] * win[k] : 0; im[k] = 0; }
+    powerSpectrum(re, im, pw);
+    for (let m = 0; m < nMels; m++) {
+      const f = fb[m];
+      let s = 0;
+      for (let k = 0; k < pw.length; k++) if (f[k]) s += f[k] * pw[k];
+      data[t * nMels + m] = Math.log(s + 1e-10);
+    }
+  }
+  return { data, frames, nMels };
 }

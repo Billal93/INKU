@@ -125,25 +125,64 @@ export function needsRetry(text, speechSec) {
  * @returns {Word[]}
  */
 export function refineWordTimes(words, db, opt = {}) {
+  return refineEnds(refineOnsets(words, db, opt), db, opt);
+}
+
+/**
+ * Débuts de mots sur l'attaque d'énergie, de gauche à droite.
+ * - Un mot annoncé dans le SILENCE (cas fréquent d'un modèle CTC, qui « devance » souvent le son, parfois de tout
+ *   un mot court) est déplacé à la prochaine attaque (front montant), jusqu'à 350 ms plus loin.
+ * - Un mot annoncé dans la parole n'est ajusté que s'il existe un front montant proche (−120 / +80 ms).
+ * - L'ordre est garanti : un mot commence au plus tôt après la durée minimale du précédent (selon ses lettres).
+ * @param {Word[]} words @param {Float32Array} db @param {{ before?: number, after?: number, rise?: number }} [opt]
+ */
+export function refineOnsets(words, db, opt = {}) {
+  const before = opt.before ?? 0.12, after = opt.after ?? 0.08, rise = opt.rise ?? 10;
+  const at = (t) => Math.max(0, Math.min(db.length - 1, Math.round(t / HOP - 1)));
+  const tt = (i) => (i + 1) * HOP;
+  const out = words.map((w) => ({ ...w }));
+  const minDur = (w) => 0.05 + 0.025 * Math.min(12, w.w.replace(/[^\p{L}\p{N}]/gu, '').length);
+  for (let k = 0; k < out.length; k++) {
+    const w = out[k], prev = k ? out[k - 1] : null;
+    const lo = Math.max(0, w.t0 - before, prev ? prev.t0 + minDur(prev) : 0);
+    // Bruit de fond local : minimum sur les 300 ms avant le début annoncé.
+    let floor = Infinity;
+    for (let i = at(w.t0 - 0.3); i <= at(w.t0); i++) floor = Math.min(floor, db[i]);
+    const silentAt = (t) => { const i = at(t); return Math.max(db[i], db[Math.min(db.length - 1, i + 1)], db[Math.min(db.length - 1, i + 2)]) < floor + rise; };
+    const edge = (from, to) => {
+      for (let i = Math.max(at(from), 1); i <= at(to); i++) {
+        if (db[i] <= floor + rise + 2) continue;
+        let low = Infinity; for (let j = Math.max(0, i - 3); j < i; j++) low = Math.min(low, db[j]);
+        if (low < floor + rise + 2) return tt(i) - HOP / 2;
+      }
+      return -1;
+    };
+    let t0 = w.t0;
+    if (silentAt(w.t0)) { const e = edge(w.t0, w.t0 + 0.35); if (e >= 0) t0 = e; }
+    else { const e = edge(Math.max(lo, w.t0 - before), w.t0 + after); if (e >= 0) t0 = e; }
+    t0 = Math.max(t0, lo);
+    if (t0 !== w.t0) {
+      // Décalage d'un mot CTC : sa fin (dernier pic) suit d'autant.
+      if (w.ctc) w.t1 = Math.max(w.t1 + (t0 - w.t0), t0 + 0.04);
+      w.t0 = t0;
+      if (w.t1 < w.t0 + 0.04) w.t1 = w.t0 + 0.04;
+    }
+  }
+  // Fins jamais au-delà du début du mot suivant.
+  for (let k = 0; k + 1 < out.length; k++) if (out[k].t1 > out[k + 1].t0 - 0.01) out[k].t1 = Math.max(out[k].t0 + 0.03, out[k + 1].t0 - 0.01);
+  return out;
+}
+
+/** Fins de mots : dernière trame au-dessus du plancher suivant + rise, sans dépasser le mot suivant. */
+export function refineEnds(words, db, opt = {}) {
   const before = opt.before ?? 0.12, after = opt.after ?? 0.08, rise = opt.rise ?? 10;
   const at = (t) => Math.max(0, Math.min(db.length - 1, Math.round(t / HOP - 1)));
   const tt = (i) => (i + 1) * HOP;
   const out = words.map((w) => ({ ...w }));
   for (let k = 0; k < out.length; k++) {
     const w = out[k];
-    const lo = k ? Math.max(out[k - 1].t1, w.t0 - before) : w.t0 - before;
-    const hi = Math.min(w.t1 - 0.02, w.t0 + after);
-    // Plancher local = minimum d'énergie avant l'attaque présumée ; attaque = première trame qui dépasse plancher + rise.
-    let a = at(lo), b = at(hi);
-    if (b <= a) continue;
-    let floor = Infinity;
-    for (let i = a; i <= at(w.t0); i++) floor = Math.min(floor, db[i]);
-    let onset = -1;
-    for (let i = a; i <= b; i++) if (db[i] > floor + rise) { onset = i; break; }
-    if (onset >= 0 && floor < db[onset] - rise) w.t0 = Math.min(Math.max(lo, tt(onset) - HOP / 2), w.t1 - 0.03);
-    // Fin : dernière trame au-dessus du plancher suivant + rise, sans dépasser le mot suivant.
     const nextT0 = k + 1 < out.length ? out[k + 1].t0 : w.t1 + 0.2;
-    a = at(Math.max(w.t0 + 0.03, w.t1 - after)); b = at(Math.min(nextT0, w.t1 + before));
+    const a = at(Math.max(w.t0 + 0.03, w.t1 - after)), b = at(Math.min(nextT0, w.t1 + before));
     if (b <= a) continue;
     let floorEnd = Infinity;
     for (let i = at(w.t1); i <= b; i++) floorEnd = Math.min(floorEnd, db[i]);
@@ -156,7 +195,7 @@ export function refineWordTimes(words, db, opt = {}) {
 
 /**
  * Fin réelle des mots d'un modèle CTC : le modèle ne donne que le « pic » de chaque jeton (début de mot fiable,
- * fin inconnue). La fin est la PREMIÈRE chute d'énergie franche (−15 dB sous le maximum du mot, sur 30 ms) après le
+ * fin inconnue). La fin est la PREMIÈRE chute d'énergie jusqu'au bruit de fond (+8 dB, sur 30 ms) après le
  * dernier pic ; sans chute avant le mot suivant (parole liée), le mot va jusqu'au suivant. Ainsi un « euh », une
  * syllabe bégayée ou un faux départ non transcrits restent HORS des mots, donc détectables.
  * @param {(Word & { spikeEnd?: number })[]} words t1 = fin du dernier pic @param {Float32Array} db énergie (10 ms)
@@ -168,9 +207,13 @@ export function ctcWordEnds(words, db) {
     let peak = -Infinity;
     for (let i = at(w.t0); i <= at(w.t1); i++) peak = Math.max(peak, db[i]);
     const lim = at(Math.max(w.t1, next - 0.02));
+    // Seuil relatif au BRUIT DE FOND local (et non au pic) : les consonnes finales faibles (« s », « f ») restent dans le mot.
+    let floor = Infinity;
+    for (let i = at(w.t1); i <= Math.min(db.length - 1, lim + 30); i++) floor = Math.min(floor, db[i]);
+    const thr = Math.max(peak - 30, floor + 8);
     let end = -1;
     for (let i = at(w.t1); i + 2 <= lim; i++) {
-      if (db[i] < peak - 15 && db[i + 1] < peak - 15 && db[i + 2] < peak - 15) { end = i; break; }
+      if (db[i] < thr && db[i + 1] < thr && db[i + 2] < thr) { end = i; break; }
     }
     const t1 = end >= 0 ? (end + 1) * HOP : Math.max(w.t1, next - 0.02);
     return { ...w, t1: Math.max(w.t0 + 0.04, Math.min(t1, next - 0.01)) };

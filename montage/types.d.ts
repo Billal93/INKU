@@ -7,4 +7,4 @@ interface Window {
   /** Points d'accroche pour les tests automatiques et l'écran d'autotest. */
   __studio?: any; __studioReady?: boolean; __studioError?: string; __lintCount?: number;
 }
-interface Performance { memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number } }
+interface Performance { memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number }; measureUserAgentSpecificMemory?: () => Promise<{ bytes: number }> }

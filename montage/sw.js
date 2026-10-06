@@ -5,7 +5,7 @@
 //    pas par ici : ils sont vérifiés et stockés dans l'OPFS par speech/models.js.
 // VERSION est réécrit par tools/montage-precache.mjs à chaque changement de fichier : nouvelle version = nouveau cache.
 /** @type {string} */
-const VERSION = '0403a59079bc';
+const VERSION = '18b061887055';
 const CACHE = 'inku-montage-' + VERSION;
 // En développement local, pas de cache (sinon les fichiers modifiés seraient servis périmés), sauf test hors ligne.
 const USE_CACHE = VERSION !== 'dev' && (location.hostname !== 'localhost' || new URL(location.href).searchParams.has('cache'));

@@ -12,7 +12,7 @@ const byType = {};
 for (const r of R.raw) {
   const T = JSON.parse(readFileSync(join(BENCH, 'corpus/v1', r.name + '.json'), 'utf8'));
   const cut = new Set(r.proposal.cutWords);
-  const kept = r.proposal.kept.map((k) => [k.t0, k.t1]);
+  const kept = (r.pieces || r.proposal.kept).map((k) => [k.t0, k.t1]);
   for (const d of T.defects) {
     const removed = (d.t1 - d.t0) - kept.reduce((s, k) => s + overlap([d.t0, d.t1], k), 0);
     const ok = removed >= 0.5 * (d.t1 - d.t0);
@@ -30,7 +30,7 @@ for (const r of R.raw) {
 const lostBy = {};
 for (const r of R.raw) {
   const T = JSON.parse(readFileSync(join(BENCH, 'corpus/v1', r.name + '.json'), 'utf8'));
-  const kept = r.proposal.kept.map((k) => [k.t0, k.t1]);
+  const kept = (r.pieces || r.proposal.kept).map((k) => [k.t0, k.t1]);
   for (const w of T.words) {
     if (kept.reduce((s, k) => s + overlap([w.t0, w.t1], k), 0) >= 0.5 * (w.t1 - w.t0)) continue;
     const iss = r.issues.find((x) => x.action === 'cut' && x.t0 <= w.t1 && x.t1 >= w.t0);

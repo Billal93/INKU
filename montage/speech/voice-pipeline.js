@@ -3,11 +3,12 @@
 // hallucinations → recalage acoustique → glossaire → descripteurs → défauts, prises, proposition de coupes.
 // Rien n'est appliqué ici : le Studio montre la proposition, l'utilisateur valide.
 import { resample } from '../audio/resample.js';
-import { energy, pitchYin, detectClicks } from '../audio/features.js';
+import { energy, pitchYin, detectClicks, logMelFrames } from '../audio/features.js';
 import { measureLoudness, truePeak } from '../audio/loudness.js';
 import { sileroProbs, speechSegments, planChunks, VAD_RATE, VAD_FRAME } from './vad.js';
-import { mergeChunks, filterHallucinations, needsRetry, refineWordTimes, applyGlossary, uncoveredSpeech, ctcWordEnds } from './asr-post.js';
-import { splitSentences, wordIssues, acousticIssues, groupTakes, takeScore, keptSegments, pitchRangeSemitones, abandonedSentences, DEFAULTS } from './clean.js';
+import { normalizeWords, alignWords } from './text.js';
+import { mergeChunks, filterHallucinations, needsRetry, refineWordTimes, refineOnsets, refineEnds, applyGlossary, uncoveredSpeech, ctcWordEnds } from './asr-post.js';
+import { splitSentences, wordIssues, acousticIssues, groupTakes, takeScore, keptSegments, pitchRangeSemitones, abandonedSentences, stutterDoublets, DEFAULTS } from './clean.js';
 
 /**
  * @param {{ pcm: Float32Array, sampleRate: number, transcriber: import('./asr.js').Transcriber,
@@ -81,16 +82,19 @@ export async function analyzeVoice(o) {
     const sorted = Array.from(e.db).filter((x) => x > -60).sort((x, y) => x - y);
     const speechDb = sorted.length ? sorted[Math.floor(sorted.length * 0.7)] : -30;
     const clicks = detectClicks(a16, 16000).filter((t) => (e.db[Math.max(0, Math.round(t / 0.01) - 1)] ?? 0) < speechDb - 15);
-    return { db: e.db, zcr: e.zcr, f0: p.f0, clarity: p.clarity, clicks };
+    return { db: e.db, zcr: e.zcr, f0: p.f0, clarity: p.clarity, clicks, mel: logMelFrames(a16) };
   });
-  // Modèle CTC : fins de mots calculées sur l'énergie ; puis recalage fin de toutes les bornes.
-  const ends = kept.length && kept[0].ctc ? ctcWordEnds(kept, feats.db) : kept;
-  const refined = refineWordTimes(ends, feats.db);
-  const words = applyGlossary(refined, o.glossary || []);
+
+  // Modèle CTC : débuts recalés d'abord (le modèle annonce souvent les mots en avance), puis fins sur l'énergie.
+  const refined = kept.length && kept[0].ctc ? refineEnds(ctcWordEnds(refineOnsets(kept, feats.db), feats.db), feats.db) : refineWordTimes(kept, feats.db);
+  // Syllabes / mots redits fusionnés par le modèle dans le mot suivant (comparaison spectrale).
+  const doublets = stutterDoublets(applyGlossary(refined, o.glossary || []), { db: feats.db, mel: feats.mel });
+  const words = doublets.words;
 
   const sentences = splitSentences(words, settings);
   const issues = [
     ...wordIssues(words, settings),
+    ...doublets.issues,
     ...acousticIssues(words, { db: feats.db, f0: feats.f0, clarity: feats.clarity, probs, probRate: VAD_RATE / VAD_FRAME }),
   ].sort((a, b) => a.t0 - b.t0);
   const ac = {
@@ -103,7 +107,7 @@ export async function analyzeVoice(o) {
   timing.total = Math.round(performance.now() - t00);
   return {
     duration, level, speech, chunks: chunks.map((c) => ({ start: c.start, end: c.end })), retries, recovered,
-    words, removedWords: removed.map((r) => ({ ...r.w, reason: r.reason })),
+    words, rawWords: kept.map((w) => ({ w: w.w, t0: w.t0, t1: w.t1, ctc: w.ctc })), removedWords: removed.map((r) => ({ ...r.w, reason: r.reason })),
     sentences, issues, takes, proposal, timing,
     clicks: feats.clicks,
     // Enveloppe d'énergie (10 ms) pour l'affichage de la forme d'onde et les coupes.
@@ -121,5 +125,37 @@ export function proposeCuts(words, sentences, issues, takes, settings = DEFAULTS
   for (const x of issues) if (x.action === 'cut') x.words.forEach((i) => cut.add(i));
   for (const g of takes) for (const m of g.members) if (m !== g.best) { const s = sentences[m]; for (let i = s.a; i <= s.b; i++) cut.add(i); }
   const cutRanges = issues.filter((x) => x.action === 'cut' && !x.words.length).map((x) => ({ t0: x.t0, t1: x.t1, reason: x.reason }));
-  return { cutWords: [...cut].sort((a, b) => a - b), cutRanges, kept: keptSegments(words, cut, sentences, settings, cutRanges) };
+  const keepRanges = issues.filter((x) => x.action === 'listen' && !x.words.length).map((x) => ({ t0: x.t0, t1: x.t1 }));
+  return { cutWords: [...cut].sort((a, b) => a - b), cutRanges, kept: keptSegments(words, cut, sentences, settings, cutRanges, keepRanges) };
+}
+
+/**
+ * Vérification après nettoyage (leçon n°6 du brief) : la voix nettoyée RENDUE est retranscrite et comparée au texte
+ * attendu. Signale les doublons, bafouillages et « euh » restants, et les mots manquants ou en trop.
+ * @param {{ pcm: Float32Array, sampleRate: number, expected: string, transcriber: import('./asr.js').Transcriber,
+ *   vad: { ort: any, session: any } }} o
+ */
+export async function verifyCleanVoice(o) {
+  const t0 = performance.now();
+  const a16 = resample(o.pcm, o.sampleRate, 16000);
+  const probs = await sileroProbs(o.vad.ort, o.vad.session, a16);
+  const speech = speechSegments(probs);
+  const results = [];
+  for (const c of planChunks(speech)) {
+    const r = await o.transcriber.transcribe(a16.subarray(Math.floor(c.start * 16000), Math.min(a16.length, Math.ceil(c.end * 16000))), { words: true });
+    results.push({ start: c.start, words: r.words || [] });
+  }
+  let words = mergeChunks(results);
+  if (words.length && words[0].ctc) words = ctcWordEnds(words, energy(a16, 16000).db);
+  const remaining = wordIssues(words).filter((x) => x.action === 'cut' && x.type !== 'test micro');
+  const exp = normalizeWords(o.expected), got = normalizeWords(words.map((w) => w.w).join(' '));
+  const al = alignWords(exp, got);
+  const missing = al.ops.filter((x) => x.op === 'del').map((x) => exp[x.r]);
+  const extra = al.ops.filter((x) => x.op === 'ins').map((x) => ({ w: got[x.h], t: words.find((w) => normalizeWords(w.w).includes(got[x.h]))?.t0 ?? null }));
+  return {
+    ok: !remaining.length && al.dist / Math.max(1, exp.length) < 0.12,
+    agreement: +(100 * (1 - al.dist / Math.max(1, exp.length))).toFixed(1),
+    remaining: remaining.map((x) => ({ type: x.type, t0: x.t0, t1: x.t1, reason: x.reason })),
+    missing, extra: extra.slice(0, 20), words, ms: Math.round(performance.now() - t0),
+  };
 }

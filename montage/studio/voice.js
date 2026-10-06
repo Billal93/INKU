@@ -1,7 +1,7 @@
 // Contrôleur de la voix : lance l'analyse dans le worker « parole », garde le résultat en cache local (IndexedDB,
 // hors historique d'annulation), applique les décisions de l'utilisateur à la timeline (A1 + sous-titres T1).
 import { SpeechClient } from '../speech/client.js';
-import { makeSnapper } from '../speech/edits.js';
+import { makeSnapper, renderPieces } from '../speech/edits.js';
 import { kvGet, kvSet } from './storage.js';
 import { voiceState, voicePieces, voiceClips, subtitleClips, replaceVoiceAndSubs, cleaningReport, levelMatch } from './voice-model.js';
 import { sourceRef } from './ops.js';
@@ -84,7 +84,37 @@ export function createVoice({ store, lib, player }) {
         d.voice.pieces = pieces.length;
       });
       player.invalidate(); player.refresh();
+      this.verification = null;
       return { pieces: pieces.length, subs: subs.clips.length, broken: subs.broken.length, seconds: pieces.reduce((a, p) => a + p.frames, 0) / fps };
+    },
+
+    /** Dernière vérification (retranscription de la voix nettoyée) : null, { running } ou le résultat. */
+    verification: null,
+
+    /**
+     * Rend la voix nettoyée exactement comme sur la timeline (mêmes morceaux, mêmes fondus), la retranscrit et
+     * vérifie qu'il ne reste ni doublon ni bafouillage (le brief, leçon n°6). @param {(p: any) => void} [onProgress]
+     */
+    async verify(onProgress) {
+      const s = await this.state();
+      if (!s) return null;
+      const buf = await player._audioFor(s.an.srcId);
+      if (!buf) return null;
+      const fps = store.doc.project.fps;
+      const pieces = voicePieces(s.st, { fps, snap: makeSnapper(buf.getChannelData(0), buf.sampleRate) });
+      const mono = new Float32Array(buf.length);
+      for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); for (let i = 0; i < mono.length; i++) mono[i] += d[i] / buf.numberOfChannels; }
+      const [pcm] = renderPieces(pieces, [mono], buf.sampleRate, fps);
+      const expected = s.st.words.filter((_, i) => !s.st.cut.has(i)).map((w) => w.w).join(' ');
+      client ||= new SpeechClient();
+      this.verification = { running: true };
+      onProgress && onProgress(this.verification);
+      try {
+        const r = await client.call('verify', { pcm, sampleRate: buf.sampleRate, model: store.doc.voice.model, device: 'auto', expected }, onProgress, [pcm.buffer]);
+        this.verification = { ...r, words: undefined, at: new Date().toISOString(), docVersion: store.version };
+      } catch (e) { this.verification = { error: String(e.message || e) }; }
+      onProgress && onProgress(this.verification);
+      return this.verification;
     },
 
     async report() { const s = await this.state(); return s ? cleaningReport(s.an, s.st) : ''; },

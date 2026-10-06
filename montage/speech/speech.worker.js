@@ -4,7 +4,7 @@
 import { getModel, modelStatus, ensureModel, removeModel, verifiedCache, fileUrl } from './model-store.js';
 import { Transcriber } from './asr.js';
 import { ort } from './runtime.js';
-import { analyzeVoice } from './voice-pipeline.js';
+import { analyzeVoice, verifyCleanVoice } from './voice-pipeline.js';
 
 /** @type {Transcriber | null} */
 let current = null;
@@ -57,6 +57,13 @@ const ops = {
       onProgress: (p) => ctx.postMessage({ id, progress: p }),
     });
     return { ...r, model, device: device || 'auto', loadMs: Math.round(loadInfo.ms), wallMs: Math.round(performance.now() - t0) };
+  },
+  async verify({ pcm, sampleRate, model, device, expected }, id) {
+    ctx.postMessage({ id, progress: { stage: 'Vérification de la voix nettoyée', done: 0, total: 1 } });
+    await ops.ensure({ model }, id);
+    const v = await loadVad();
+    await load(model, device || 'auto');
+    return verifyCleanVoice({ pcm, sampleRate, expected, transcriber: current, vad: v });
   },
   async unload() { if (current) await current.dispose(); current = null; return true; },
   async remove({ model }) { if (current && current.spec.id === model) { await current.dispose(); current = null; } await removeModel(await getModel(model)); return true; },

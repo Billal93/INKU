@@ -9,7 +9,7 @@ import { normalizeWords, alignWords } from './text.js';
 import { sameWord } from '../subs/groups.js';
 
 /** @typedef {{ w: string, t0: number, t1: number, conf?: number }} Word */
-/** @typedef {{ type: string, t0: number, t1: number, words: number[], action: 'cut'|'listen', reason: string }} Issue */
+/** @typedef {{ type: string, t0: number, t1: number, words: number[], action: 'cut'|'listen', reason: string, uncertain?: boolean }} Issue */
 
 const TIE = 10;   // écart de score sous lequel deux prises sont jugées équivalentes (points sur 100)
 
@@ -77,9 +77,13 @@ export function restarts(words) {
         break;
       }
       if (!n) continue;
-      const reachesRestart = i + n === j;           // la 1re occurrence s'arrête juste avant la reprise
-      const strong = n >= 3 || (n >= 2 && (pause >= 0.25 || prefixEnd)) || (prefixEnd && k[j].length >= 5);
-      if (!strong || (!reachesRestart && pause < 0.25)) continue;
+      // Mots entre la fin de la 1re occurrence et la reprise : plus il y en a, plus la correspondance doit être longue
+      // (« a pris » redit 30 mots plus loin n'est pas une reprise ; une prise entière recommencée l'est).
+      const between = j - (i + n);
+      const strong = between === 0
+        ? n >= 3 || (n >= 2 && (pause >= 0.25 || prefixEnd)) || (prefixEnd && k[j].length >= 5)
+        : between <= 3 ? n >= 3 && pause >= 0.25 : n >= 5 && pause >= 0.25 && words[j].t0 - words[i].t0 <= 20;
+      if (!strong) continue;
       // Bloc répété banal (« de la », « il y a ») sans pause : ignoré.
       if (n <= 2 && pause < 0.25 && !prefixEnd) continue;
       if (!best || n > best.n || (n === best.n && i < best.i)) best = { i, n, prefixEnd };
@@ -180,7 +184,8 @@ export function acousticIssues(words, ac) {
   if (words.length) gaps.push([Math.max(0, words[0].t0 - 2), words[0].t0, 0]);
   for (let i = 0; i + 1 < words.length; i++) gaps.push([words[i].t1, words[i + 1].t0, i + 1]);
   for (const [g0, g1, nextIdx] of gaps) {
-    const a = g0 + 0.03, b = g1 - 0.03;
+    // 60 ms de marge de chaque côté : les bornes des mots sont approximatives, un fragment ne doit jamais mordre sur un mot.
+    const a = g0 + 0.06, b = g1 - 0.06;
     if (b - a < 0.08) continue;
     // Régions continues de « parole » dans le trou : VAD ≥ 0,5 et énergie proche de celle de la voix.
     let start = -1;
@@ -191,8 +196,12 @@ export function acousticIssues(words, ac) {
       if (on && start < 0) start = t;
       if ((!on || t + HOPS > b) && start >= 0) { const e = on ? t + HOPS : t; if (e - start >= 0.08) regions.push([start, e]); start = -1; }
     }
-    for (const [r0, r1] of regions) {
-      const fr = sliceIdx(r0, r1);
+    for (const [c0, c1] of regions) {
+      const fr = sliceIdx(c0, c1);
+      // Bornes de coupe étendues jusqu'au silence le plus profond entre le fragment et les mots voisins
+      // (la recherche s'est faite avec une marge de sécurité ; la coupe, elle, doit retirer TOUT le fragment).
+      const lowest = (from, to) => { let best = from, bv = Infinity; for (let t = from; (to > from ? t <= to : t >= to); t += (to > from ? HOPS : -HOPS)) { const i = Math.round(t / HOPS - 1); if (i >= 0 && i < ac.db.length && ac.db[i] < bv) { bv = ac.db[i]; best = t; } } return best; };
+      const r0 = Math.min(c0, lowest(c0, g0 + 0.02)), r1 = Math.max(c1, lowest(c1, g1 - 0.02));
       const voiced = fr.filter((i) => ac.clarity[i] > 0.7 && ac.f0[i] > 0);
       const stable = voiced.length >= 0.7 * fr.length && semitoneStd(voiced.map((i) => ac.f0[i])) < 1;
       if (stable && r1 - r0 >= 0.25) {
@@ -213,6 +222,75 @@ export function acousticIssues(words, ac) {
 
   function sliceIdx(t0, t1) { const out = []; for (let i = Math.max(0, Math.round(t0 / HOPS - 1)); i <= Math.min(ac.db.length - 1, Math.round(t1 / HOPS - 1)); i++) out.push(i); return out; }
   function sliceFrames(arr, t0, t1) { return sliceIdx(t0, t1).map((i) => arr[i]); }
+}
+
+/**
+ * Syllabe ou mot redit ACCOLÉ au mot suivant, que le modèle fusionne avec lui (« p- pour », « le le »).
+ * Dans les 0,8 premières secondes de chaque mot (et 0,4 s avant), on cherche : un court son, un creux d'énergie
+ * (≥ 12 dB, 30-250 ms), puis un début de son spectralement SEMBLABLE au premier. Une consonne occlusive dans un mot
+ * (« ca|pitale ») donne aussi un creux, mais les deux côtés ne se ressemblent pas : pas de fausse alerte.
+ * @param {Word[]} words
+ * @param {{ db: Float32Array, mel: { data: Float32Array, frames: number, nMels: number } }} ac
+ * @param {{ cutSim?: number, listenSim?: number }} [opt]
+ *   seuils réglés sur le corpus (docs/decisions.md D19) : ≥ 0,97 coupé, ≥ 0,85 « à écouter »
+ * @returns {{ issues: Issue[], words: Word[] }} mots dont le début est déplacé après la syllabe redite (si coupée)
+ */
+export function stutterDoublets(words, ac, opt = {}) {
+  const cutSim = opt.cutSim ?? 0.97, listenSim = opt.listenSim ?? 0.85;
+  const H = 0.01, nM = ac.mel.nMels, T = ac.mel.frames;
+  const fi = (t) => Math.max(0, Math.min(ac.db.length - 1, Math.round(t / H - 1)));
+  const out = words.map((w) => ({ ...w })), issues = [];
+  // Bandes normalisées sur toute la parole (moyenne et écart-type par bande) : retire la couleur commune de la voix,
+  // sinon tous les sons se « ressemblent ».
+  const zn = new Float32Array(ac.mel.data.length), mu = new Float64Array(nM), sd = new Float64Array(nM);
+  let cnt = 0;
+  for (let t = 0; t < T; t++) if (ac.db[Math.min(ac.db.length - 1, t)] > -45) { cnt++; for (let m = 0; m < nM; m++) mu[m] += ac.mel.data[t * nM + m]; }
+  if (!cnt) return { issues, words: out };
+  for (let m = 0; m < nM; m++) mu[m] /= cnt;
+  for (let t = 0; t < T; t++) if (ac.db[Math.min(ac.db.length - 1, t)] > -45) for (let m = 0; m < nM; m++) sd[m] += (ac.mel.data[t * nM + m] - mu[m]) ** 2;
+  for (let m = 0; m < nM; m++) sd[m] = Math.sqrt(sd[m] / cnt) + 1e-6;
+  for (let t = 0; t < T; t++) for (let m = 0; m < nM; m++) zn[t * nM + m] = (ac.mel.data[t * nM + m] - mu[m]) / sd[m];
+  const sim1 = (a, b, n) => {
+    let s = 0;
+    for (let k = 0; k < n; k++) {
+      let xy = 0, xx = 0, yy = 0;
+      for (let m = 0; m < nM; m++) { const x = zn[(a + k) * nM + m], y = zn[(b + k) * nM + m]; xy += x * y; xx += x * x; yy += y * y; }
+      s += xy / Math.sqrt(xx * yy + 1e-12);
+    }
+    return s / n;
+  };
+  // Meilleur alignement à ±50 ms (le début exact du son redit est approximatif).
+  const sim = (a, b, n, lo) => { let best = -1; for (let o = -5; o <= 5; o++) if (b + o > lo && b + o + n < T) best = Math.max(best, sim1(a, b + o, n)); return best; };
+  for (let k = 0; k < out.length; k++) {
+    const w = out[k];
+    const start = Math.max(k ? out[k - 1].t1 + 0.02 : 0, w.t0 - 0.4), end = Math.min(w.t1, w.t0 + 0.8);
+    const a = fi(start), b = fi(end);
+    if (b - a < 12) continue;
+    let peak = -Infinity; for (let i = a; i <= b; i++) peak = Math.max(peak, ac.db[i]);
+    // Creux : au moins 3 trames sous peak − 12 dB, entre deux zones sonores.
+    let found = null;
+    for (let i = a + 4; i <= b - 6 && !found; i++) {
+      if (!(ac.db[i] < peak - 12 && ac.db[i - 1] >= peak - 12)) continue;
+      let j = i; while (j <= b && ac.db[j] < peak - 12) j++;
+      const dip = j - i;
+      if (dip < 3 || dip > 25 || j > b - 4) continue;
+      // Début du son avant le creux.
+      let s0 = i - 1; while (s0 > a && ac.db[s0 - 1] >= peak - 20) s0--;
+      const preLen = i - s0;
+      if (preLen < 5 || preLen > 60) continue;
+      const n = Math.min(preLen, T - j - 6, 25);
+      if (n < 5 || s0 + n >= T) continue;
+      const sm = sim(s0, j, n, i);
+      if (sm >= listenSim) found = { s0, i, j, sm, preLen };
+    }
+    if (!found) continue;
+    const t0 = (found.s0 + 1) * H, t1 = (found.j + 1) * H - 0.01;
+    const kind = found.preLen >= 18 ? 'répétition' : 'bégaiement';
+    const sure = found.sm >= cutSim;
+    issues.push({ type: kind, t0, t1, words: [], action: sure ? 'cut' : 'listen', uncertain: !sure, reason: `${kind === 'répétition' ? 'mot redit' : 'syllabe redite'} ${sure ? '' : 'probable '}avant « ${w.w.trim()} » (ressemblance ${Math.round(found.sm * 100)} %)` });
+    if (sure && w.t0 < t1) w.t0 = Math.min(w.t1 - 0.04, t1 + 0.01);
+  }
+  return { issues, words: out };
 }
 
 function median(a) { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); return s[s.length >> 1]; }
@@ -298,17 +376,15 @@ export function abandonedSentences(sents, issues) {
  */
 export function takeScore(words, s, issues, ac = {}) {
   const t0 = words[s.a].t0, t1 = words[s.b].t1;
-  const inside = issues.filter((x) => x.t0 >= t0 - 0.01 && x.t1 <= t1 + 0.01);
+  // Les indices incertains (signalés « à écouter » sans certitude) ne pèsent pas sur le choix de la prise.
+  const inside = issues.filter((x) => x.t0 >= t0 - 0.01 && x.t1 <= t1 + 0.01 && !x.uncertain);
   const notes = [];
   let score = 100;
   const pen = (n, p, label) => { if (n > 0) { score -= n * p; notes.push(`${n} ${label}`); } };
-  // Défauts que la coupe retire proprement (répétition, « euh » isolé) : faible pénalité ; défauts qui restent
-  // audibles (bégaiement collé, parole confuse, mots douteux) : forte pénalité.
-  const removable = (x) => x.action === 'cut' && (x.type === 'répétition' || x.type === 'hésitation' || x.type === 'reprise');
-  pen(inside.filter((x) => x.type === 'bégaiement').length, 12, 'bégaiement(s)');
-  pen(inside.filter(removable).length, 3, 'défaut(s) retiré(s) à la coupe');
-  pen(inside.filter((x) => x.type === 'hésitation' && x.action === 'listen').length, 6, 'hésitation(s) à écouter');
-  pen(inside.filter((x) => x.type === 'fragment').length, 10, 'passage(s) non transcrit(s)');
+  // Ce qui compte, c'est ce qui RESTE audible après nettoyage : un défaut coupé proprement coûte peu, un passage
+  // « à écouter » (incertain) coûte plus, un mot douteux un peu.
+  pen(inside.filter((x) => x.action === 'cut').length, 3, 'défaut(s) retiré(s) à la coupe');
+  pen(inside.filter((x) => x.action === 'listen' && x.type !== 'douteux').length, 5, 'passage(s) à écouter');
   pen(inside.filter((x) => x.type === 'douteux').length, 5, 'mot(s) douteux');
   // Débit régulier : écart-type des pauses entre mots.
   const gaps = [];
@@ -319,7 +395,8 @@ export function takeScore(words, s, issues, ac = {}) {
     const st = ac.pitchRange(t0, t1);
     if (st < 3) { score -= 6; notes.push('intonation plate'); }
   }
-  if (ac.clicks) pen(ac.clicks(t0, t1), 3, 'bruit(s) de bouche');
+  // Bruits de bouche : indice encore peu fiable (consonnes près d'un silence) : poids faible et plafonné.
+  if (ac.clicks) { const n = ac.clicks(t0, t1); if (n) { score -= Math.min(4, n); notes.push(`${n} bruit(s) de bouche`); } }
   if (!END.test(words[s.b].w.trim()) && s.b - s.a < 3) { score -= 10; notes.push('phrase inachevée'); }
   return { score: Math.max(0, score), notes };
 }
@@ -329,18 +406,26 @@ export function takeScore(words, s, issues, ac = {}) {
  * @param {Word[]} words @param {Set<number>} cut indices des mots coupés @param {{ a: number, b: number }[]} sents
  * @param {typeof DEFAULTS} [o]
  * @param {{ t0: number, t1: number }[]} [cutRanges] intervalles à exclure hors mots (fragments, « euh » non transcrits)
+ * @param {{ t0: number, t1: number }[]} [keepRanges] parole non transcrite à GARDER (relie les mots voisins)
  * @returns {{ t0: number, t1: number, words: number[] }[]}
  */
-export function keptSegments(words, cut, sents, o = DEFAULTS, cutRanges = []) {
+export function keptSegments(words, cut, sents, o = DEFAULTS, cutRanges = [], keepRanges = []) {
   const sentOf = new Int32Array(words.length);
   sents.forEach((s, k) => { for (let i = s.a; i <= s.b; i++) sentOf[i] = k; });
   const segs = [];
   let cur = null;
+  // Parole non transcrite mais GARDÉE (fragment « à écouter ») : elle relie les mots qui l'entourent, comme un mot.
+  const bridged = (a, b) => {
+    const inside = keepRanges.filter((r) => r.t0 >= a - 1e-6 && r.t1 <= b + 1e-6).sort((x, y) => x.t0 - y.t0);
+    let t = a, worst = 0;
+    for (const r of inside) { worst = Math.max(worst, r.t0 - t); t = r.t1; }
+    return Math.max(worst, b - t);
+  };
   for (let i = 0; i < words.length; i++) {
     if (cut.has(i)) { if (cur) { segs.push(cur); cur = null; } continue; }
     const w = words[i];
     if (cur) {
-      const gap = w.t0 - words[cur.words[cur.words.length - 1]].t1;
+      const gap = bridged(words[cur.words[cur.words.length - 1]].t1, w.t0);
       const prevEnd = words[cur.words[cur.words.length - 1]].t1;
       const newSentence = sentOf[i] !== sentOf[cur.words[cur.words.length - 1]];
       const blocked = cutRanges.some((r) => r.t1 > prevEnd && r.t0 < w.t0);
@@ -358,6 +443,11 @@ export function keptSegments(words, cut, sents, o = DEFAULTS, cutRanges = []) {
     for (const r of cutRanges) {
       if (r.t1 <= words[first].t0 + 1e-9 && r.t1 > segs[k].t0) segs[k].t0 = r.t1;
       if (r.t0 >= words[last].t1 - 1e-9 && r.t0 < segs[k].t1) segs[k].t1 = r.t0;
+    }
+    // Parole gardée juste avant / après le passage : incluse (jamais de mot non transcrit amputé).
+    for (const r of keepRanges) {
+      if (r.t1 <= words[first].t0 + 1e-6 && words[first].t0 - r.t1 <= o.maxPause && (first === 0 || r.t0 >= words[first - 1].t1)) segs[k].t0 = Math.min(segs[k].t0, Math.max(r.t0 - 0.03, first ? words[first - 1].t1 : 0));
+      if (r.t0 >= words[last].t1 - 1e-6 && r.t0 - words[last].t1 <= o.maxPause && (last + 1 >= words.length || r.t1 <= words[last + 1].t0)) segs[k].t1 = Math.max(segs[k].t1, Math.min(r.t1 + 0.03, last + 1 < words.length ? words[last + 1].t0 : Infinity));
     }
     segs[k].t0 = Math.max(0, segs[k].t0);
   }

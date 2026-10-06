@@ -120,3 +120,29 @@ Sur chaque appareil (iPhone, iPad, Android, PC), idéalement avec 2-3 vrais trai
 - [ ] Fermer l'onglet puis rouvrir : projet, sources et historique d'annulation sont intacts
 - [ ] Glisser sur l'aperçu pour déplacer le cadrage 9:16 ; l'alerte « plan immobile » apparaît sur un plan fixe
 - [ ] Noter : durée d'analyse d'un trailer de ~2 min, chauffe, batterie, éventuel plantage
+
+## Montage vidéo — sur iPhone (priorité 2)
+
+Adresse : `https://billal93.github.io/INKU/montage/studio.html` (une fois la branche publiée) ; en attendant, la
+pull request contient tout le code.
+
+1. **Autotest** : Studio → panneau « Projet » (bouton Réglages) → « Autotest de cet appareil ». Cochez
+   « Inclure la transcription » (télécharge 458 Mo une seule fois, en Wi-Fi), touchez « Lancer l'autotest »,
+   puis « Copier le rapport » et collez-le dans la conversation. Il mesure : compatibilité, rendu 5 s en
+   1080×1920 avec sous-titres, encodage H.264 + AAC et relecture du MP4, vitesse et précision de la transcription.
+2. **Voix** : importez un enregistrement brut (onglet Sources → Importer), touchez « Voix » dans la barre du bas,
+   « Analyser comme voix ». Vérifiez : les prises regroupées (★ = gardée), les mots barrés (coupés), les
+   passages soulignés en orange (à écouter : appui long sur un mot pour l'écouter). Puis « Appliquer à la
+   timeline » : la piste A1 et les sous-titres T1 apparaissent ; la vérification automatique s'affiche ensuite.
+3. **Sous-titres** : sans votre police (pack de marque), un bandeau orange le signale. Importez votre pack
+   (ZIP ou fichier de police) depuis le panneau Voix → « Pack de marque ».
+4. **Installer** : Safari → Partager → « Sur l'écran d'accueil ». Ouvrez l'icône, coupez le réseau : le Studio
+   doit démarrer hors ligne (la transcription aussi, si le modèle a déjà été téléchargé).
+
+### Voir les erreurs d'un iPhone depuis un Mac (Safari Web Inspector)
+1. iPhone : Réglages → Apps → Safari → Avancé → activer « Inspecteur web ».
+2. Mac : Safari → Réglages → Avancés → cocher « Afficher les fonctionnalités pour les développeurs web ».
+3. Reliez l'iPhone au Mac par câble (la première fois, touchez « Se fier à cet ordinateur »).
+4. Mac : menu Développement → nom de l'iPhone → la page « INKU Studio | Montage » (ou « Autotest »).
+5. Onglet Console : copiez les lignes rouges. Onglet Chronologies : enregistrez pendant une analyse pour voir le
+   temps et la mémoire. Pour une application installée sur l'écran d'accueil, elle apparaît aussi dans ce menu.

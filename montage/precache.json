@@ -1,10 +1,13 @@
 {
- "version": "0403a59079bc",
+ "version": "18b061887055",
  "files": [
   "audio/features.js",
   "audio/loudness.js",
   "audio/resample.js",
   "audio/wav.js",
+  "autotest.html",
+  "autotest/ATTRIBUTION.txt",
+  "autotest/voix-fr-reference.wav",
   "brand/brand.js",
   "brand/zip.js",
   "coi-register.js",
@@ -36,6 +39,7 @@
   "studio.html",
   "studio/analysis.worker.js",
   "studio/app.js",
+  "studio/autotest.js",
   "studio/bin.js",
   "studio/caps.js",
   "studio/edl.js",

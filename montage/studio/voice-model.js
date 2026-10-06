@@ -31,7 +31,7 @@ export function voiceState(an, ed = {}) {
   for (const [k, v] of Object.entries(ed.cut || {})) { const i = Number(k); if (v) cut.add(i); else cut.delete(i); }
   const ranges = an.issues.filter((x) => !x.words.length && (x.type === 'hésitation' || x.type === 'bégaiement' || x.type === 'fragment'))
     .map((x, k) => ({ ...x, k, cut: ed.ranges && ed.ranges[k] !== undefined ? ed.ranges[k] : x.action === 'cut' }));
-  const kept = keptSegments(words, cut, an.sentences, settings, ranges.filter((r) => r.cut));
+  const kept = keptSegments(words, cut, an.sentences, settings, ranges.filter((r) => r.cut), ranges.filter((r) => !r.cut));
   const keptSec = kept.reduce((a, s) => a + s.t1 - s.t0, 0);
   return { words, cut, takes, ranges, kept, keptSec, settings, sentences: an.sentences };
 }

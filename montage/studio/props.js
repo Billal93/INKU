@@ -57,7 +57,9 @@ export function createProps({ el, titleEl, store, lib, player, timeline, toast }
         <div class="field pro-only"><label>Images / seconde</label><span>${d.project.fps} (constant)</span></div>
         <div class="field pro-only"><label>Sortie</label><span>${d.project.width}×${d.project.height}</span></div>
         <div class="panel-h" style="padding-left:0;margin-top:10px">Alertes (${issues.length})</div>${lintHtml(issues, true)}
-        <p style="font-size:.7rem;color:var(--muted);margin-top:14px;line-height:1.5">Les droits des extraits et trailers restent à leurs ayants droit ; le copyright affiché ne remplace pas une autorisation.</p>`;
+        <div class="field"><label for="pTheme">Thème</label><select id="pTheme"><option value="dark" ${document.documentElement.dataset.theme !== 'light' ? 'selected' : ''}>Sombre</option><option value="light" ${document.documentElement.dataset.theme === 'light' ? 'selected' : ''}>Clair</option></select></div>
+        <p style="font-size:.74rem;margin:10px 0"><a href="autotest.html" style="color:var(--fuchsia);font-weight:800">Autotest de cet appareil</a> <span style="color:var(--muted)">: mesure rendu, encodage et transcription, rapport à copier.</span></p>
+        <p style="font-size:.7rem;color:var(--muted);margin-top:14px;line-height:1.5">Les droits des extraits et trailers restent à leurs ayants droit ; le copyright affiché ne remplace pas une autorisation. Transcription : modèle NVIDIA FastConformer (CC-BY-4.0, export ONNX OpenVoiceOS) ou OpenAI Whisper (MIT) ; détection de parole Silero VAD (MIT).</p>`;
     }
     el.innerHTML = html;
     window.__lintCount = issues.length;
@@ -66,6 +68,7 @@ export function createProps({ el, titleEl, store, lib, player, timeline, toast }
   el.addEventListener('change', (e) => {
     const c = ui.selection.length === 1 ? findClip(doc(), ui.selection[0]) : null;
     const fps = doc().project.fps;
+    if (e.target.id === 'pTheme') { const v = e.target.value; document.documentElement.dataset.theme = v; try { localStorage.setItem('inku-montage-theme', v); } catch { } return; }
     if (e.target.id === 'pName') { store.commit('Nom', (d) => { d.project.name = e.target.value.trim() || 'Nouveau montage'; }); return; }
     if (!c) return;
     if (e.target.id === 'pDur') {

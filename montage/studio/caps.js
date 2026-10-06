@@ -38,7 +38,7 @@ export async function detectCapabilities() {
     jsHeapLimitMB: performance.memory ? Math.round(performance.memory.jsHeapSizeLimit / 1048576) : null,
     webgpu: null,
     h264: /** @type {{res:string, codec:string, hw:boolean, sw:boolean}[]} */ ([]),
-    aac: { native: false, sampleRates: /** @type {number[]} */ ([]) },
+    aac: { native: false, sampleRates: /** @type {number[]} */ ([]), maxBitrate: 0 },
     wakeLock: !!(navigator.wakeLock && navigator.wakeLock.request),
     shareFiles: !!(navigator.canShare && (() => { try { return navigator.canShare({ files: [new File([''], 'a.mp4', { type: 'video/mp4' })] }); } catch { return false; } })()),
     persisted: navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted() : null,
@@ -70,12 +70,15 @@ export async function detectCapabilities() {
       }
     }
   }
+  // AAC : débit le plus élevé accepté (le brief demande 192 à 320 kb/s ; Windows plafonne à 192 kb/s).
   if (typeof g.AudioEncoder !== 'undefined') {
     for (const sampleRate of [48000, 44100]) {
-      try {
-        const r = await AudioEncoder.isConfigSupported({ codec: 'mp4a.40.2', sampleRate, numberOfChannels: 2, bitrate: 256000 });
-        if (r.supported) { caps.aac.native = true; caps.aac.sampleRates.push(sampleRate); }
-      } catch { }
+      for (const bitrate of [320000, 256000, 192000, 160000, 128000]) {
+        try {
+          const r = await AudioEncoder.isConfigSupported({ codec: 'mp4a.40.2', sampleRate, numberOfChannels: 2, bitrate });
+          if (r.supported) { caps.aac.native = true; caps.aac.sampleRates.push(sampleRate); caps.aac.maxBitrate = Math.max(caps.aac.maxBitrate || 0, bitrate); break; }
+        } catch { }
+      }
     }
   }
   return caps;

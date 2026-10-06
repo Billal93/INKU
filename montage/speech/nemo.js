@@ -24,7 +24,7 @@ export function melFilterbank(nMels = 80, sr = SR, nFft = N_FFT, fmin = 0, fmax 
 }
 
 /** FFT réelle (radix 2, en place) → puissance |X|² des N/2+1 premières fréquences. */
-function powerSpectrum(re, im, out) {
+export function powerSpectrum(re, im, out) {
   const n = re.length;
   for (let i = 1, j = 0; i < n; i++) {
     let bit = n >> 1;
