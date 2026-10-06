@@ -90,21 +90,33 @@
     <button data-sheet="sheetSources"><svg class="i"><use href="#i-lib"/></svg>Sources</button>
     <button id="dCut"><svg class="i"><use href="#i-cut"/></svg>Couper</button>
     <button data-sheet="sheetVoice"><svg class="i"><use href="#i-mic"/></svg>Voix</button>
-    <button id="dDel"><svg class="i"><use href="#i-trash"/></svg>Supprimer</button>
+    <button data-sheet="sheetDress"><svg class="i"><use href="#i-wand"/></svg>Habillage</button>
     <button data-sheet="sheetProps"><svg class="i"><use href="#i-sliders"/></svg>Réglages</button>
   </nav>
 
   <aside class="sheet left active" id="sheetSources" aria-label="Sources">
     <div class="grab"></div>
-    <div class="panel-h"><span class="tabs"><button class="on" data-tab="sheetSources">Sources</button><button data-tab="sheetVoice">Voix</button></span><span class="sp"></span><button class="ibtn primary" data-import style="min-height:34px">Importer</button><button class="ibtn close-sheet" data-close aria-label="Fermer">✕</button></div>
+    <div class="panel-h"><span class="tabs"><button class="on" data-tab="sheetSources">Sources</button><button data-tab="sheetVoice">Voix</button><button data-tab="sheetDress">Habillage</button><button data-tab="sheetEnd">Fin</button></span><span class="sp"></span><button class="ibtn primary" data-import style="min-height:34px">Importer</button><button class="ibtn close-sheet" data-close aria-label="Fermer">✕</button></div>
     <div class="panel-b" id="binBody"></div>
     <div class="panel-h" style="font-size:.62rem;text-transform:none;letter-spacing:0"><span id="storage"></span></div>
   </aside>
 
   <aside class="sheet left" id="sheetVoice" aria-label="Voix">
     <div class="grab"></div>
-    <div class="panel-h"><span class="tabs"><button data-tab="sheetSources">Sources</button><button class="on" data-tab="sheetVoice">Voix</button></span><span class="sp"></span><button class="ibtn close-sheet" data-close aria-label="Fermer">✕</button></div>
+    <div class="panel-h"><span class="tabs"><button data-tab="sheetSources">Sources</button><button class="on" data-tab="sheetVoice">Voix</button><button data-tab="sheetDress">Habillage</button><button data-tab="sheetEnd">Fin</button></span><span class="sp"></span><button class="ibtn close-sheet" data-close aria-label="Fermer">✕</button></div>
     <div class="panel-b" id="voiceBody"></div>
+  </aside>
+
+  <aside class="sheet left" id="sheetDress" aria-label="Habillage">
+    <div class="grab"></div>
+    <div class="panel-h"><span class="tabs"><button data-tab="sheetSources">Sources</button><button data-tab="sheetVoice">Voix</button><button class="on" data-tab="sheetDress">Habillage</button><button data-tab="sheetEnd">Fin</button></span><span class="sp"></span><button class="ibtn close-sheet" data-close aria-label="Fermer">✕</button></div>
+    <div class="panel-b" id="dressBody"></div>
+  </aside>
+
+  <aside class="sheet left" id="sheetEnd" aria-label="Fin de vidéo">
+    <div class="grab"></div>
+    <div class="panel-h"><span class="tabs"><button data-tab="sheetSources">Sources</button><button data-tab="sheetVoice">Voix</button><button data-tab="sheetDress">Habillage</button><button class="on" data-tab="sheetEnd">Fin</button></span><span class="sp"></span><button class="ibtn close-sheet" data-close aria-label="Fermer">✕</button></div>
+    <div class="panel-b" id="endBody"></div>
   </aside>
 
   <aside class="sheet" id="sheetProps" aria-label="Propriétés">
@@ -113,7 +125,7 @@
     <div class="panel-b" id="propsBody"></div>
   </aside>
 </div>
-<input type="file" id="filePicker" multiple accept="video/*,audio/*,.mp4,.mov,.m4v,.webm,.mkv,.mp3,.wav,.m4a,.aac,.ogg,.flac" hidden>
+<input type="file" id="filePicker" multiple accept="video/*,audio/*,image/png,image/jpeg,image/webp,.mp4,.mov,.m4v,.webm,.mkv,.mp3,.wav,.m4a,.aac,.ogg,.flac" hidden>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="coi-register.js"></script>
 <script type="module" src="studio/app.js"></script>

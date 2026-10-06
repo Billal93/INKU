@@ -97,6 +97,7 @@ export function createTimeline({ store, lib, player, scrollEl, contentEl, toast,
     if (onSelect) onSelect();
   }
 
+  const ROLE_LABEL = { transition: 'Transition', opening: 'Ouverture', subscribe: 'Abonne-toi', logo: 'Logo', overlay: 'Overlay', sfx: 'SFX', climax: 'Climax', thumbnail: 'Miniature' };
   function clipEl(c, tr, issues, P) {
     const el = document.createElement('div');
     const aud = tr.id.startsWith('A');
@@ -119,7 +120,9 @@ export function createTimeline({ store, lib, player, scrollEl, contentEl, toast,
         nm.appendChild(sp);
       }
       if (c.dur * P > 18) el.appendChild(nm);
-    } else nm.textContent = tr.id === 'V1' ? (doc().clips.filter((x) => x.track === 'V1').sort((a, b) => a.start - b.start).findIndex((x) => x.id === c.id) + 1) + ' · ' + (c.dur / fps()).toFixed(1).replace('.', ',') + ' s' : (rec ? rec.name : '');
+    } else nm.textContent = tr.id === 'V1' ? (doc().clips.filter((x) => x.track === 'V1').sort((a, b) => a.start - b.start).findIndex((x) => x.id === c.id) + 1) + ' · ' + (c.dur / fps()).toFixed(1).replace('.', ',') + ' s' : (rec ? rec.name : (ROLE_LABEL[c.role] ? ROLE_LABEL[c.role] + ' · ' : '') + (c.assetName || ''));
+    // Transition : fenêtre de couverture totale (la coupe des clips tombe au milieu).
+    if (c.cover) { const cv = document.createElement('div'); cv.className = 'cover'; cv.style.cssText = `left:${c.cover[0] * P}px;width:${Math.max(2, (c.cover[1] - c.cover[0] + 1) * P)}px`; el.appendChild(cv); }
     if (tr.id !== 'T1' && c.dur * P > 36) el.appendChild(nm);
     if (issues && issues.length) { const b = document.createElement('span'); b.className = 'badge' + (issues.some((i) => i.level === 'err') ? ' err' : ''); b.textContent = issues.length > 1 ? issues.length : '!'; el.appendChild(b); }
     if (!tr.locked) {

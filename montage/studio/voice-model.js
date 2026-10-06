@@ -116,7 +116,7 @@ export function subtitleClips(st, pieces, o) {
     const sent = tagged.slice(a, b + 1);
     for (const g of groupWords(sent, { maxWords: o.maxWords ?? 3, fits: o.fits })) {
       const ws = g.map((k) => sent[k]);
-      clips.push({ ws, start: Math.round(ws[0].t0 * fps) });
+      clips.push({ ws, start: Math.round(ws[0].t0 * fps), sid });
     }
     a = b + 1;
   }
@@ -127,7 +127,7 @@ export function subtitleClips(st, pieces, o) {
       const lastEnd = Math.round(c.ws[c.ws.length - 1].t1 * fps) + hold;
       const next = k + 1 < clips.length ? clips[k + 1].start : Infinity;
       const end = Math.max(c.start + 1, Math.min(next, lastEnd));
-      const clip = makeClip({ track: 'T1', start: c.start, dur: end - c.start, sub: { index: k, words: c.ws.map((w) => ({ w: w.w, kind: w.kind || 'normal', expr: w.expr })) } });
+      const clip = makeClip({ track: 'T1', start: c.start, dur: end - c.start, sub: { index: k, sentence: c.sid, words: c.ws.map((w) => ({ w: w.w, kind: w.kind || 'normal', expr: w.expr, t0: +w.t0.toFixed(3) })) } });
       delete clip.crop;
       return clip;
     }),

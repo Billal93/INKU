@@ -40,6 +40,7 @@ export function kWeight(x, fs) {
     const z = r0 * y + r1 * y1 + r2 * y2 - s1 * z1 - s2 * z2;
     y2 = y1; y1 = y; z2 = z1; z1 = z;
     out[i] = z;
+    if ((i & 4095) === 0) { if (Math.abs(y1) < 1e-150 && Math.abs(y2) < 1e-150) { y1 = 0; y2 = 0; } if (Math.abs(z1) < 1e-150 && Math.abs(z2) < 1e-150) { z1 = 0; z2 = 0; } }
   }
   return out;
 }
@@ -47,17 +48,41 @@ export function kWeight(x, fs) {
 const LOUD = (ms) => (ms > 0 ? -0.691 + 10 * Math.log10(ms) : -Infinity);
 
 /**
- * Énergie moyenne pondérée par blocs (somme des voies, poids 1 pour gauche/droite/centre).
- * @param {Float64Array[]} kw voies pondérées K @param {number} fs @param {number} winSec @param {number} hopSec
+ * Énergie pondérée K par tranches de 100 ms (somme des carrés), sans stocker le signal filtré : mémoire minime,
+ * un seul passage. Les blocs de 400 ms (pas 100 ms) et de 3 s (pas 100 ms) sont des sommes de tranches.
+ * @param {Float32Array} x @param {number} fs @param {number} hop
  */
-function blockPowers(kw, fs, winSec, hopSec) {
-  const n = kw[0].length, win = Math.round(winSec * fs), hop = Math.round(hopSec * fs);
-  // Sommes cumulées des carrés pour un calcul en O(n).
-  const cum = kw.map((c) => { const s = new Float64Array(n + 1); for (let i = 0; i < n; i++) s[i + 1] = s[i] + c[i] * c[i]; return s; });
-  const out = [];
-  for (let s = 0; s + win <= n; s += hop) {
+function segmentEnergies(x, fs, hop) {
+  const [{ b: b1, a: a1 }, { b: b2, a: a2 }] = kWeightingCoefs(fs);
+  const p0 = b1[0], p1 = b1[1], p2 = b1[2], q1 = a1[1], q2 = a1[2];
+  const r0 = b2[0], r1 = b2[1], r2 = b2[2], s1 = a2[1], s2 = a2[2];
+  const nseg = Math.floor(x.length / hop);
+  const e = new Float64Array(nseg);
+  let x1 = 0, x2 = 0, y1 = 0, y2 = 0, z1 = 0, z2 = 0, acc = 0, k = 0, seg = 0;
+  for (let i = 0; i < nseg * hop; i++) {
+    const xi = x[i];
+    const y = p0 * xi + p1 * x1 + p2 * x2 - q1 * y1 - q2 * y2;
+    x2 = x1; x1 = xi;
+    const z = r0 * y + r1 * y1 + r2 * y2 - s1 * z1 - s2 * z2;
+    y2 = y1; y1 = y; z2 = z1; z1 = z;
+    acc += z * z;
+    if (++k === hop) {
+      e[seg++] = acc; acc = 0; k = 0;
+      // Silence : l'état du filtre décroît vers des nombres « dénormaux » (calcul jusqu'à 100× plus lent).
+      // Remis à zéro bien avant (1e-150 ≪ toute valeur audible) : résultat inchangé.
+      if (Math.abs(y1) < 1e-150 && Math.abs(y2) < 1e-150) { y1 = 0; y2 = 0; }
+      if (Math.abs(z1) < 1e-150 && Math.abs(z2) < 1e-150) { z1 = 0; z2 = 0; }
+    }
+  }
+  return e;
+}
+
+/** Puissances moyennes des blocs de `m` tranches (pas d'une tranche), voies sommées. */
+function blocks(segs, m, hop) {
+  const nseg = segs[0].length, out = [];
+  for (let s = 0; s + m <= nseg; s++) {
     let z = 0;
-    for (const c of cum) z += (c[s + win] - c[s]) / win;
+    for (const e of segs) { let t = 0; for (let j = s; j < s + m; j++) t += e[j]; z += t / (m * hop); }
     out.push(z);
   }
   return out;
@@ -70,10 +95,11 @@ function blockPowers(kw, fs, winSec, hopSec) {
  *   haut-parleurs (+3 dB), ce qui est le cas d'une voix mono placée au centre d'un mixage stéréo.
  */
 export function measureLoudness(channels, fs, opt = {}) {
-  const kw = channels.map((c) => kWeight(c, fs));
-  if (channels.length === 1 && opt.dualMono) kw.push(kw[0]);
+  const hop = Math.round(0.1 * fs);
+  const segs = channels.map((c) => segmentEnergies(c, fs, hop));
+  if (channels.length === 1 && opt.dualMono) segs.push(segs[0]);
   // Intégrée : blocs de 400 ms, pas de 100 ms.
-  const z = blockPowers(kw, fs, 0.4, 0.1);
+  const z = blocks(segs, 4, hop);
   const abs = z.filter((p) => LOUD(p) > -70);
   const mean = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
   let integrated = -Infinity, relGate = -Infinity;
@@ -84,7 +110,7 @@ export function measureLoudness(channels, fs, opt = {}) {
   }
   const momentary = z.map(LOUD);
   // Short-term (3 s) à 10 Hz et LRA (EBU Tech 3342).
-  const st = blockPowers(kw, fs, 3, 0.1);
+  const st = blocks(segs, 30, hop);
   const shortTerm = st.map(LOUD);
   let lra = 0;
   const stAbs = st.filter((p) => LOUD(p) > -70);

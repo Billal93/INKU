@@ -55,9 +55,10 @@ export class Library extends EventTarget {
   ingest(files) {
     const ids = [];
     for (const file of Array.from(files)) {
-      const isMedia = /^(video|audio)\//.test(file.type) || /\.(mp4|mov|m4v|webm|mkv|mp3|wav|m4a|aac|ogg|flac)$/i.test(file.name);
+      const isImage = /^image\/(png|jpeg|webp)/.test(file.type) || /\.(png|jpe?g|webp)$/i.test(file.name);
+      const isMedia = isImage || /^(video|audio)\//.test(file.type) || /\.(mp4|mov|m4v|webm|mkv|mp3|wav|m4a|aac|ogg|flac)$/i.test(file.name);
       const id = uid('src');
-      const rec = { id, name: file.name, kind: /^audio\//.test(file.type) ? 'audio' : 'video', size: file.size, status: isMedia ? 'queued' : 'error', stage: 'queued', progress: 0, proxy: 'none', shots: [], error: isMedia ? null : 'Ce type de fichier n\'est pas un média' };
+      const rec = { id, name: file.name, kind: isImage ? 'image' : /^audio\//.test(file.type) ? 'audio' : 'video', size: file.size, status: isMedia ? 'queued' : 'error', stage: 'queued', progress: 0, proxy: 'none', shots: [], error: isMedia ? null : 'Ce type de fichier n\'est pas un média' };
       this.sources.set(id, rec);
       ids.push(id);
       if (isMedia) this.queue.push({ cmd: 'ingest', id, file });
@@ -104,6 +105,7 @@ export class Library extends EventTarget {
         rec.thumbs = m.thumbs;
       }
       if (m.scrub) rec.scrub = m.scrub;
+      if (m.feat) rec.feat = m.feat;
       if (m.waveform) rec.waveform = m.waveform;
       if (m.file) this.memFiles.set(rec.id, m.file);
       await this._persist(rec);

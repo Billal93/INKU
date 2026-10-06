@@ -7,7 +7,7 @@ import { createStore } from '../../montage/studio/store.js';
 test('EDL : nouveau projet valide, pistes fixes et nommées', () => {
   const d = newProject();
   assert.deepEqual(validate(d), []);
-  assert.deepEqual(d.tracks.map((t) => t.id), ['V1', 'V2', 'T1', 'A1', 'A2', 'A3', 'A4']);
+  assert.deepEqual(d.tracks.map((t) => t.id), ['V1', 'V2', 'T1', 'A1', 'A2', 'A3', 'A4', 'A5']);
   assert.equal(d.project.fps, 30);
   assert.equal(d.project.width, 1080);
 });

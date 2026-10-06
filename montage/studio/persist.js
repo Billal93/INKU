@@ -11,7 +11,7 @@ export async function loadSaved() {
     const doc = migrate(JSON.parse(data.doc));
     const problems = validate(doc);
     if (problems.length) { console.warn('[persist] projet sauvegardé invalide :', problems); return null; }
-    return data;
+    return { ...data, doc: JSON.stringify(doc) };
   } catch (e) { console.warn('[persist] lecture', e); return null; }
 }
 

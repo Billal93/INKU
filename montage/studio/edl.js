@@ -15,6 +15,7 @@ export const TRACK_DEFS = [
   { id: 'A2', kind: 'music', name: 'A2', label: 'Musique' },
   { id: 'A3', kind: 'sfx', name: 'A3', label: 'SFX' },
   { id: 'A4', kind: 'overlay-audio', name: 'A4', label: 'Sons overlays' },
+  { id: 'A5', kind: 'trailer-audio', name: 'A5', label: 'Son du climax' },
 ];
 
 export const PRESETS = {
@@ -41,6 +42,9 @@ export function newProject(presetId = 'inku-actu-anime') {
     clips: [],     // voir makeClip
     markers: [],   // { id, frame, label }
     settings: { snap: true, ripple: false, mode: 'simple' },
+    copyright: { enabled: true, text: '' },   // ligne de copyright (texte par projet)
+    mix: {},                                  // réglages de mixage (voir audio/mix.js MIX_DEFAULTS)
+    end: null,                                // fin de vidéo : { climax: { srcId, start, dur }, thumbnail: { srcId, dur } }
   };
 }
 
@@ -133,7 +137,11 @@ export function validate(doc) {
 }
 
 export function migrate(doc) {
-  // Point d'extension : v1 est la première version publiée. Les futures migrations s'ajoutent ici.
+  // v1 : ajouts compatibles uniquement (pistes manquantes ajoutées, réglages par défaut).
+  for (const t of TRACK_DEFS) if (!doc.tracks.some((x) => x.id === t.id)) doc.tracks.push({ ...t, locked: false, muted: false, solo: false });
+  doc.tracks.sort((a, b) => TRACK_DEFS.findIndex((t) => t.id === a.id) - TRACK_DEFS.findIndex((t) => t.id === b.id));
+  if (!doc.copyright) doc.copyright = { enabled: true, text: '' };
+  if (!doc.mix) doc.mix = {};
   return doc;
 }
 

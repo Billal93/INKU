@@ -1,9 +1,10 @@
 // Worker d'analyse : copie dans le stockage privé (OPFS), sonde, bandes noires, plans (shots), vignettes,
 // forme d'onde, proxy 720p. Une seule tâche lourde à la fois (un seul décodeur actif).
 import {
-  Input, ALL_FORMATS, BlobSource, CanvasSink, AudioSampleSink, Conversion, Output, Mp4OutputFormat, StreamTarget, BufferTarget,
+  Input, ALL_FORMATS, BlobSource, CanvasSink, AudioSampleSink, Conversion, Output, Mp4OutputFormat, StreamTarget, BufferTarget, EncodedPacketSink,
 } from '../vendor/mediabunny.min.mjs';
 import { detectLetterbox } from '../lib/analysis.js';
+import { histogram, focusPoint, textCard } from './framing.js';
 
 const post = (msg, transfer) => self.postMessage(msg, transfer || []);
 const progress = (id, stage, p) => post({ type: 'progress', id, stage, progress: Math.max(0, Math.min(1, p)) });
@@ -55,20 +56,12 @@ async function fingerprint(file) {
 }
 
 // ── Plans (shots) ──
-const BINS = 16;
 function histOf(canvas, ctx, w, h) {
   ctx.drawImage(canvas, 0, 0, w, h);
   const d = ctx.getImageData(0, 0, w, h).data;
-  const hist = new Float32Array(BINS * 3);
-  let luma = 0;
-  const n = w * h;
-  for (let i = 0; i < d.length; i += 4) {
-    hist[(d[i] >> 4)]++; hist[BINS + (d[i + 1] >> 4)]++; hist[2 * BINS + (d[i + 2] >> 4)]++;
-    luma += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
-  }
-  for (let i = 0; i < hist.length; i++) hist[i] /= n;
-  return { hist, luma: luma / (n * 255) };
+  return { ...histogram(d, w, h), focus: focusPoint(d, w, h), card: textCard(d, w, h).card };
 }
+
 const l1 = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += Math.abs(a[i] - b[i]); return s / 3; }; // 0..2
 
 async function detectShots(vTrack, duration, usable, onp) {
@@ -89,7 +82,7 @@ async function detectShots(vTrack, duration, usable, onp) {
   for await (const wc of sink.canvasesAtTimestamps(ts)) {
     if (wc) {
       const cur = histOf(wc.canvas, ctx, W, H);
-      samples.push({ t: ts[i], luma: cur.luma, d: prev ? l1(prev.hist, cur.hist) : 0 });
+      samples.push({ t: ts[i], luma: cur.luma, d: prev ? l1(prev.hist, cur.hist) : 0, hist: cur.hist, fx: cur.focus.x, detail: cur.focus.detail, card: cur.card });
       prev = cur;
       if (i % everyN === 0) {
         const blob = await /** @type {OffscreenCanvas} */ (wc.canvas).convertToBlob({ type: 'image/jpeg', quality: 0.62 });
@@ -129,9 +122,18 @@ async function detectShots(vTrack, duration, usable, onp) {
     const luma = inside.length ? inside.reduce((a, x) => a + x.luma, 0) / inside.length : 0;
     // mouvement = écart d'histogramme moyen entre échantillons du plan, hors saut de coupe
     const motion = inside.length > 1 ? inside.slice(1).reduce((a, x) => a + Math.min(x.d, TH), 0) / (inside.length - 1) : 0;
-    shots.push({ start, end, luma, motion, black: luma < 0.06 });
+    // Histogramme moyen (alertes de transition : plans avant/après trop semblables), point d'intérêt (cadrage par
+    // défaut), part de cartons de texte (fin de vidéo).
+    const hist = new Array(48).fill(0);
+    for (const x of inside) for (let k = 0; k < 48; k++) hist[k] += x.hist[k] / inside.length;
+    const det = inside.reduce((a, x) => a + x.detail, 0);
+    const focusX = det > 0 ? inside.reduce((a, x) => a + x.fx * x.detail, 0) / det : 0.5;
+    const cards = inside.length ? inside.filter((x) => x.card).length / inside.length : 0;
+    shots.push({ start, end, luma, motion, black: luma < 0.06, hist: hist.map((v) => +v.toFixed(4)), focusX: +focusX.toFixed(3), cards: +cards.toFixed(2), detail: +(det / Math.max(1, inside.length)).toFixed(4) });
   }
-  return { shots, scrub: { perSec: scrubPerSec, width: SW, height: SH, frames: scrubFrames } };
+  // Descripteurs par échantillon (8/s) pour la proposition de climax : mouvement, luminosité, cartons.
+  const feat = { rate: SR, d: samples.map((x) => +x.d.toFixed(3)), luma: samples.map((x) => +x.luma.toFixed(3)), card: samples.map((x) => (x.card ? 1 : 0)) };
+  return { shots, feat, scrub: { perSec: scrubPerSec, width: SW, height: SH, frames: scrubFrames } };
 }
 
 async function makeThumbs(vTrack, shots, usable) {
@@ -176,6 +178,15 @@ async function ingest(m) {
   const blob = copy.ok ? await readOpfs('media', id) : file;
   const fp = await fingerprint(file);
   progress(id, 'probe', 0);
+  // Image fixe (miniature de fin, carte) : dimensions seulement.
+  if (/^image\//.test(file.type) || /\.(png|jpe?g|webp)$/i.test(file.name)) {
+    const bmp = await createImageBitmap(blob);
+    const meta = { id, name: file.name, kind: 'image', size: file.size, fingerprint: fp, duration: 0, hasAudio: false, width: bmp.width, height: bmp.height,
+      letterbox: { top: 0, bottom: 0, left: 0, right: 0, usable: { x: 0, y: 0, w: bmp.width, h: bmp.height }, source: { w: bmp.width, h: bmp.height } }, persisted: copy.ok, persistReason: copy.ok ? null : copy.reason };
+    bmp.close();
+    self.postMessage({ type: 'ingested', id, meta, shots: [], thumbs: [] });
+    return;
+  }
   const input = new Input({ source: new BlobSource(blob), formats: ALL_FORMATS });
   const vTrack = await input.getPrimaryVideoTrack();
   const aTrack = await input.getPrimaryAudioTrack();
@@ -192,14 +203,31 @@ async function ingest(m) {
     let fps = 30;
     try { const st = await vTrack.computePacketStats(150); if (st.averagePacketRate > 1) fps = Math.round(st.averagePacketRate * 100) / 100; } catch (e) { /* fps par défaut */ }
     Object.assign(meta, { fps, width: vTrack.displayWidth, height: vTrack.displayHeight, codec: vTrack.codec });
+    // Fréquence variable (VFR) : écarts entre timestamps des 240 premières images. Le rendu échantillonne toujours
+    // la source au temps exact de chaque image du projet (30 fps constants) : une source VFR est donc convertie une
+    // seule fois, sans mélange d'images ; on le signale seulement.
+    try {
+      const ts = [];
+      for await (const p of new EncodedPacketSink(vTrack).packets()) { ts.push(p.timestamp); if (ts.length >= 240) break; }
+      ts.sort((a, b) => a - b);
+      const dts = ts.slice(1).map((t, i) => t - ts[i]).filter((d) => d > 1e-4).sort((a, b) => a - b);
+      if (dts.length > 10) { const med = dts[dts.length >> 1]; meta.vfr = dts[dts.length - 1] > med * 1.6 || dts[0] < med * 0.6; }
+    } catch (e) { /* inconnu */ }
+    // HDR (PQ / HLG / BT.2020) : le navigateur convertit en SDR à l'affichage ; résultat possiblement terne → alerte.
+    try {
+      const cs = await vTrack.getColorSpace();
+      meta.color = cs;
+      const tr = String(cs.transfer || ''), pr = String(cs.primaries || '');
+      meta.hdr = tr === 'pq' || tr === 'hlg' || pr === 'bt2020';
+    } catch (e) { /* inconnu */ }
     progress(id, 'letterbox', 0);
     const times = [0.5, 0.3, 0.6, 0.4, 0.2].map((f) => f * Math.max(1, duration - 1));
     const lb = await detectLetterbox(vTrack, times);
     meta.letterbox = lb;
-    const { shots, scrub } = await detectShots(vTrack, duration, lb.usable, (p) => progress(id, 'shots', p));
+    const { shots, scrub, feat } = await detectShots(vTrack, duration, lb.usable, (p) => progress(id, 'shots', p));
     progress(id, 'thumbs', 0);
     const thumbs = await makeThumbs(vTrack, shots, lb.usable);
-    result.shots = shots; result.thumbs = thumbs; result.scrub = scrub;
+    result.shots = shots; result.thumbs = thumbs; result.scrub = scrub; result.feat = feat;
     for (const t of thumbs) if (t) transfer.push(t);
     for (const f of scrub.frames) if (f) transfer.push(f);
   } else {

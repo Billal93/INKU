@@ -8,6 +8,9 @@ import { createBin } from './bin.js';
 import { createProps } from './props.js';
 import { createVoice } from './voice.js';
 import { createVoicePanel } from './voice-panel.js';
+import { createDressPanel } from './dress-panel.js';
+import { BrandAssets } from './assets.js';
+import { boundLoops, contentEnd } from './overlays.js';
 import { splitAt, deleteClips, duplicateClips, addMarker } from './ops.js';
 import { loadSaved, startAutosave } from './persist.js';
 import { requestPersistence, usage, opfsAvailable } from './storage.js';
@@ -60,6 +63,8 @@ async function boot() {
 
   const lib = new Library();
   await lib.init();
+  const assets = new BrandAssets();
+  await assets.load().catch((e) => console.warn('[montage] pack de marque', e));
   const saved = await loadSaved();
   const store = createStore(saved ? JSON.parse(saved.doc) : newProject());
   if (saved) store.restore(saved);
@@ -70,14 +75,14 @@ async function boot() {
   const frameEl = $('frame');
   const hud = $('hud');
   const player = new Player({
-    store, library: lib, mount: frameEl,
+    store, library: lib, mount: frameEl, assets,
     onFrame: (frame, clip) => {
       const fps = store.doc.project.fps;
       const n = clip && clip.track === 'V1' ? store.doc.clips.filter((c) => c.track === 'V1').sort((a, b) => a.start - b.start).findIndex((c) => c.id === clip.id) + 1 : 0;
       hud.textContent = fmtTime(frame, fps) + (clip ? ` · V1 clip ${n} · ${player.stats.lastSource === 'proxy' ? 'proxy' : 'original'}` : ' · aucun clip');
     },
   });
-  window.__studio = { store, lib, player };
+  window.__studio = { store, lib, player, assets };
 
   // ── Timeline, sources, propriétés ──
   let props = null;
@@ -90,11 +95,20 @@ async function boot() {
   const voice = createVoice({ store, lib, player });
   createVoicePanel({ el: $('voiceBody'), store, lib, voice, toast, onFont: (f) => player.setSubtitleFont(f) });
   window.__studio.voice = voice;
+  createDressPanel({ el: $('dressBody'), store, lib, player, assets, toast });
+  // Logo et musique bouclés : toujours bornés à la durée exacte de la vidéo (donnée dérivée, hors historique).
+  let mixTimer = undefined;
+  store.subscribe((k) => {
+    if (k !== 'doc' || store.inGesture) return;
+    boundLoops(store.doc);
+    // Mixage recalculé en arrière-plan (worker) peu après la dernière modification : prêt pour la lecture.
+    clearTimeout(mixTimer); mixTimer = setTimeout(() => { if (!store.ui.playing) player.prepareMix(); }, 900);
+  });
 
   // ── Barre supérieure ──
   const durEl = $('dur');
   const updateDur = () => {
-    const d = store.doc, tf = totalFrames(d) / d.project.fps, t = d.project.target;
+    const d = store.doc, tf = contentEnd(d) / d.project.fps, t = d.project.target;
     const delta = tf - t.duration;
     durEl.textContent = `${fr(tf)} s / ${fr(t.duration)} s · ${delta >= 0 ? '+' : '−'}${fr(Math.abs(delta))}`;
     durEl.className = 'dur ' + (tf >= t.min && tf <= t.max ? 'ok' : 'warn');
@@ -159,10 +173,11 @@ async function boot() {
   window.addEventListener('drop', (e) => { $('dropHint').classList.remove('show'); if (e.dataTransfer && e.dataTransfer.files.length) { e.preventDefault(); doImport(e.dataTransfer.files); } });
 
   // ── Feuilles (mobile) ──
-  const sheets = ['sheetSources', 'sheetVoice', 'sheetProps'];
+  const LEFT = ['sheetSources', 'sheetVoice', 'sheetDress', 'sheetEnd'];
+  const sheets = [...LEFT, 'sheetProps'];
   const toggleSheet = (id) => { sheets.forEach((s) => $(s).classList.toggle('open', s === id && !$(s).classList.contains('open'))); };
   // Onglets du panneau gauche (Sources / Voix) : sur ordinateur ils partagent la même colonne.
-  const setActive = (id) => { for (const s of ['sheetSources', 'sheetVoice']) $(s).classList.toggle('active', s === id); };
+  const setActive = (id) => { for (const s of LEFT) $(s).classList.toggle('active', s === id); };
   const showTab = (id) => {
     setActive(id);
     // Sur téléphone, un onglet touché dans une feuille ouverte ouvre l'autre feuille.
@@ -171,7 +186,7 @@ async function boot() {
   document.querySelectorAll(/** @type {'button'} */ ('[data-tab]')).forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
   document.querySelectorAll(/** @type {'button'} */ ('[data-sheet]')).forEach((b) => b.addEventListener('click', () => { if (b.dataset.sheet !== 'sheetProps') setActive(b.dataset.sheet); toggleSheet(b.dataset.sheet); }));
   document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => b.closest('.sheet').classList.remove('open')));
-  $('dCut').onclick = cut; $('dDel').onclick = del;
+  $('dCut').onclick = cut;
 
   // ── Cadrage en glissant sur l'aperçu ──
   let cg = null;

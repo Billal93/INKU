@@ -64,10 +64,11 @@ svg.i { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2;
 .row.ruler .lane { height:26px; }
 .tick { position:absolute; top:0; bottom:0; border-left:1px solid var(--line); font-size:.6rem; color:var(--muted); padding-left:3px; padding-top:2px; font-variant-numeric:tabular-nums; pointer-events:none; }
 .tick.minor { top:16px; }
-.lane.h-v1 { height:62px; } .lane.h-v2 { height:34px; } .lane.h-t1 { height:34px; } .lane.h-a1 { height:54px; } .lane.h-a2, .lane.h-a3, .lane.h-a4 { height:30px; }
+.lane.h-v1 { height:62px; } .lane.h-v2 { height:34px; } .lane.h-t1 { height:34px; } .lane.h-a1 { height:54px; } .lane.h-a2, .lane.h-a3, .lane.h-a4, .lane.h-a5 { height:30px; }
 .clip { position:absolute; top:3px; bottom:3px; border-radius:7px; overflow:hidden; display:flex; align-items:center; color:#fff; font-size:.66rem; font-weight:700; padding:0 6px; background:var(--v1); border:2px solid transparent; touch-action:pan-x pan-y; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
 .clip.grab { box-shadow:0 6px 18px rgba(0,0,0,.55); outline:2px solid var(--fuchsia); z-index:9; }
-.clip.v2 { background:var(--v2); } .clip.t1 { background:var(--t1); } .clip.a2 { background:var(--a2); } .clip.a3 { background:var(--a3); } .clip.a4 { background:var(--a4); }
+.clip.v2 { background:var(--v2); } .clip.t1 { background:var(--t1); } .clip.a2 { background:var(--a2); } .clip.a3 { background:var(--a3); } .clip.a4 { background:var(--a4); } .clip.a5 { background:var(--a2); filter:saturate(.6); }
+.clip .cover { position:absolute; top:0; bottom:0; background:repeating-linear-gradient(45deg, rgba(255,255,255,.35) 0 4px, transparent 4px 8px); pointer-events:none; }
 .clip.a1 { background:color-mix(in srgb, var(--a1) 55%, transparent); padding:0; align-items:stretch; }
 .clip.sel { border-color:var(--sel); box-shadow:0 0 0 1px rgba(0,0,0,.4); z-index:3; }
 .clip .nm { position:relative; text-shadow:0 1px 2px rgba(0,0,0,.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
@@ -186,3 +187,21 @@ svg.i { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2;
 .clip.t1 .nm { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .clip.t1 .nm b { color:#ffea00; } .clip.t1 .nm i { color:#ff5a5a; font-style:normal; }
 .fontwarn { position:absolute; left:8px; bottom:8px; z-index:3; font-size:.62rem; font-weight:800; background:rgba(0,0,0,.65); color:var(--warn); padding:4px 8px; border-radius:8px; pointer-events:none; }
+
+/* Habillage */
+.brow { display:flex; gap:6px; align-items:center; padding:6px 0; border-bottom:1px solid var(--line); font-size:.74rem; }
+.brow .bname { flex:1; min-width:0; overflow-wrap:anywhere; font-weight:700; }
+.brow select, .vrow select { max-width:42%; min-height:34px; background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:8px; font-size:.72rem; }
+.vrow { display:flex; gap:6px; align-items:center; margin:6px 0; flex-wrap:wrap; }
+.vrow input[type=text] { min-height:36px; background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:0 8px; font-size:.75rem; }
+.vrow .chk { font-size:.75rem; display:flex; gap:4px; align-items:center; }
+.chips { display:flex; flex-wrap:wrap; gap:6px; }
+.chip { min-height:34px; padding:0 10px; border-radius:99px; background:var(--panel2); border:1px solid var(--line); color:var(--text); font-size:.7rem; }
+.placed { font-size:.74rem; padding:6px 0; border-bottom:1px solid var(--line); }
+.placed .ibtn { min-height:30px; font-size:.68rem; margin-left:4px; }
+.placed .warn, .placed .err, .panel-b .warn { color:var(--warn); font-size:.7rem; margin-top:3px; }
+.placed .err { color:var(--danger, #ff5a5a); }
+.mixset { display:flex; flex-wrap:wrap; gap:8px; font-size:.72rem; }
+.mixset input { width:64px; min-height:32px; background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:0 6px; }
+.mixtab { width:100%; border-collapse:collapse; font-size:.72rem; margin:8px 0; }
+.mixtab th, .mixtab td { text-align:left; padding:3px 4px; border-bottom:1px solid var(--line); }

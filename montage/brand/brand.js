@@ -4,13 +4,17 @@
 import { readZip, writeZip } from './zip.js';
 
 export const BRAND_SCHEMA = 'inku-brand', BRAND_VERSION = 1;
+/** Événement « change » après chaque modification du pack (les panneaux se mettent à jour). */
+export const brandEvents = new EventTarget();
 export const KINDS = {
   font: 'Police', opening: 'Ouverture (explosion)', transition: 'Transition', subscribe: 'Abonne-toi', logo: 'Logo',
   overlay: 'Autre overlay', sfx: 'Son (SFX)', music: 'Musique', thumbnail: 'Miniature',
 };
 
 /** @typedef {{ id: string, kind: string, file: string, name: string, size: number, role?: string,
- *   keying?: { method: 'luma'|'chroma'|'alpha', lo?: number, hi?: number, color?: [number, number, number] }, analysis?: any }} BrandAsset */
+ *   keying?: { method: 'luma'|'chroma'|'alpha'|'none', lo?: number, hi?: number, color?: number[] }, keyingManual?: boolean, keyingWhy?: string,
+ *   analysis?: any, analyzed?: number, fps?: number, frames?: number, width?: number, height?: number, duration?: number,
+ *   hasAudio?: boolean, image?: boolean, lufs?: number, truePeakDb?: number, rate?: number }} BrandAsset */
 /** @typedef {{ schema: string, version: number, name: string, font: { family: string, weight: number, file: string } | null, assets: BrandAsset[] }} BrandManifest */
 
 /** Rôle probable d'un fichier d'après son nom et son type (modifiable ensuite). @param {string} name */
@@ -53,6 +57,7 @@ async function saveManifest(m) {
   const h = await (await dir()).getFileHandle('brand.json', { create: true });
   const w = await h.createWritable();
   await w.write(JSON.stringify(m, null, 1)); await w.close();
+  brandEvents.dispatchEvent(new Event('change'));
 }
 
 /** Lit un fichier du pack (Blob). @param {string} file */

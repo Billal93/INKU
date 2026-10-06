@@ -3,11 +3,10 @@
 // on affiche la dernière image disponible (images sautées) sans jamais décaler l'audio.
 import { Input, ALL_FORMATS, BlobSource, CanvasSink } from '../vendor/mediabunny.min.mjs';
 import { Compositor } from '../render/compositor.js';
-import { SubtitleLayer } from '../render/subtitle-layer.js';
-import { makeMeasure } from '../render/text-raster.js';
-import { layoutGroup, baseFontSize } from '../subs/layout.js';
+import { Scene } from '../render/scene.js';
 import { decodeAudio } from '../lib/audio.js';
-import { cropWindow, totalFrames } from './edl.js';
+import { ProjectMixer } from './mixer.js';
+import { contentEnd } from './overlays.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -19,8 +18,13 @@ class LRU {
 }
 
 export class Player {
-  constructor({ store, library, mount, onFrame }) {
+  constructor({ store, library, mount, onFrame, assets }) {
     this.store = store; this.lib = library; this.onFrame = onFrame || (() => {});
+    this.assets = assets;
+    this.scene = new Scene();
+    this.mixer = new ProjectMixer({ lib: library, assets });
+    this.mixBuffer = null;    // { key, buffer } : mixage complet du projet (même calcul que l'export)
+    if (assets) assets.addEventListener('reader', () => this.redraw());
     this.H = library.proxyHeight; this.W = Math.round((this.H * 9) / 16);
     // Compositeur commun aperçu / export ; la résolution suit la taille affichée × densité de l'écran (≤ 1080×1920).
     const canvas = document.createElement('canvas');
@@ -35,8 +39,6 @@ export class Player {
       new ResizeObserver(() => { const [w, h] = size(); if (Math.abs(h - this.comp.height) > 40) { this.comp.resize(w, h); this.redraw(); } }).observe(mount);
     }
     this.mount = mount;
-    this.subs = null;               // calque des sous-titres (créé quand la police est connue)
-    this.subsKey = '';
     this.font = { family: 'Plus Jakarta Sans', weight: 800, brand: false };
     this.handles = new Map();         // `${srcId}:${kind}` -> { input, sink, kind, usable, track }
     this.cache = new LRU(10);
@@ -57,6 +59,15 @@ export class Player {
   async _handle(srcId) {
     const rec = this.lib.get(srcId);
     if (!rec) return null;
+    if (rec.kind === 'image') {
+      const key = srcId + ':image';
+      if (this.handles.has(key)) return this.handles.get(key);
+      const file = await this.lib.getFile(srcId, 'media');
+      if (!file) return null;
+      const h = { kind: 'image', bmp: await createImageBitmap(file), usable: rec.letterbox.usable, rec, input: null, sink: null };
+      this.handles.set(key, h);
+      return h;
+    }
     const wantProxy = rec.proxy === 'ready';
     const key = srcId + ':' + (wantProxy ? 'proxy' : 'media');
     if (this.handles.has(key)) return this.handles.get(key);
@@ -72,7 +83,7 @@ export class Player {
 
   // Passe une fenêtre de cadrage (coordonnées originales) en coordonnées du canvas décodé.
   _toFrameRect(h, rect, canvas) {
-    if (h.kind === 'proxy') {
+    if (h.kind === 'proxy' && h.usable) {
       const s = canvas.height / h.usable.h;
       return { x: (rect.x - h.usable.x) * s, y: (rect.y - h.usable.y) * s, w: rect.w * s, h: rect.h * s };
     }
@@ -82,6 +93,7 @@ export class Player {
   async frameAt(srcId, t) {
     const h = await this._handle(srcId);
     if (!h) return null;
+    if (h.kind === 'image') return { canvas: h.bmp, h };
     const key = srcId + ':' + h.kind + ':' + Math.round(t * 1000);
     const hit = this.cache.get(key);
     if (hit) return { canvas: hit, h };
@@ -92,16 +104,14 @@ export class Player {
   }
 
   videoClipAt(frame) {
-    const doc = this.store.doc;
-    const tr = doc.tracks.find((x) => x.id === 'V1');
-    if (tr && tr.muted) return null;
-    return doc.clips.find((c) => c.track === 'V1' && frame >= c.start && frame < c.start + c.dur) || null;
+    const b = this.scene.bgAt(this.store.doc, frame);
+    return b ? b.clip : null;
   }
 
   /** Police des sous-titres : celle de la marque si chargée, sinon police de remplacement SIGNALÉE (export bloqué). */
   async setSubtitleFont(font) {
     try { await document.fonts.load(`${font.weight} 64px "${font.family}"`, 'ÉÀÇŒ'); } catch { }
-    this.font = font; this.subsKey = ''; this.subs = null;
+    this.font = font; this.scene.setFont(font);
     let w = this.mount.querySelector('.fontwarn');
     if (!font.brand) {
       if (!w) { w = document.createElement('div'); w.className = 'fontwarn'; this.mount.appendChild(w); }
@@ -110,42 +120,33 @@ export class Player {
     this.redraw();
   }
 
-  /** Groupes de sous-titres (mise en page) à partir des clips T1, recalculés seulement si T1 a changé. */
-  _subtitleLayer() {
-    const doc = this.store.doc;
-    const t1 = doc.tracks.find((t) => t.id === 'T1');
-    if (t1 && t1.muted) return null;
-    const clips = doc.clips.filter((c) => c.track === 'T1' && c.sub).sort((a, b) => a.start - b.start);
-    const key = this.font.family + '|' + JSON.stringify(clips.map((c) => [c.id, c.start, c.dur, c.sub.words]));
-    if (key !== this.subsKey) {
-      this.subsKey = key;
-      if (!clips.length) { this.subs = null; return null; }
-      const measure = makeMeasure(this.font.family, this.font.weight);
-      const all = clips.flatMap((c) => c.sub.words);
-      const base = baseFontSize(all.filter((w) => w.kind === 'important').map((w) => w.w), all.map((w) => w.w), measure, { impactWords: all.filter((w) => w.kind === 'impact').map((w) => w.w) });
-      this.subs = new SubtitleLayer({ family: this.font.family, weight: this.font.weight, preset: (doc.subtitles && doc.subtitles.preset) || 'pop rapide' });
-      this.subs.setGroups(clips.map((c, i) => ({ id: c.id + ':' + i, index: c.sub.index ?? i, start: c.start, end: c.start + c.dur, layout: layoutGroup(c.sub.words, base, measure) })));
-      this.subsBase = base;
+  /** Images des overlays à l'image `frame` : exactes (image fixe) ou dernière prête (lecture temps réel). */
+  async _overlaysExact(frame) {
+    const m = new Map();
+    if (!this.assets) return m;
+    for (const o of this.scene.overlaysAt(this.store.doc, frame)) {
+      const r = await this.assets.reader(o.assetId, this.comp.height);
+      const cv = r ? await r.at(o.t) : null;
+      if (cv) m.set(o.clip.id, cv);
     }
-    return this.subs;
+    return m;
+  }
+  _overlaysLive(frame) {
+    const m = new Map();
+    if (!this.assets) return m;
+    for (const o of this.scene.overlaysAt(this.store.doc, frame)) {
+      const r = this.assets.readerSync(o.assetId, this.comp.height);
+      const cv = r ? r.peek(o.t) : null;
+      if (cv) m.set(o.clip.id, cv);
+    }
+    return m;
   }
 
-  /** Calques au-dessus du fond (sous-titres ; overlays et logo en priorité 3). Même code pour l'export. */
-  _drawLayers(frame) {
-    const subs = this._subtitleLayer();
-    if (subs) subs.draw(this.comp, frame, this.fps);
-  }
-
-  _draw(frameObj, clip, frame) {
-    this.comp.begin();
-    if (frameObj) {
-      const k = frame - clip.start;
-      const rect = cropWindow(clip, k, frameObj.h.usable);
-      this.comp.drawClip(frameObj.canvas, this._toFrameRect(frameObj.h, rect, frameObj.canvas));
-      this.stats.drawn++;
-      this.stats.lastSource = frameObj.h.kind;
-    }
-    this._drawLayers(frame);
+  /** Composition de l'image (calques de la méthode, même code que l'export). */
+  _draw(frameObj, clip, frame, overlays) {
+    const bg = frameObj ? { canvas: frameObj.canvas, usable: frameObj.h.usable, src: frameObj.h.rec, toCanvas: (r) => this._toFrameRect(frameObj.h, r, frameObj.canvas) } : null;
+    this.scene.draw(this.comp, this.store.doc, frame, { bg, overlays: overlays || this._overlaysLive(frame) });
+    if (frameObj) { this.stats.drawn++; this.stats.lastSource = frameObj.h.kind; }
     this.onFrame(frame, clip);
   }
 
@@ -209,11 +210,12 @@ export class Player {
   async renderStill(frame) {
     const seq = this.seq;
     const clip = this.videoClipAt(frame);
-    if (!clip) { this.comp.begin(); this._drawLayers(frame); this.onFrame(frame, null); return; }
+    const ov = await this._overlaysExact(frame);
+    if (!clip) { if (this.pending !== null || seq !== this.seq) return; this._draw(null, null, frame, ov); return; }
     const t = clip.srcIn + (frame - clip.start) / this.fps;
     const fo = await this.frameAt(clip.srcId, t);
     if (this.pending !== null || seq !== this.seq) return; // un nouveau déplacement est arrivé : inutile de dessiner
-    this._draw(fo, clip, frame);
+    this._draw(fo, clip, frame, ov);
   }
 
   refresh() { this.cache.clear(); this.pending = this.store.ui.playhead; this._pump(); }
@@ -234,17 +236,39 @@ export class Player {
     return buf;
   }
 
+  /** Mixage complet du projet (même calcul que l'export), recalculé en arrière-plan quand le son change. */
+  async prepareMix() {
+    try {
+      const m = await this.mixer.mix(this.store.doc);
+      if (!this.mixBuffer || this.mixBuffer.key !== m.key) this.mixBuffer = { key: m.key, buffer: ProjectMixer.toAudioBuffer(m), report: m.report, ms: m.ms };
+      return this.mixBuffer;
+    } catch (e) { console.warn('[player] mixage', e); return null; }
+  }
+
   async _scheduleAudio(startFrame) {
     const doc = this.store.doc;
     if (!this.actx) this.actx = new (window.AudioContext || window.webkitAudioContext)();
     if (this.actx.state === 'suspended') await this.actx.resume();
     this.audioNodes.forEach((n) => { try { n.stop(); } catch (e) { /* déjà arrêté */ } });
     this.audioNodes = [];
-    const solo = doc.tracks.some((t) => t.solo);
     const base = this.actx.currentTime + 0.06;
+    // Mixage complet prêt (le cas normal, calculé en arrière-plan après chaque modification) : un seul tampon,
+    // identique au son exporté. Sinon on joue les clips séparément sans attendre, et le mixage se prépare.
+    const mix = this.mixBuffer && this.mixBuffer.key === this.mixer.keyFor(doc) ? this.mixBuffer : null;
+    if (!mix) this.prepareMix();
+    if (mix && mix.buffer) {
+      const node = this.actx.createBufferSource();
+      node.buffer = mix.buffer;
+      node.connect(this.actx.destination);
+      const off = startFrame / this.fps, at = this.actx.currentTime + 0.06;
+      if (off < mix.buffer.duration) { node.start(at, off); this.audioNodes.push(node); }
+      return at;
+    }
+    // Repli (mixage pas encore prêt) : chaque clip audio de la bibliothèque joué séparément.
+    const solo = doc.tracks.some((t) => t.solo);
     for (const clip of doc.clips) {
       const tr = doc.tracks.find((t) => t.id === clip.track);
-      if (!tr || !tr.id.startsWith('A') || tr.muted || (solo && !tr.solo)) continue;
+      if (!tr || !tr.id.startsWith('A') || tr.muted || (solo && !tr.solo) || !clip.srcId) continue;
       const endF = clip.start + clip.dur;
       if (endF <= startFrame) continue;
       const buf = await this._audioFor(clip.srcId);
@@ -270,7 +294,7 @@ export class Player {
 
   async play() {
     if (this.playing) return;
-    const end = totalFrames(this.store.doc);
+    const end = contentEnd(this.store.doc);
     let start = this.store.ui.playhead;
     if (end > 0 && start >= end - 1) start = this.store.ui.inPoint ?? 0;
     this.playing = true; this.store.ui.playing = true; this.store.notify('transport');
@@ -355,7 +379,14 @@ export class Player {
 
   _playbackFrame(frame) {
     const clip = this.videoClipAt(frame);
-    if (!clip) { this.comp.begin(); this._drawLayers(frame); this.lastDrawn = 'black'; this.onFrame(frame, null); return; }
+    if (!clip) { this._draw(null, null, frame); this.lastDrawn = 'black'; return; }
+    const rec = this.lib.get(clip.srcId);
+    if (rec && rec.kind === 'image') {
+      const h = this.handles.get(clip.srcId + ':image');
+      if (!h) { this._handle(clip.srcId); return; }
+      this._draw({ canvas: h.bmp, h }, clip, frame);
+      return;
+    }
     if (!this.pump || this.pump.clipId !== clip.id) {
       if (this.pump) this.pump.stop = true;
       if (this.nextPump && this.nextPump.clipId === clip.id) { this.pump = this.nextPump; this.nextPump = null; }
@@ -375,7 +406,8 @@ export class Player {
     }
     if (!cur) { if (this.lastFrameObj && this.lastFrameObj.clipId === clip.id) cur = this.lastFrameObj.cur; else return; } // image pas encore prête : la précédente
     // Sans calque animé, inutile de redessiner une image identique.
-    if (!this.subs && this.lastDrawn === cur && this._lastClip === clip.id && this._lastCrop === JSON.stringify(clip.crop)) { this.onFrame(frame, clip); return; }
+    const animated = this.scene.subtitleLayer(this.store.doc) || this.scene.overlaysAt(this.store.doc, frame).length || (this.store.doc.copyright && this.store.doc.copyright.enabled);
+    if (!animated && this.lastDrawn === cur && this._lastClip === clip.id && this._lastCrop === JSON.stringify(clip.crop)) { this.onFrame(frame, clip); return; }
     this.lastFrameObj = { clipId: clip.id, cur };
     this.lastDrawn = cur; this._lastClip = clip.id; this._lastCrop = JSON.stringify(clip.crop);
     this._draw({ canvas: cur.canvas, h: p.h }, clip, frame);
