@@ -1,0 +1,16 @@
+{
+  "name": "INKU Studio Montage",
+  "short_name": "INKU Montage",
+  "description": "Montage vidéo TikTok 9:16, 100 % sur l'appareil.",
+  "lang": "fr",
+  "start_url": "studio.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f0d16",
+  "theme_color": "#0f0d16",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

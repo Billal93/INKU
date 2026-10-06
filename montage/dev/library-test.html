@@ -1,0 +1,11 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Test bibliothèque</title>
+<script type="importmap">{"imports":{"mediabunny":"../vendor/mediabunny.min.mjs"}}</script></head>
+<body><input id="f" type="file" multiple><pre id="out"></pre>
+<script type="module">
+import { Library } from '../studio/library.js';
+const lib = new Library(); window.lib = lib;
+await lib.init();
+lib.addEventListener('change', () => { document.getElementById('out').textContent = JSON.stringify(lib.list.map(r => ({ id: r.id, name: r.name, status: r.status, stage: r.stage, p: Math.round((r.progress||0)*100), proxy: r.proxy, shots: r.shots && r.shots.length })), null, 1); });
+document.getElementById('f').onchange = (e) => lib.ingest(e.target.files);
+window.ready = true;
+</script></body></html>

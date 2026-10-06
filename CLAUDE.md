@@ -56,3 +56,18 @@ ne protège que l'avenir, pas l'exposition passée.
 - L'utilisateur n'est pas développeur : ne poser que des questions de rendu
   visuel/comportement observable, jamais de questions techniques
   d'implémentation.
+
+## Montage vidéo (dossier `montage/`)
+
+Éditeur multipistes 9:16 100 % navigateur (WebCodecs + Mediabunny), page SÉPARÉE du site principal :
+`montage/studio.html`. Les règles de compatibilité ES2017/vieux iOS ci-dessus ne s'appliquent PAS à ce dossier
+(modules ES, détection de fonctionnalités, message « non compatible » sinon) ; elles continuent de s'appliquer
+à `index.html`. Ne jamais mettre de fichier de l'utilisateur (voix, trailers) ni de média protégé dans le dépôt.
+- Architecture et décisions : `docs/decisions.md`. Maquettes : `montage/mockup.html`, `docs/maquettes/`.
+- Modèle de données : `montage/studio/edl.js` (EDL v1 versionné, temps en images à 30 fps).
+- Cible (D15) : iPhone 17+/iOS 26+ (Safari 26), Chrome/Edge à jour, Safari 26 Mac, Firefox 130+ best-effort.
+  JS moderne autorisé, WebGPU/WebCodecs/OPFS/workers. En dessous : message + export EDL.
+- Avant chaque commit : `npm run montage:check` (tsc --checkJs, ESLint, pré-cache à jour, tests unitaires).
+  Après modification d'un fichier de `montage/` : `node tools/montage-precache.mjs`.
+- Tests navigateur : `npm run montage:e2e` (Chromium/Chrome ; inclut l'isolation du service worker).
+- Le service worker est limité à `/montage/` : ne jamais l'enregistrer depuis `index.html`.

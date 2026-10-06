@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Autotest | INKU Montage</title>
+<meta name="theme-color" content="#0f0d16">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+<style>
+  @font-face { font-family:'Plus Jakarta Sans'; font-weight:400; src:url('../assets/fonts/plus-jakarta-sans-400.woff2') format('woff2'); }
+  @font-face { font-family:'Plus Jakarta Sans'; font-weight:800; src:url('../assets/fonts/plus-jakarta-sans-800.woff2') format('woff2'); }
+  :root { --bg:#0f0d16; --panel:#171421; --line:#2b2640; --text:#ece9f6; --muted:#8c86a3; --ok:#37c871; --warn:#ffb020; --err:#ff4d5e; --fuchsia:#d91b81; }
+  :root[data-theme="light"] { --bg:#f4f5f8; --panel:#fff; --line:#e2e4ee; --text:#1a1625; --muted:#6b7280; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 'Plus Jakarta Sans', system-ui, sans-serif; padding:16px; padding-top:calc(16px + env(safe-area-inset-top)); }
+  main { max-width:760px; margin:0 auto; }
+  h1 { font-size:1.3rem; margin:0 0 4px; }
+  p { color:var(--muted); margin:6px 0 14px; font-size:.86rem; }
+  .row { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin:8px 0; }
+  .row b { display:block; }
+  .st { font-size:.8rem; color:var(--muted); white-space:pre-wrap; }
+  .st.ok { color:var(--ok); } .st.warn { color:var(--warn); } .st.err { color:var(--err); }
+  button { font:inherit; font-weight:800; border:0; border-radius:12px; min-height:48px; padding:0 18px; cursor:pointer; color:#fff; background:linear-gradient(135deg,#d91b81,#82278f); }
+  button.sec { background:var(--panel); color:var(--text); border:1px solid var(--line); }
+  label { display:flex; gap:10px; align-items:flex-start; font-size:.86rem; margin:10px 0; }
+  input[type=checkbox] { width:22px; height:22px; flex:none; }
+  textarea { width:100%; min-height:180px; background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:10px; font:12px/1.4 ui-monospace, monospace; padding:10px; }
+  .btns { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+  canvas { display:none; }
+  a { color:var(--fuchsia); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Autotest et benchmark</h1>
+  <p>Mesure ce que CET appareil sait faire pour le Montage : rendu, encodage vidéo et audio, transcription. Rien n'est envoyé : copiez le rapport à la fin et collez-le dans la conversation. <a href="studio.html">← Retour au Studio</a></p>
+  <label><input type="checkbox" id="withAsr"> <span>Inclure la transcription (télécharge une fois le modèle de 458 Mo depuis Hugging Face si absent, puis le garde sur l'appareil)</span></label>
+  <div class="btns"><button id="run">Lancer l'autotest</button><button class="sec" id="copy" disabled>Copier le rapport</button></div>
+  <div id="steps"></div>
+  <textarea id="report" readonly placeholder="Le rapport apparaîtra ici."></textarea>
+</main>
+<script src="coi-register.js"></script>
+<script type="importmap">{"imports":{"mediabunny":"./vendor/mediabunny.min.mjs"}}</script>
+<script type="module" src="studio/autotest.js"></script>
+</body>
+</html>
