@@ -85,6 +85,31 @@ test.describe('Smoke INKU Studio', () => {
     }
   });
 
+  test('Collage 3x1 : colonnes de trois images + téléchargement individuel', async ({ page }) => {
+    await page.goto('/index.html');
+    await page.click('#btn-collage');
+    await page.setInputFiles('#collageInput', [img(1), img(2), img(3), img(4)]);
+    await expect(page.locator('#collageGrid .collage-item')).toHaveCount(4);
+
+    const isIOSProject = /iPhone|iPad/.test(test.info().project.name);
+
+    // 4 images -> une colonne de 3 + une colonne d'1 image restante.
+    await page.click('text=Collage 3x1');
+    await expect(page.locator('#trioPreview .capture-thumb')).toHaveCount(2);
+
+    const firstCardDlBtn = page.locator('#trioPreview .capture-thumb').nth(0).locator('button');
+    if (isIOSProject) {
+      await firstCardDlBtn.click();
+      await expect(page.locator('#iosModal')).toBeVisible();
+    } else {
+      const [download] = await Promise.all([
+        page.waitForEvent('download'),
+        firstCardDlBtn.click(),
+      ]);
+      expect(download.suggestedFilename()).toBe('INKU_COLLAGE_3X1_1.jpg');
+    }
+  });
+
   test('Créateur 4K : génère un canvas 3840x2160', async ({ page }) => {
     await page.goto('/index.html');
     await page.click('#btn-generator');
