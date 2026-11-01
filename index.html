@@ -593,6 +593,40 @@
             display: block;
         }
 
+        .trio-handle {
+            padding: 6px 8px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            background: #fff;
+            border-bottom: 1px solid var(--border);
+            cursor: grab;
+        }
+
+        .trio-stack {
+            min-height: 40px;
+            padding: 3px;
+            background: #f4f4f6;
+        }
+
+        .trio-shot {
+            margin-bottom: 3px;
+            border-radius: 3px;
+            overflow: hidden;
+            cursor: grab;
+            background: #ddd;
+        }
+
+        .trio-shot:last-child {
+            margin-bottom: 0;
+        }
+
+        .trio-shot img {
+            width: 100%;
+            display: block;
+            pointer-events: none;
+        }
+
         .capture-actions {
             padding: 8px;
             display: flex;
@@ -2221,12 +2255,110 @@
 
         function generateInstaCollage() { return generateGroupedCollage(INSTA_CFG); }
         window.generateInstaCollage = generateInstaCollage;
-        function generateTrioCollage() { return generateGroupedCollage(TRIO_CFG); }
+        // Collage 3x1 : chaque colonne affiche ses captures empilées. On peut
+        // glisser une capture dans une autre colonne (si la colonne est pleine,
+        // les deux captures sont échangées) et réordonner les colonnes via
+        // leur poignée. Le fichier n'est fabriqué qu'au téléchargement, d'après
+        // l'agencement affiché à ce moment-là.
+        function refreshTrioColumns() {
+            const wrap = document.getElementById(TRIO_CFG.previewId);
+            Array.from(wrap.children).forEach(card => {
+                if (!card.querySelector('.trio-shot')) card.remove();
+            });
+            Array.from(wrap.children).forEach((card, i) => {
+                card.querySelector('.trio-title').textContent = 'Colonne ' + (i + 1);
+            });
+            if (!wrap.children.length) document.getElementById(TRIO_CFG.containerId).style.display = 'none';
+        }
+
+        async function renderTrioColumn(card) {
+            const items = Array.from(card.querySelectorAll('.trio-shot')).map(el => el._item);
+            if (!items.length) return null;
+            const canvas = await createMergedCanvas(items, 1);
+            if (!canvas) return null;
+            const blob = await canvasToBlob(canvas, 0.9);
+            canvas.width = 0; canvas.height = 0;
+            return blob;
+        }
+
+        function generateTrioCollage() {
+            const orderedFiles = getOrderedCollageFiles();
+            if (!orderedFiles.length) return showToast('Aucune image', 'error');
+            const container = document.getElementById(TRIO_CFG.containerId);
+            const wrap = document.getElementById(TRIO_CFG.previewId);
+            wrap.innerHTML = '';
+            const stacks = [];
+            for (let i = 0; i < orderedFiles.length; i += TRIO_CFG.size) {
+                const card = document.createElement('div'); card.className = 'capture-thumb';
+                const handle = document.createElement('div'); handle.className = 'trio-handle';
+                const title = document.createElement('span'); title.className = 'trio-title';
+                handle.appendChild(title);
+                const stack = document.createElement('div'); stack.className = 'trio-stack';
+                orderedFiles.slice(i, i + TRIO_CFG.size).forEach(item => {
+                    const shot = document.createElement('div'); shot.className = 'trio-shot';
+                    shot._item = item;
+                    const img = document.createElement('img'); img.src = item.objectUrl; img.alt = item.name;
+                    shot.appendChild(img); stack.appendChild(shot);
+                });
+                const actionsDiv = document.createElement('div'); actionsDiv.className = 'capture-actions'; actionsDiv.style.justifyContent = 'center';
+                const dlBtn = document.createElement('button');
+                dlBtn.className = 'btn-dl-small'; dlBtn.textContent = 'Télécharger'; dlBtn.style.width = '100%'; dlBtn.style.textAlign = 'center';
+                dlBtn.addEventListener('click', async () => {
+                    try {
+                        const blob = await renderTrioColumn(card);
+                        if (!blob) return;
+                        const pos = Array.from(wrap.children).indexOf(card);
+                        saveFiles([{ blob, name: TRIO_CFG.prefix + (pos + 1) + '.jpg' }]);
+                    } catch (e) { console.error(e); showToast('Erreur génération 3x1', 'error'); }
+                });
+                actionsDiv.appendChild(dlBtn);
+                card.appendChild(handle); card.appendChild(stack); card.appendChild(actionsDiv);
+                wrap.appendChild(card);
+                stacks.push(stack);
+            }
+            container.style.display = 'block';
+            refreshTrioColumns();
+
+            if (window.trioSortable) window.trioSortable.destroy();
+            (window.trioStackSortables || []).forEach(sb => sb.destroy());
+            const sortOpts = {
+                animation: 200, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen',
+                delay: 150, delayOnTouchOnly: true, touchStartThreshold: 5
+            };
+            window.trioSortable = new Sortable(wrap, Object.assign({ handle: '.trio-handle' }, sortOpts));
+            window.trioStackSortables = stacks.map(stack => new Sortable(stack, Object.assign({
+                group: 'trio-shots',
+                onEnd: evt => {
+                    // Colonne pleine : la capture déplacée prend la place d'une
+                    // autre qui retourne dans la colonne d'origine.
+                    if (evt.from !== evt.to && evt.to.children.length > TRIO_CFG.size) {
+                        const kids = Array.from(evt.to.children);
+                        const moved = kids.indexOf(evt.item);
+                        const displaced = kids[moved + 1] || kids[moved - 1];
+                        const ref = evt.from.children[evt.oldIndex] || null;
+                        evt.from.insertBefore(displaced, ref);
+                    }
+                    refreshTrioColumns();
+                }
+            }, sortOpts)));
+            showToast(TRIO_CFG.doneMsg);
+        }
         window.generateTrioCollage = generateTrioCollage;
 
         function downloadAllInsta() { downloadAllGrouped(INSTA_CFG.previewId, INSTA_CFG.prefix); }
         window.downloadAllInsta = downloadAllInsta;
-        function downloadAllTrio() { downloadAllGrouped(TRIO_CFG.previewId, TRIO_CFG.prefix); }
+        async function downloadAllTrio() {
+            const cards = Array.from(document.getElementById(TRIO_CFG.previewId).children);
+            if (!cards.length) return;
+            try {
+                const items = [];
+                for (let i = 0; i < cards.length; i++) {
+                    const blob = await renderTrioColumn(cards[i]);
+                    if (blob) items.push({ blob, name: TRIO_CFG.prefix + (i + 1) + '.jpg' });
+                }
+                saveFiles(items);
+            } catch (e) { console.error(e); showToast('Erreur génération 3x1', 'error'); }
+        }
         window.downloadAllTrio = downloadAllTrio;
 
         function clearCollage() {
@@ -2244,6 +2376,9 @@
                     wrap.innerHTML = '';
                 }
             });
+            if (window.trioSortable) { window.trioSortable.destroy(); window.trioSortable = null; }
+            (window.trioStackSortables || []).forEach(sb => sb.destroy());
+            window.trioStackSortables = [];
             showToast('Collage effacé');
         }
         window.clearCollage = clearCollage;
