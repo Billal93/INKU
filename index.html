@@ -2229,6 +2229,26 @@
             return blob;
         }
 
+        // L'image du groupe est fabriquée d'avance (à la génération et après
+        // chaque déplacement) : sur iPhone, le partage "Enregistrer l'image"
+        // doit être lancé directement par le clic, sans attente de rendu.
+        function prepareGroup(card) {
+            if (!card || !card.isConnected) return Promise.resolve(null);
+            const ver = (card._ver || 0) + 1;
+            card._ver = ver; card._blob = null;
+            card._promise = renderGroup(card).then(blob => {
+                if (card._ver === ver) card._blob = blob;
+                return blob;
+            }).catch(e => { console.error(e); return null; });
+            return card._promise;
+        }
+
+        async function groupBlob(card) {
+            if (card._blob) return card._blob;
+            showToast('Préparation de l\'image...');
+            return card._promise || prepareGroup(card);
+        }
+
         function generateGroupedCollage(cfg) {
             const orderedFiles = getOrderedCollageFiles();
             if (!orderedFiles.length) return showToast('Aucune image', 'error');
@@ -2256,13 +2276,11 @@
                 dlBtn.className = 'btn-dl-small'; dlBtn.textContent = 'Télécharger'; dlBtn.style.width = '100%'; dlBtn.style.textAlign = 'center';
                 // Le nom est recalculé sur la position actuelle au moment du clic,
                 // pour rester juste après un glisser-déposer.
-                dlBtn.addEventListener('click', async () => {
-                    try {
-                        const blob = await renderGroup(card);
-                        if (!blob) return;
-                        const pos = Array.from(wrap.children).indexOf(card);
-                        saveFiles([{ blob, name: cfg.prefix + (pos + 1) + '.jpg' }]);
-                    } catch (e) { console.error(e); showToast('Erreur génération ' + cfg.label, 'error'); }
+                dlBtn.addEventListener('click', () => {
+                    const pos = Array.from(wrap.children).indexOf(card);
+                    const name = cfg.prefix + (pos + 1) + '.jpg';
+                    if (card._blob) { saveFiles([{ blob: card._blob, name }]); return; }
+                    groupBlob(card).then(blob => { if (blob) saveFiles([{ blob, name }]); });
                 });
                 actionsDiv.appendChild(dlBtn);
                 card.appendChild(handle); card.appendChild(stack); card.appendChild(actionsDiv);
@@ -2271,6 +2289,7 @@
             }
             container.style.display = 'block';
             refreshGroups(cfg);
+            Array.from(wrap.children).forEach(prepareGroup);
 
             const sortOpts = {
                 animation: 200, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen',
@@ -2289,6 +2308,8 @@
                         evt.from.insertBefore(displaced, ref);
                     }
                     refreshGroups(cfg);
+                    prepareGroup(evt.from.closest('.capture-thumb'));
+                    prepareGroup(evt.to.closest('.capture-thumb'));
                 }
             }, sortOpts)));
             showToast(cfg.doneMsg);
@@ -2297,14 +2318,11 @@
         async function downloadAllGrouped(cfg) {
             const cards = Array.from(document.getElementById(cfg.previewId).children);
             if (!cards.length) return;
-            try {
-                const items = [];
-                for (let i = 0; i < cards.length; i++) {
-                    const blob = await renderGroup(cards[i]);
-                    if (blob) items.push({ blob, name: cfg.prefix + (i + 1) + '.jpg' });
-                }
-                saveFiles(items);
-            } catch (e) { console.error(e); showToast('Erreur génération ' + cfg.label, 'error'); }
+            const build = blobs => blobs.map((blob, i) => ({ blob, name: cfg.prefix + (i + 1) + '.jpg' })).filter(it => it.blob);
+            // Tout est déjà prêt : appel direct dans le clic (requis par iOS).
+            if (cards.every(c => c._blob)) { saveFiles(build(cards.map(c => c._blob))); return; }
+            const blobs = await Promise.all(cards.map(groupBlob));
+            saveFiles(build(blobs));
         }
 
         function generateInstaCollage() { return generateGroupedCollage(INSTA_CFG); }
