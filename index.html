@@ -2186,92 +2186,40 @@
         }
         window.generateClassicCollage = generateClassicCollage;
 
-        // Génère un aperçu de collages par groupes de `size` images empilées
-        // verticalement (Insta = paires, 3x1 = colonnes de trois).
-        async function generateGroupedCollage(cfg) {
-            const orderedFiles = getOrderedCollageFiles();
-            if (!orderedFiles.length) return showToast('Aucune image', 'error');
-            showToast('Génération ' + cfg.label + '...');
-            const previewContainer = document.getElementById(cfg.containerId);
-            const previewWrap = document.getElementById(cfg.previewId);
-            previewWrap.querySelectorAll('img').forEach(img => { if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src); });
-            previewWrap.innerHTML = '';
-            try {
-                // Nombre d'images non multiple de la taille du groupe : le
-                // dernier groupe contient simplement moins d'images.
-                for (let i = 0; i < orderedFiles.length; i += cfg.size) {
-                    const group = orderedFiles.slice(i, i + cfg.size);
-                    const canvas = await createMergedCanvas(group, 1);
-                    if (!canvas) continue;
-                    const blob = await canvasToBlob(canvas, 0.9);
-                    canvas.width = 0; canvas.height = 0;
-                    const objectUrl = URL.createObjectURL(blob);
-
-                    const div = document.createElement('div'); div.className = 'capture-thumb'; div.style.cursor = 'grab';
-                    div._groupBlob = blob;
-                    const imgEl = document.createElement('img'); imgEl.src = objectUrl;
-                    const actionsDiv = document.createElement('div'); actionsDiv.className = 'capture-actions'; actionsDiv.style.justifyContent = 'center';
-                    const dlBtn = document.createElement('button');
-                    dlBtn.className = 'btn-dl-small'; dlBtn.textContent = 'Télécharger'; dlBtn.style.width = '100%'; dlBtn.style.textAlign = 'center';
-                    // Le nom est recalculé sur la position actuelle dans le DOM au
-                    // moment du clic, pour rester juste après un glisser-déposer.
-                    dlBtn.addEventListener('click', () => {
-                        const pos = Array.from(previewWrap.children).indexOf(div);
-                        saveFiles([{ blob: div._groupBlob, name: cfg.prefix + (pos + 1) + '.jpg' }]);
-                    });
-                    actionsDiv.appendChild(dlBtn); div.appendChild(imgEl); div.appendChild(actionsDiv);
-                    previewWrap.appendChild(div);
-                }
-                previewContainer.style.display = 'block';
-                if (window[cfg.sortableKey]) window[cfg.sortableKey].destroy();
-                window[cfg.sortableKey] = new Sortable(previewWrap, {
-                    animation: 200, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen',
-                    delay: 150, delayOnTouchOnly: true, touchStartThreshold: 5,
-                });
-                showToast(cfg.doneMsg);
-            } catch(e) { console.error(e); showToast('Erreur génération ' + cfg.short, 'error'); }
-        }
-
-        function downloadAllGrouped(previewId, prefix) {
-            const thumbs = document.querySelectorAll('#' + previewId + ' .capture-thumb');
-            if (!thumbs.length) return;
-            const items = [];
-            thumbs.forEach((thumb, i) => {
-                items.push({ blob: thumb._groupBlob, name: prefix + (i + 1) + '.jpg' });
-            });
-            saveFiles(items);
-        }
-
+        // Collages Insta (paires) et 3x1 (colonnes de trois) : chaque groupe
+        // affiche ses captures empilées. On peut glisser une capture dans un
+        // autre groupe (si le groupe est plein, les deux captures sont
+        // échangées) et réordonner les groupes via leur poignée. Le fichier
+        // n'est fabriqué qu'au téléchargement, d'après l'agencement affiché.
         const INSTA_CFG = {
-            size: 2, label: 'Collages Insta', short: 'Insta', doneMsg: 'Paires Insta générées !',
+            size: 2, label: 'Insta', title: 'Paire', doneMsg: 'Paires Insta générées !',
             containerId: 'instaPreviewContainer', previewId: 'instaPreview',
-            prefix: 'INKU_COLLAGE_INSTA_', sortableKey: 'instaSortable'
+            prefix: 'INKU_COLLAGE_INSTA_', key: 'insta'
         };
         const TRIO_CFG = {
-            size: 3, label: 'Collages 3x1', short: '3x1', doneMsg: 'Colonnes 3x1 générées !',
+            size: 3, label: '3x1', title: 'Colonne', doneMsg: 'Colonnes 3x1 générées !',
             containerId: 'trioPreviewContainer', previewId: 'trioPreview',
-            prefix: 'INKU_COLLAGE_3X1_', sortableKey: 'trioSortable'
+            prefix: 'INKU_COLLAGE_3X1_', key: 'trio'
         };
 
-        function generateInstaCollage() { return generateGroupedCollage(INSTA_CFG); }
-        window.generateInstaCollage = generateInstaCollage;
-        // Collage 3x1 : chaque colonne affiche ses captures empilées. On peut
-        // glisser une capture dans une autre colonne (si la colonne est pleine,
-        // les deux captures sont échangées) et réordonner les colonnes via
-        // leur poignée. Le fichier n'est fabriqué qu'au téléchargement, d'après
-        // l'agencement affiché à ce moment-là.
-        function refreshTrioColumns() {
-            const wrap = document.getElementById(TRIO_CFG.previewId);
+        function destroyGroupSortables(cfg) {
+            if (window[cfg.key + 'Sortable']) { window[cfg.key + 'Sortable'].destroy(); window[cfg.key + 'Sortable'] = null; }
+            (window[cfg.key + 'Stacks'] || []).forEach(sb => sb.destroy());
+            window[cfg.key + 'Stacks'] = [];
+        }
+
+        function refreshGroups(cfg) {
+            const wrap = document.getElementById(cfg.previewId);
             Array.from(wrap.children).forEach(card => {
                 if (!card.querySelector('.trio-shot')) card.remove();
             });
             Array.from(wrap.children).forEach((card, i) => {
-                card.querySelector('.trio-title').textContent = 'Colonne ' + (i + 1);
+                card.querySelector('.trio-title').textContent = cfg.title + ' ' + (i + 1);
             });
-            if (!wrap.children.length) document.getElementById(TRIO_CFG.containerId).style.display = 'none';
+            if (!wrap.children.length) document.getElementById(cfg.containerId).style.display = 'none';
         }
 
-        async function renderTrioColumn(card) {
+        async function renderGroup(card) {
             const items = Array.from(card.querySelectorAll('.trio-shot')).map(el => el._item);
             if (!items.length) return null;
             const canvas = await createMergedCanvas(items, 1);
@@ -2281,20 +2229,23 @@
             return blob;
         }
 
-        function generateTrioCollage() {
+        function generateGroupedCollage(cfg) {
             const orderedFiles = getOrderedCollageFiles();
             if (!orderedFiles.length) return showToast('Aucune image', 'error');
-            const container = document.getElementById(TRIO_CFG.containerId);
-            const wrap = document.getElementById(TRIO_CFG.previewId);
+            const container = document.getElementById(cfg.containerId);
+            const wrap = document.getElementById(cfg.previewId);
+            destroyGroupSortables(cfg);
             wrap.innerHTML = '';
             const stacks = [];
-            for (let i = 0; i < orderedFiles.length; i += TRIO_CFG.size) {
+            // Nombre d'images non multiple de la taille du groupe : le dernier
+            // groupe contient simplement moins d'images.
+            for (let i = 0; i < orderedFiles.length; i += cfg.size) {
                 const card = document.createElement('div'); card.className = 'capture-thumb';
                 const handle = document.createElement('div'); handle.className = 'trio-handle';
                 const title = document.createElement('span'); title.className = 'trio-title';
                 handle.appendChild(title);
                 const stack = document.createElement('div'); stack.className = 'trio-stack';
-                orderedFiles.slice(i, i + TRIO_CFG.size).forEach(item => {
+                orderedFiles.slice(i, i + cfg.size).forEach(item => {
                     const shot = document.createElement('div'); shot.className = 'trio-shot';
                     shot._item = item;
                     const img = document.createElement('img'); img.src = item.objectUrl; img.alt = item.name;
@@ -2303,13 +2254,15 @@
                 const actionsDiv = document.createElement('div'); actionsDiv.className = 'capture-actions'; actionsDiv.style.justifyContent = 'center';
                 const dlBtn = document.createElement('button');
                 dlBtn.className = 'btn-dl-small'; dlBtn.textContent = 'Télécharger'; dlBtn.style.width = '100%'; dlBtn.style.textAlign = 'center';
+                // Le nom est recalculé sur la position actuelle au moment du clic,
+                // pour rester juste après un glisser-déposer.
                 dlBtn.addEventListener('click', async () => {
                     try {
-                        const blob = await renderTrioColumn(card);
+                        const blob = await renderGroup(card);
                         if (!blob) return;
                         const pos = Array.from(wrap.children).indexOf(card);
-                        saveFiles([{ blob, name: TRIO_CFG.prefix + (pos + 1) + '.jpg' }]);
-                    } catch (e) { console.error(e); showToast('Erreur génération 3x1', 'error'); }
+                        saveFiles([{ blob, name: cfg.prefix + (pos + 1) + '.jpg' }]);
+                    } catch (e) { console.error(e); showToast('Erreur génération ' + cfg.label, 'error'); }
                 });
                 actionsDiv.appendChild(dlBtn);
                 card.appendChild(handle); card.appendChild(stack); card.appendChild(actionsDiv);
@@ -2317,48 +2270,50 @@
                 stacks.push(stack);
             }
             container.style.display = 'block';
-            refreshTrioColumns();
+            refreshGroups(cfg);
 
-            if (window.trioSortable) window.trioSortable.destroy();
-            (window.trioStackSortables || []).forEach(sb => sb.destroy());
             const sortOpts = {
                 animation: 200, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen',
+                forceFallback: true, fallbackTolerance: 3,
                 delay: 150, delayOnTouchOnly: true, touchStartThreshold: 5
             };
-            window.trioSortable = new Sortable(wrap, Object.assign({ handle: '.trio-handle' }, sortOpts));
-            window.trioStackSortables = stacks.map(stack => new Sortable(stack, Object.assign({
-                group: 'trio-shots',
+            window[cfg.key + 'Sortable'] = new Sortable(wrap, Object.assign({ handle: '.trio-handle' }, sortOpts));
+            window[cfg.key + 'Stacks'] = stacks.map(stack => new Sortable(stack, Object.assign({
+                group: cfg.key + '-shots',
                 onEnd: evt => {
-                    // Colonne pleine : la capture déplacée prend la place d'une
-                    // autre qui retourne dans la colonne d'origine.
-                    if (evt.from !== evt.to && evt.to.children.length > TRIO_CFG.size) {
+                    if (evt.from !== evt.to && evt.to.children.length > cfg.size) {
                         const kids = Array.from(evt.to.children);
                         const moved = kids.indexOf(evt.item);
                         const displaced = kids[moved + 1] || kids[moved - 1];
                         const ref = evt.from.children[evt.oldIndex] || null;
                         evt.from.insertBefore(displaced, ref);
                     }
-                    refreshTrioColumns();
+                    refreshGroups(cfg);
                 }
             }, sortOpts)));
-            showToast(TRIO_CFG.doneMsg);
+            showToast(cfg.doneMsg);
         }
-        window.generateTrioCollage = generateTrioCollage;
 
-        function downloadAllInsta() { downloadAllGrouped(INSTA_CFG.previewId, INSTA_CFG.prefix); }
-        window.downloadAllInsta = downloadAllInsta;
-        async function downloadAllTrio() {
-            const cards = Array.from(document.getElementById(TRIO_CFG.previewId).children);
+        async function downloadAllGrouped(cfg) {
+            const cards = Array.from(document.getElementById(cfg.previewId).children);
             if (!cards.length) return;
             try {
                 const items = [];
                 for (let i = 0; i < cards.length; i++) {
-                    const blob = await renderTrioColumn(cards[i]);
-                    if (blob) items.push({ blob, name: TRIO_CFG.prefix + (i + 1) + '.jpg' });
+                    const blob = await renderGroup(cards[i]);
+                    if (blob) items.push({ blob, name: cfg.prefix + (i + 1) + '.jpg' });
                 }
                 saveFiles(items);
-            } catch (e) { console.error(e); showToast('Erreur génération 3x1', 'error'); }
+            } catch (e) { console.error(e); showToast('Erreur génération ' + cfg.label, 'error'); }
         }
+
+        function generateInstaCollage() { return generateGroupedCollage(INSTA_CFG); }
+        window.generateInstaCollage = generateInstaCollage;
+        function generateTrioCollage() { return generateGroupedCollage(TRIO_CFG); }
+        window.generateTrioCollage = generateTrioCollage;
+        function downloadAllInsta() { return downloadAllGrouped(INSTA_CFG); }
+        window.downloadAllInsta = downloadAllInsta;
+        function downloadAllTrio() { return downloadAllGrouped(TRIO_CFG); }
         window.downloadAllTrio = downloadAllTrio;
 
         function clearCollage() {
@@ -2376,9 +2331,7 @@
                     wrap.innerHTML = '';
                 }
             });
-            if (window.trioSortable) { window.trioSortable.destroy(); window.trioSortable = null; }
-            (window.trioStackSortables || []).forEach(sb => sb.destroy());
-            window.trioStackSortables = [];
+            destroyGroupSortables(INSTA_CFG); destroyGroupSortables(TRIO_CFG);
             showToast('Collage effacé');
         }
         window.clearCollage = clearCollage;
