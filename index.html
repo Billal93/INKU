@@ -1149,9 +1149,11 @@
                     style="display:none; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <span class="section-title" style="margin:0;">Aperçu des paires Insta</span>
-                        <button class="big-btn secondary" onclick="downloadAllInsta()"
+                        <div style="display:flex; gap:8px;"><button class="big-btn secondary" onclick="viewInstaImages()"
+                            style="width:auto; padding:8px 14px; margin:0; display:inline-block; font-size:0.75rem;">Voir les
+                            images</button><button class="big-btn secondary" onclick="downloadAllInsta()"
                             style="width:auto; padding:8px 14px; margin:0; display:inline-block; font-size:0.75rem;">Tout
-                            Télécharger</button>
+                            Télécharger</button></div>
                     </div>
                     <div class="captures-grid" id="instaPreview"
                         style="margin-top:12px; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));"></div>
@@ -1161,9 +1163,11 @@
                     style="display:none; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <span class="section-title" style="margin:0;">Aperçu des colonnes 3x1</span>
-                        <button class="big-btn secondary" onclick="downloadAllTrio()"
+                        <div style="display:flex; gap:8px;"><button class="big-btn secondary" onclick="viewTrioImages()"
+                            style="width:auto; padding:8px 14px; margin:0; display:inline-block; font-size:0.75rem;">Voir les
+                            images</button><button class="big-btn secondary" onclick="downloadAllTrio()"
                             style="width:auto; padding:8px 14px; margin:0; display:inline-block; font-size:0.75rem;">Tout
-                            Télécharger</button>
+                            Télécharger</button></div>
                     </div>
                     <div class="captures-grid" id="trioPreview"
                         style="margin-top:12px; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));"></div>
@@ -2224,7 +2228,7 @@
             if (!items.length) return null;
             const canvas = await createMergedCanvas(items, 1);
             if (!canvas) return null;
-            const blob = await canvasToBlob(canvas, 0.9);
+            const blob = await canvasToBlob(canvas, 0.98);
             canvas.width = 0; canvas.height = 0;
             return blob;
         }
@@ -2279,8 +2283,12 @@
                 dlBtn.addEventListener('click', () => {
                     const pos = Array.from(wrap.children).indexOf(card);
                     const name = cfg.prefix + (pos + 1) + '.jpg';
-                    if (card._blob) { saveFiles([{ blob: card._blob, name }]); return; }
-                    groupBlob(card).then(blob => { if (blob) saveFiles([{ blob, name }]); });
+                    const out = blob => {
+                        if (!blob) return;
+                        if (isIOS) showIOSModal([{ name, blob, isImage: true }]);
+                        else saveFiles([{ blob, name }]);
+                    };
+                    if (card._blob) out(card._blob); else groupBlob(card).then(out);
                 });
                 actionsDiv.appendChild(dlBtn);
                 card.appendChild(handle); card.appendChild(stack); card.appendChild(actionsDiv);
@@ -2315,14 +2323,18 @@
             showToast(cfg.doneMsg);
         }
 
-        async function downloadAllGrouped(cfg) {
+        async function downloadAllGrouped(cfg, viewOnly) {
             const cards = Array.from(document.getElementById(cfg.previewId).children);
             if (!cards.length) return;
-            const build = blobs => blobs.map((blob, i) => ({ blob, name: cfg.prefix + (i + 1) + '.jpg' })).filter(it => it.blob);
-            // Tout est déjà prêt : appel direct dans le clic (requis par iOS).
-            if (cards.every(c => c._blob)) { saveFiles(build(cards.map(c => c._blob))); return; }
-            const blobs = await Promise.all(cards.map(groupBlob));
-            saveFiles(build(blobs));
+            const build = blobs => blobs.map((blob, i) => ({ blob, name: cfg.prefix + (i + 1) + '.jpg', isImage: true })).filter(it => it.blob);
+            const out = blobs => {
+                const items = build(blobs);
+                if (!items.length) return;
+                // Sur iPhone : toutes les images affichées, appui long -> Enregistrer dans Photos.
+                if (isIOS || viewOnly) showIOSModal(items); else saveFiles(items);
+            };
+            if (cards.every(c => c._blob)) { out(cards.map(c => c._blob)); return; }
+            out(await Promise.all(cards.map(groupBlob)));
         }
 
         function generateInstaCollage() { return generateGroupedCollage(INSTA_CFG); }
@@ -2330,6 +2342,10 @@
         function generateTrioCollage() { return generateGroupedCollage(TRIO_CFG); }
         window.generateTrioCollage = generateTrioCollage;
         function downloadAllInsta() { return downloadAllGrouped(INSTA_CFG); }
+        function viewInstaImages() { return downloadAllGrouped(INSTA_CFG, true); }
+        window.viewInstaImages = viewInstaImages;
+        function viewTrioImages() { return downloadAllGrouped(TRIO_CFG, true); }
+        window.viewTrioImages = viewTrioImages;
         window.downloadAllInsta = downloadAllInsta;
         function downloadAllTrio() { return downloadAllGrouped(TRIO_CFG); }
         window.downloadAllTrio = downloadAllTrio;
