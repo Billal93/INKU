@@ -593,6 +593,40 @@
             display: block;
         }
 
+        .trio-handle {
+            padding: 6px 8px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            background: #fff;
+            border-bottom: 1px solid var(--border);
+            cursor: grab;
+        }
+
+        .trio-stack {
+            min-height: 40px;
+            padding: 3px;
+            background: #f4f4f6;
+        }
+
+        .trio-shot {
+            margin-bottom: 3px;
+            border-radius: 3px;
+            overflow: hidden;
+            cursor: grab;
+            background: #ddd;
+        }
+
+        .trio-shot:last-child {
+            margin-bottom: 0;
+        }
+
+        .trio-shot img {
+            width: 100%;
+            display: block;
+            pointer-events: none;
+        }
+
         .capture-actions {
             padding: 8px;
             display: flex;
@@ -1105,6 +1139,8 @@
                             Classique</button>
                         <button class="big-btn" onclick="generateInstaCollage()" style="margin-top:0;">Collage
                             Insta</button>
+                        <button class="big-btn" onclick="generateTrioCollage()"
+                            style="margin-top:0; grid-column: 1 / -1;">Collage 3x1</button>
                     </div>
                     <button class="big-btn secondary" onclick="clearCollage()" style="margin-top:10px;">Tout
                         effacer</button>
@@ -1114,11 +1150,27 @@
                     style="display:none; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <span class="section-title" style="margin:0;">Aperçu des paires Insta</span>
-                        <button class="big-btn secondary" onclick="downloadAllInsta()"
+                        <div style="display:flex; gap:8px;"><button class="big-btn secondary" onclick="viewInstaImages()"
+                            style="width:auto; padding:8px 14px; margin:0; display:inline-block; font-size:0.75rem;">Voir les
+                            images</button><button class="big-btn secondary" onclick="downloadAllInsta()"
                             style="width:auto; padding:8px 14px; margin:0; display:inline-block; font-size:0.75rem;">Tout
-                            Télécharger</button>
+                            Télécharger</button></div>
                     </div>
                     <div class="captures-grid" id="instaPreview"
+                        style="margin-top:12px; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));"></div>
+                </div>
+
+                <div id="trioPreviewContainer"
+                    style="display:none; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="section-title" style="margin:0;">Aperçu des colonnes 3x1</span>
+                        <div style="display:flex; gap:8px;"><button class="big-btn secondary" onclick="viewTrioImages()"
+                            style="width:auto; padding:8px 14px; margin:0; display:inline-block; font-size:0.75rem;">Voir les
+                            images</button><button class="big-btn secondary" onclick="downloadAllTrio()"
+                            style="width:auto; padding:8px 14px; margin:0; display:inline-block; font-size:0.75rem;">Tout
+                            Télécharger</button></div>
+                    </div>
+                    <div class="captures-grid" id="trioPreview"
                         style="margin-top:12px; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));"></div>
                 </div>
             </div>
@@ -2139,61 +2191,165 @@
         }
         window.generateClassicCollage = generateClassicCollage;
 
-        async function generateInstaCollage() {
+        // Collages Insta (paires) et 3x1 (colonnes de trois) : chaque groupe
+        // affiche ses captures empilées. On peut glisser une capture dans un
+        // autre groupe (si le groupe est plein, les deux captures sont
+        // échangées) et réordonner les groupes via leur poignée. Le fichier
+        // n'est fabriqué qu'au téléchargement, d'après l'agencement affiché.
+        const INSTA_CFG = {
+            size: 2, label: 'Insta', title: 'Paire', doneMsg: 'Paires Insta générées !',
+            containerId: 'instaPreviewContainer', previewId: 'instaPreview',
+            prefix: 'INKU_COLLAGE_INSTA_', key: 'insta'
+        };
+        const TRIO_CFG = {
+            size: 3, label: '3x1', title: 'Colonne', doneMsg: 'Colonnes 3x1 générées !',
+            containerId: 'trioPreviewContainer', previewId: 'trioPreview',
+            prefix: 'INKU_COLLAGE_3X1_', key: 'trio'
+        };
+
+        function destroyGroupSortables(cfg) {
+            if (window[cfg.key + 'Sortable']) { window[cfg.key + 'Sortable'].destroy(); window[cfg.key + 'Sortable'] = null; }
+            (window[cfg.key + 'Stacks'] || []).forEach(sb => sb.destroy());
+            window[cfg.key + 'Stacks'] = [];
+        }
+
+        function refreshGroups(cfg) {
+            const wrap = document.getElementById(cfg.previewId);
+            Array.from(wrap.children).forEach(card => {
+                if (!card.querySelector('.trio-shot')) card.remove();
+            });
+            Array.from(wrap.children).forEach((card, i) => {
+                card.querySelector('.trio-title').textContent = cfg.title + ' ' + (i + 1);
+            });
+            if (!wrap.children.length) document.getElementById(cfg.containerId).style.display = 'none';
+        }
+
+        async function renderGroup(card) {
+            const items = Array.from(card.querySelectorAll('.trio-shot')).map(el => el._item);
+            if (!items.length) return null;
+            const canvas = await createMergedCanvas(items, 1);
+            if (!canvas) return null;
+            const blob = await canvasToBlob(canvas, 0.98);
+            canvas.width = 0; canvas.height = 0;
+            return blob;
+        }
+
+        // L'image du groupe est fabriquée d'avance (à la génération et après
+        // chaque déplacement) : sur iPhone, le partage "Enregistrer l'image"
+        // doit être lancé directement par le clic, sans attente de rendu.
+        function prepareGroup(card) {
+            if (!card || !card.isConnected) return Promise.resolve(null);
+            const ver = (card._ver || 0) + 1;
+            card._ver = ver; card._blob = null;
+            card._promise = renderGroup(card).then(blob => {
+                if (card._ver === ver) card._blob = blob;
+                return blob;
+            }).catch(e => { console.error(e); return null; });
+            return card._promise;
+        }
+
+        async function groupBlob(card) {
+            if (card._blob) return card._blob;
+            showToast('Préparation de l\'image...');
+            return card._promise || prepareGroup(card);
+        }
+
+        function generateGroupedCollage(cfg) {
             const orderedFiles = getOrderedCollageFiles();
             if (!orderedFiles.length) return showToast('Aucune image', 'error');
-            showToast('Génération Collages Insta...');
-            const previewContainer = document.getElementById('instaPreviewContainer');
-            const previewWrap = document.getElementById('instaPreview');
-            previewWrap.querySelectorAll('img').forEach(img => { if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src); });
-            previewWrap.innerHTML = '';
-            try {
-                // Nombre d'images impair : la dernière paire ne contient qu'une
-                // image (comportement existant conservé tel quel).
-                for (let i = 0; i < orderedFiles.length; i += 2) {
-                    const pair = orderedFiles.slice(i, i + 2);
-                    const canvas = await createMergedCanvas(pair, 1);
-                    if (!canvas) continue;
-                    const blob = await canvasToBlob(canvas, 0.9);
-                    canvas.width = 0; canvas.height = 0;
-                    const objectUrl = URL.createObjectURL(blob);
-
-                    const div = document.createElement('div'); div.className = 'capture-thumb'; div.style.cursor = 'grab';
-                    div._instaBlob = blob;
-                    const imgEl = document.createElement('img'); imgEl.src = objectUrl;
-                    const actionsDiv = document.createElement('div'); actionsDiv.className = 'capture-actions'; actionsDiv.style.justifyContent = 'center';
-                    const dlBtn = document.createElement('button');
-                    dlBtn.className = 'btn-dl-small'; dlBtn.textContent = 'Télécharger'; dlBtn.style.width = '100%'; dlBtn.style.textAlign = 'center';
-                    // Le nom est recalculé sur la position actuelle dans le DOM au
-                    // moment du clic, pour rester juste après un glisser-déposer.
-                    dlBtn.addEventListener('click', () => {
-                        const pos = Array.from(previewWrap.children).indexOf(div);
-                        saveFiles([{ blob: div._instaBlob, name: 'INKU_COLLAGE_INSTA_' + (pos + 1) + '.jpg' }]);
-                    });
-                    actionsDiv.appendChild(dlBtn); div.appendChild(imgEl); div.appendChild(actionsDiv);
-                    previewWrap.appendChild(div);
-                }
-                previewContainer.style.display = 'block';
-                if (window.instaSortable) window.instaSortable.destroy();
-                window.instaSortable = new Sortable(previewWrap, {
-                    animation: 200, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen',
-                    delay: 150, delayOnTouchOnly: true, touchStartThreshold: 5,
+            const container = document.getElementById(cfg.containerId);
+            const wrap = document.getElementById(cfg.previewId);
+            destroyGroupSortables(cfg);
+            wrap.innerHTML = '';
+            const stacks = [];
+            // Nombre d'images non multiple de la taille du groupe : le dernier
+            // groupe contient simplement moins d'images.
+            for (let i = 0; i < orderedFiles.length; i += cfg.size) {
+                const card = document.createElement('div'); card.className = 'capture-thumb';
+                const handle = document.createElement('div'); handle.className = 'trio-handle';
+                const title = document.createElement('span'); title.className = 'trio-title';
+                handle.appendChild(title);
+                const stack = document.createElement('div'); stack.className = 'trio-stack';
+                orderedFiles.slice(i, i + cfg.size).forEach(item => {
+                    const shot = document.createElement('div'); shot.className = 'trio-shot';
+                    shot._item = item;
+                    const img = document.createElement('img'); img.src = item.objectUrl; img.alt = item.name;
+                    shot.appendChild(img); stack.appendChild(shot);
                 });
-                showToast('Paires Insta générées !');
-            } catch(e) { console.error(e); showToast('Erreur génération Insta', 'error'); }
-        }
-        window.generateInstaCollage = generateInstaCollage;
+                const actionsDiv = document.createElement('div'); actionsDiv.className = 'capture-actions'; actionsDiv.style.justifyContent = 'center';
+                const dlBtn = document.createElement('button');
+                dlBtn.className = 'btn-dl-small'; dlBtn.textContent = 'Télécharger'; dlBtn.style.width = '100%'; dlBtn.style.textAlign = 'center';
+                // Le nom est recalculé sur la position actuelle au moment du clic,
+                // pour rester juste après un glisser-déposer.
+                dlBtn.addEventListener('click', () => {
+                    const pos = Array.from(wrap.children).indexOf(card);
+                    const name = cfg.prefix + (pos + 1) + '.jpg';
+                    const out = blob => {
+                        if (!blob) return;
+                        if (isIOS) showIOSModal([{ name, blob, isImage: true }]);
+                        else saveFiles([{ blob, name }]);
+                    };
+                    if (card._blob) out(card._blob); else groupBlob(card).then(out);
+                });
+                actionsDiv.appendChild(dlBtn);
+                card.appendChild(handle); card.appendChild(stack); card.appendChild(actionsDiv);
+                wrap.appendChild(card);
+                stacks.push(stack);
+            }
+            container.style.display = 'block';
+            refreshGroups(cfg);
+            Array.from(wrap.children).forEach(prepareGroup);
 
-        function downloadAllInsta() {
-            const thumbs = document.querySelectorAll('#instaPreview .capture-thumb');
-            if (!thumbs.length) return;
-            const items = [];
-            thumbs.forEach((thumb, i) => {
-                items.push({ blob: thumb._instaBlob, name: 'INKU_COLLAGE_INSTA_' + (i + 1) + '.jpg' });
-            });
-            saveFiles(items);
+            const sortOpts = {
+                animation: 200, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen',
+                forceFallback: true, fallbackTolerance: 3,
+                delay: 150, delayOnTouchOnly: true, touchStartThreshold: 5
+            };
+            window[cfg.key + 'Sortable'] = new Sortable(wrap, Object.assign({ handle: '.trio-handle' }, sortOpts));
+            window[cfg.key + 'Stacks'] = stacks.map(stack => new Sortable(stack, Object.assign({
+                group: cfg.key + '-shots',
+                onEnd: evt => {
+                    if (evt.from !== evt.to && evt.to.children.length > cfg.size) {
+                        const kids = Array.from(evt.to.children);
+                        const moved = kids.indexOf(evt.item);
+                        const displaced = kids[moved + 1] || kids[moved - 1];
+                        const ref = evt.from.children[evt.oldIndex] || null;
+                        evt.from.insertBefore(displaced, ref);
+                    }
+                    refreshGroups(cfg);
+                    prepareGroup(evt.from.closest('.capture-thumb'));
+                    prepareGroup(evt.to.closest('.capture-thumb'));
+                }
+            }, sortOpts)));
+            showToast(cfg.doneMsg);
         }
+
+        async function downloadAllGrouped(cfg, viewOnly) {
+            const cards = Array.from(document.getElementById(cfg.previewId).children);
+            if (!cards.length) return;
+            const build = blobs => blobs.map((blob, i) => ({ blob, name: cfg.prefix + (i + 1) + '.jpg', isImage: true })).filter(it => it.blob);
+            const out = blobs => {
+                const items = build(blobs);
+                if (!items.length) return;
+                // Sur iPhone : toutes les images affichées, appui long -> Enregistrer dans Photos.
+                if (isIOS || viewOnly) showIOSModal(items); else saveFiles(items);
+            };
+            if (cards.every(c => c._blob)) { out(cards.map(c => c._blob)); return; }
+            out(await Promise.all(cards.map(groupBlob)));
+        }
+
+        function generateInstaCollage() { return generateGroupedCollage(INSTA_CFG); }
+        window.generateInstaCollage = generateInstaCollage;
+        function generateTrioCollage() { return generateGroupedCollage(TRIO_CFG); }
+        window.generateTrioCollage = generateTrioCollage;
+        function downloadAllInsta() { return downloadAllGrouped(INSTA_CFG); }
+        function viewInstaImages() { return downloadAllGrouped(INSTA_CFG, true); }
+        window.viewInstaImages = viewInstaImages;
+        function viewTrioImages() { return downloadAllGrouped(TRIO_CFG, true); }
+        window.viewTrioImages = viewTrioImages;
         window.downloadAllInsta = downloadAllInsta;
+        function downloadAllTrio() { return downloadAllGrouped(TRIO_CFG); }
+        window.downloadAllTrio = downloadAllTrio;
 
         function clearCollage() {
             collageFiles.forEach(item => URL.revokeObjectURL(item.objectUrl));
@@ -2201,13 +2357,16 @@
             document.getElementById('collageGrid').innerHTML = '';
             syncCollageVisibility();
             if (sortableCollage) { sortableCollage.destroy(); sortableCollage = null; }
-            const pv = document.getElementById('instaPreviewContainer');
-            if (pv) pv.style.display = 'none';
-            const wrap = document.getElementById('instaPreview');
-            if (wrap) {
-                wrap.querySelectorAll('img').forEach(img => { if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src); });
-                wrap.innerHTML = '';
-            }
+            [INSTA_CFG, TRIO_CFG].forEach(cfg => {
+                const pv = document.getElementById(cfg.containerId);
+                if (pv) pv.style.display = 'none';
+                const wrap = document.getElementById(cfg.previewId);
+                if (wrap) {
+                    wrap.querySelectorAll('img').forEach(img => { if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src); });
+                    wrap.innerHTML = '';
+                }
+            });
+            destroyGroupSortables(INSTA_CFG); destroyGroupSortables(TRIO_CFG);
             showToast('Collage effacé');
         }
         window.clearCollage = clearCollage;
