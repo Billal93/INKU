@@ -1,0 +1,2 @@
+transformers.js 4.3.0 (Apache-2.0) : transformers.js.gz = dist/transformers.js compressé
+onnxruntime-web 1.31.0-dev.20260914-8d85527a0 (MIT) : ort-wasm-simd-threaded.asyncify.wasm.gz = moteur WebAssembly compressé

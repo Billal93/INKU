@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><title>Profil transcription | INKU Montage (dev)</title></head>
+<body style="font:13px system-ui;background:#111;color:#ddd">
+<pre id="log"></pre>
+<script src="../coi-register.js"></script>
+<script type="module">
+// Profil (développement) : temps de l'encodeur seul (max_new_tokens = 1) contre transcription complète,
+// pour savoir ce qui limite la vitesse sur l'appareil.
+import { SpeechClient } from '../speech/client.js';
+import { decodeWav } from '../audio/wav.js';
+const q = new URLSearchParams(location.search);
+const log = (s) => { document.getElementById('log').textContent += s + '\n'; console.log(s); };
+const out = { done: false, rows: [] };
+window.__profile = out;
+(async () => {
+  const list = await (await fetch('/bench-data/list.json')).json();
+  const audio = decodeWav(await (await fetch(list.items[0].url)).arrayBuffer()).channels[0];
+  for (const model of (q.get('models') || 'whisper-turbo').split(',')) {
+    const sc = new SpeechClient();
+    await sc.call('ensure', { model });
+    for (const device of (q.get('devices') || 'webgpu').split(',')) {
+      await sc.call('load', { model, device });
+      await sc.call('transcribe', { audio: audio.slice(0, 16000 * 3), opt: {} });   // échauffement
+      const row = { model, device, sec: audio.length / 16000 };
+      for (const [k, opt] of [['encodeur+1', { maxNewTokens: 1 }], ['complet', {}], ['complet+mots', { words: true }]]) {
+        const t = []; for (let i = 0; i < 2; i++) t.push((await sc.call('transcribe', { audio, opt })).ms);
+        row[k] = Math.round(Math.min(...t));
+      }
+      out.rows.push(row); log(JSON.stringify(row));
+      await sc.call('unload');
+    }
+    sc.terminate();
+  }
+  out.done = true;
+})().catch((e) => { out.error = String(e.message || e); out.done = true; log('ERREUR ' + out.error); });
+</script>
+</body>
+</html>

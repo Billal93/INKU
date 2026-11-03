@@ -3,6 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
+  testIgnore: /(studio|montage-[\w-]+)\.spec\.js/,   // suite du Studio : playwright.studio.config.js (Chrome/Edge installés)
   timeout: 30000,
   fullyParallel: false,
   reporter: [['list']],

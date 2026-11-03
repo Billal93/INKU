@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.montage.json",
+  "compilerOptions": { "lib": ["ESNext", "WebWorker", "WebWorker.Iterable", "WebWorker.AsyncIterable"] },
+  "include": ["montage/types.d.ts", "montage/**/*.worker.js", "montage/sw.js"],
+  "exclude": ["montage/vendor/**"]
+}
