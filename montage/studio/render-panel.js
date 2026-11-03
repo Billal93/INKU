@@ -79,7 +79,7 @@ export function createRenderPanel({ el, sheet, store, lib, assets, player, toast
     if (result) {
       const r = result.render, v = result.verify;
       html += `<div class="vsum ${v && v.ok ? '' : 'bad'}"><b>${v ? (v.ok ? '✓ Contrôles réussis' : '✗ Contrôles en échec') : 'Contrôles…'}</b> · ${r.width}×${r.height}${r.fallback ? ' (repli : résolution maximale de l\'appareil)' : ''} · ${r.frames} images en ${fr(r.ms / 1000)} s (×${fr(r.ms / 1000 / (r.frames / r.fps), 2)} le temps réel) · AAC ${Math.round(r.audio.bitrate / 1000)} kb/s${r.audio.native ? '' : ' (encodeur embarqué)'}
-        ${url ? `<video controls playsinline src="${url}" style="width:100%;max-height:46vh;margin-top:8px;background:#000;border-radius:10px"></video>` : ''}
+        ${url && !job ? `<video controls playsinline src="${url}" style="width:100%;max-height:46vh;margin-top:8px;background:#000;border-radius:10px"></video>` : ''}
         ${v ? `<ul class="checks">${v.checks.map((c) => `<li class="${c.ok ? 'ok' : 'ko'}">${c.ok ? '✓' : '✗'} ${esc(c.label)} <span class="muted">— ${esc(c.detail)}</span></li>`).join('')}</ul>` : ''}
         <div class="vbtns"><button class="bigbtn" data-dl="${r.id}">Télécharger</button>${navigator.canShare ? `<button class="bigbtn sec" data-share="${r.id}">Partager / galerie</button>` : ''}</div></div>`;
     }
@@ -93,17 +93,25 @@ export function createRenderPanel({ el, sheet, store, lib, assets, player, toast
     el.innerHTML = html;
   }
 
+  /** Change la vidéo affichée ; l'ancienne adresse n'est libérée qu'une fois le lecteur retiré de la page. */
+  function setVideo(blob) {
+    const old = url;
+    url = blob ? URL.createObjectURL(blob) : null;
+    render();
+    if (old) setTimeout(() => URL.revokeObjectURL(old), 1000);
+  }
+
   async function start() {
     const ctrl = new AbortController();
     job = { ctrl, p: null, wake: null };
-    result = null; if (url) { URL.revokeObjectURL(url); url = null; }
-    render();
+    result = null;
+    setVideo(null);
     player.pause();
     try {
       const r = await renderProject({ doc: store.doc, lib, assets, scene: player.scene, mixer: player.mixer, preset, signal: ctrl.signal, onProgress: (p) => { job.p = p; render(); } });
       job.wake = r.wakeLock;
       result = { render: r, verify: null };
-      url = URL.createObjectURL(r.blob);
+      setVideo(r.blob);
       job.p = { stage: 'Contrôles après rendu', done: 0, total: 1 }; render();
       const v = await verifyRender(r.blob, { doc: JSON.parse(JSON.stringify(store.doc)), frames: r.frames, fps: r.fps, width: r.width, height: r.height, getSource: (id) => lib.get(id), subtitleBase: player.scene.subsBase }, (p) => { job.p = p; render(); });
       result.verify = v;
@@ -137,7 +145,7 @@ export function createRenderPanel({ el, sheet, store, lib, assets, player, toast
     if (b.dataset.do === 'cancel') { if (job) job.ctrl.abort(); return; }
     if (b.dataset.dl) { const blob = await fileOf(b.dataset.dl); const h = history.find((x) => x.id === b.dataset.dl) || result.render; if (blob) download(blob, fileName(h)); else toast('Fichier introuvable'); return; }
     if (b.dataset.share) return share(b.dataset.share);
-    if (b.dataset.play) { const blob = await fileOf(b.dataset.play); if (!blob) { toast('Fichier introuvable'); return; } if (url) URL.revokeObjectURL(url); url = URL.createObjectURL(blob); const h = history.find((x) => x.id === b.dataset.play); result = { render: { ...h, blob, audio: { bitrate: 0, native: true }, fallback: false }, verify: { ok: h.ok, checks: (h.failed || []).map((l) => ({ ok: false, label: l, detail: 'lors du rendu' })) } }; render(); return; }
+    if (b.dataset.play) { const blob = await fileOf(b.dataset.play); if (!blob) { toast('Fichier introuvable'); return; } const h = history.find((x) => x.id === b.dataset.play); result = { render: { ...h, blob, audio: { bitrate: 0, native: true }, fallback: false }, verify: { ok: h.ok, checks: (h.failed || []).map((l) => ({ ok: false, label: l, detail: 'lors du rendu' })) } }; setVideo(blob); return; }
     if (b.dataset.rmh) {
       const id = b.dataset.rmh;
       try { const root = await navigator.storage.getDirectory(); await (await root.getDirectoryHandle('renders')).removeEntry(id + '.mp4'); } catch { /* absent */ }

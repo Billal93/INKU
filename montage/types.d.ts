@@ -5,6 +5,8 @@ interface FileSystemFileHandle { createSyncAccessHandle(): Promise<FileSystemSyn
 interface Window {
   webkitAudioContext?: typeof AudioContext;
   /** Points d'accroche pour les tests automatiques et l'écran d'autotest. */
+  /** Résolue quand le mot de passe du Montage est validé (gate.js). */
+  __gate: Promise<void>;
   __studio?: any; __studioReady?: boolean; __studioError?: string; __lintCount?: number;
 }
 interface Performance { memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number }; measureUserAgentSpecificMemory?: () => Promise<{ bytes: number }> }

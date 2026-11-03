@@ -260,4 +260,4 @@ async function boot() {
   window.__studioReady = true;
 }
 
-boot().catch((e) => { console.error(e); const b = $('boot'); if (b) b.textContent = 'Erreur de démarrage : ' + e.message; window.__studioError = e.message; });
+window.__gate.then(boot).catch((e) => { console.error(e); const b = $('boot'); if (b) b.textContent = 'Erreur de démarrage : ' + e.message; window.__studioError = e.message; });

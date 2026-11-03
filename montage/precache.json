@@ -1,5 +1,5 @@
 {
- "version": "edfd95307c99",
+ "version": "d22b6d208886",
  "files": [
   "audio/features.js",
   "audio/loudness.js",
@@ -14,6 +14,7 @@
   "brand/brand.js",
   "brand/zip.js",
   "coi-register.js",
+  "gate.js",
   "icon-192.png",
   "icon-512.png",
   "lib/analysis.js",

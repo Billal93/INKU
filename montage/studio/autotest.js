@@ -194,4 +194,4 @@ $('run').onclick = run;
 $('copy').onclick = async () => {
   try { await navigator.clipboard.writeText($('report').value); $('copy').textContent = 'Copié ✓'; } catch { $('report').select(); document.execCommand('copy'); }
 };
-if (new URLSearchParams(location.search).has('auto')) run();
+if (new URLSearchParams(location.search).has('auto')) window.__gate.then(run);

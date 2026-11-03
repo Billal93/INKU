@@ -70,4 +70,5 @@ ne protège que l'avenir, pas l'exposition passée.
 - Avant chaque commit : `npm run montage:check` (tsc --checkJs, ESLint, pré-cache à jour, tests unitaires).
   Après modification d'un fichier de `montage/` : `node tools/montage-precache.mjs`.
 - Tests navigateur : `npm run montage:e2e` (Chromium/Chrome ; inclut l'isolation du service worker).
+- Accès au Montage derrière un mot de passe pendant les essais (`montage/gate.js`, barrière côté navigateur, pas une vraie sécurité, inactive sur localhost sauf `?gate`).
 - Le service worker est limité à `/montage/` : ne jamais l'enregistrer depuis `index.html`.
